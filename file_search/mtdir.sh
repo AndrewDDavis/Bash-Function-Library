@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 mtdir() {
 
@@ -12,9 +12,8 @@ mtdir() {
     the path does not exist, or if there are insufficient permissions to check whether
     a directory is empty. In the latter two cases, an error is printed by \`find\`.
 
-    If the path is a symlink, mtdir follows it to evaluate the file it points to.
-    To disable this behaviour and cause symlinks to produce a failed test, add the
-    '-P' option before the path.
+    If the path is a symlink, mtdir normally follows it to evaluate the file it points
+    to. To cause symlinks to produce a failed test, use the -P option.
     "
     [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
