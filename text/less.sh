@@ -32,7 +32,7 @@
 export LESS="-iJMR --buffers=1024 --jump-target=.2 --tabs=4 --shift=4"
 
 # Colours
-if [[ $_term_n_colors -ge 8 ]]
+if [[ ${_term_n_colors:-2} -ge 8 ]]
 then
     # - colour specs must be terminated with '$' in the LESS variable
     # LESS="$LESS --use-color --color=Pwk\$ --color=Ewy\$"
@@ -54,10 +54,8 @@ export LESSHISTFILE="${XDG_DATA_HOME:-$HOME/.local/share}"/less/lesshst
 
 # Editor called by less using the :v command
 # default '%E ?lm+%lm. %g', where %E comes from VISUAL or EDITOR
-[[ -n $( command -v micro ) ]] && {
-
+[[ -n $( command -v micro ) ]] &&
     export LESSEDIT='micro ?lm+%lm. %g'
-}
 
 # Wrap text before input to less
 # fmt -w $(tput cols) | less
@@ -98,16 +96,17 @@ lessx() {
 # - i think this script sometimes causes problems, and it's not well documented,
 #   but it's handy when it works.
 # - this is specifically the Debian lesspipe version, but there are others.
-[[ -x /usr/bin/lesspipe ]] && {
-
+if [[ -x /usr/bin/lesspipe ]]
+then
     lessz() {
         LESSOPEN="| /usr/bin/lesspipe %s"   \
         LESSCLOSE="/usr/bin/lesspipe %s %s" \
         less "$@"
     }
-}
+fi
 
-[[ -n $(command -v highlight) ]] && {
+if [[ -n $(command -v highlight) ]]
+then
 
     less-hl() (
 
@@ -188,4 +187,4 @@ lessx() {
             less "${less_opts[@]}" < <(highlight "${hl_opts[@]}" "$fn")
         )
     )
-}
+fi

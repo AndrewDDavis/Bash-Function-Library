@@ -1,20 +1,3 @@
-mkcd()
-{
-    [[ $# -ne 1 || $1 == @(-h|--help) ]] &&
-    {
-        docsh -TD "Make dir + cd in one step
-
-        Usage: mkcd <path>
-
-        - The argument is a path to a directory that will be created if it does not exist.
-        "
-        return 0
-    }
-
-    mkdir -pv "$1"
-    cd "$1"
-}
-
 # Use canonical (physical) path for cd by default
 # - safer, as it matches e.g. `ls ../` from a symlink dir
 # - see https://unix.stackexchange.com/a/413225/85414
@@ -39,8 +22,8 @@ alias dv="dirs -v"
 pushd -n ~/Sync >/dev/null
 pushd -n ~/Documents >/dev/null
 
-cd()
-{
+cd() {
+
     [[ ${1:-} == @(-h|--help) ]] &&
     {
         docsh -TD "Change dirs with cd, but also keep track on the dir-stack

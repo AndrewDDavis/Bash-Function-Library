@@ -1,10 +1,12 @@
 # Bash Function Library ReadMe
 
-This dir contains shell function and alias definitions, as well as some environment
-configuration.
+The files in this directory tree with '.sh' or '.bash' extensions contain shell
+functions and alias definitions, as well as some environment configuration. They are
+meant to be sourced during shell initialization, or from partner files as dependencies.
+Most are *not* meant to be executed.
 
-The `bashrc` directory contains functions that are sourced first, and required early
-in the parsing of `~/.bashrc`, in particular:
+Some of the functions are sourced early in `~/.bashrc` to set up the user environment,
+prompt, colours, etc.:
 
   - path_check_add
   - path_check_symlink
@@ -30,7 +32,15 @@ Now the alias, function, and environment variable definitions have been moved to
 individual files in this directory, symlinked as `~/.bash_funclib.d/`. Any files herein
 with a '.sh' or '.bash' extension will be sourced from `~/.bashrc`.
 
-Notes:
+
+## Notes
+
+- NB I tried to write a posix/dash compliant version of these, to be sourced from
+  ~/.profile, but it was too hard: in particular, getting the output of find into the
+  set builtin in order to augment the positional parameters and treat them like an
+  array was insurmountable (in a robust way).
+
+- The more complex functions should probably be converted to Python or Go.
 
 - Note to ponder, from the Bash man page:
 

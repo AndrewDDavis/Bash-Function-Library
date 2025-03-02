@@ -1,5 +1,7 @@
 chadm() {
+
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+
         docsh -TD "Make a file or directory editable by an admin group.
 
         This is meant to reduce overuse and abuse of sudo, by allowing an admin group to

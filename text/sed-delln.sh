@@ -1,10 +1,12 @@
+# shellcheck shell=bash
+
 sed-delln() {
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Delete lines matching regex pattern.
+        : "Delete lines matching regex pattern.
 
-        Usage: ${FUNCNAME[0]} [options] <pattern> <filename>
+        Usage: sed-delln [options] <pattern> <filename>
 
         Options
 
@@ -16,9 +18,10 @@ sed-delln() {
         - A backup is made, and the diff will be shown at the end.
         - All unrecognized arguments are passed to sed.
 
-        Example: ${FUNCNAME[0]} '^dirname' bash_extended_history
+        Example: sed-delln '^dirname' bash_extended_history
         "
-        return 0
+        docsh -TD
+        return
     }
 
     # defaults and args

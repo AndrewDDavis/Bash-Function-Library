@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+
 func-where() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
@@ -10,7 +12,6 @@ func-where() {
         \`declare -F\` with the supplied arguments.
         "
         docsh -TD
-        [[ $# -gt 0 ]]
         return
     }
 
@@ -33,7 +34,9 @@ func-where() {
             src_ln=${src_ln% ${src_fn}}
 
             # grep-style output
-            [[ $# -gt 1 ]] && printf '%s' "${func}: "
+            [[ $# -gt 1 ]] &&
+                printf '%s' "${func}: "
+
             printf '%s\n' "ln. $src_ln in '$src_fn'"
         done
     )
