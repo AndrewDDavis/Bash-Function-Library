@@ -35,6 +35,7 @@ then
           -g : use gio
           -l : list mounts
           -u : unmount
+          -v : increase verbosity
 
         Configured Destinations:
 
@@ -95,10 +96,13 @@ then
         done ||
             err_msg 3 "no valid command in '${rcmds[*]}'"
 
+        # verbosity
+        local _v=1
+
         # parse option flags
         local flag OPTARG OPTIND=1
 
-        while getopts ":grslu" flag
+        while getopts ":grsluv" flag
         do
             case $flag in
                 ( g | gio ) rcmd=gio ;;
@@ -106,6 +110,7 @@ then
                 ( s | sshfs ) rcmd=sshfs ;;
                 ( l ) action=list ;;
                 ( u ) action=unmount ;;
+                ( v ) _v=2 ;;
                 ( \? )
                     err_msg 2 "unrecognized option: '-$OPTARG'"
                     return ;;
@@ -263,8 +268,11 @@ then
                             "Remaining mount-points:" \
                             "$flist"
                     else
-                        printf >&2 '%s\n' \
-                            "No additional mount-points found in ${loc_mntsdir}"
+                        if [[ $_v -gt 1 ]]
+                        then
+                            printf >&2 '%s\n' \
+                                "No additional mount-points found in ${loc_mntsdir}"
+                        fi
                     fi
                 fi
 
