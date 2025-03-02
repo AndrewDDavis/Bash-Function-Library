@@ -10,7 +10,7 @@ mkcd() {
 
         - The argument is a path to a directory that will be created if it does not exist.
         "
-        docsh -TD "Make dir + cd in one step
+        docsh -TD
         return
     }
 
