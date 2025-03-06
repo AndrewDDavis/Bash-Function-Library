@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 awk-calc() {
 
     : "Print result of calculation using awk
