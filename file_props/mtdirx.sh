@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 mtdirx() {
 
     : "Test for an empty directory and use expressive return codes

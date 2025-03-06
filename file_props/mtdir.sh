@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 mtdir() {
 
     : "Test for an empty directory

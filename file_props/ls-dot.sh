@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 ls-dot() {
 
     [[ $# -gt 0  &&  $1 == @(-h|--help) ]] && {
@@ -36,7 +34,7 @@ ls-dot() {
     alias_rslv -e "$ls_cmd" lscmd_words \
         || lscmd_words=( "$ls_cmd" )
 
-    array_strrepl lscmd_words ls "$(type -P ls)"
+    array_strrepl lscmd_words ls "$( builtin type -P ls )"
 
 
     ## Identify options for ls and add them to the cmd-line
