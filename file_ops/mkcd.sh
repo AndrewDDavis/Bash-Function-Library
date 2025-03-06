@@ -1,19 +1,16 @@
-# shellcheck shell=bash
-
 mkcd() {
 
-    [[ $# -ne 1 || $1 == @(-h|--help) ]] && {
-
-        : "Make dir + cd in one step
+    : "Create directory and cd to it in one step
 
         Usage: mkcd <path>
 
-        - The argument is a path to a directory that will be created if it does not exist.
-        "
-        docsh -TD
-        return
-    }
+        The path argument represents a directory, which will be created if it does
+        not exist. Then the CWD of the shell will be changed to that dirctory.
+    "
 
-    mkdir -pv "$1"
-    cd "$1"
+    [[ $# -ne 1  || $1 == @(-h|--help) ]] &&
+        { docsh -TD; return; }
+
+    command mkdir -pv "$1"
+    builtin cd "$1"
 }

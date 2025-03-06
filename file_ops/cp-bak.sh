@@ -1,5 +1,4 @@
-# shellcheck shell=bash
-
+# mkbak may be more mnemonic
 alias mkbak="cp-bak"
 
 cp-bak() (

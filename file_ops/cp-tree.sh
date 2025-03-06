@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 cp-tree() {
 
     : "Copy file hierarchies, preserving permissions with tar.
