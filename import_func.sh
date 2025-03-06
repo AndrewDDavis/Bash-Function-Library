@@ -1,8 +1,6 @@
-# shellcheck shell=bash
-
 import_func() {
 
-    # use docsh to print the docs
+    # function docs (relies on docsh imported below)
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Import a function to use in a script or interactive shell
@@ -16,7 +14,7 @@ import_func() {
         directory tree for function definitions matching the requested name, and imports
         the function into the current shell by sourcing its file.
 
-        By default, the search is performed in ~/.bash_funclib.d, but the library path
+        By default, the search is performed in ~/.bash_library.d, but the library path
         may be overridden by setting the BASH_FUNCLIB variable. Symlinks within the
         library are dereferenced and followed.
 
@@ -33,6 +31,17 @@ import_func() {
           : Force reimport: normally, import_func will not (re)import a function if a
             function with the same name is already defined. This option forces such
             functions to be reimported by sourcing the relevant file.
+
+        Example: import dependencies in a script
+
+          # import dependencies
+          [[ $( builtin type -t import_func ) == function ]] || {
+              source ~/.bash_library.d/import_func.sh \
+                  || return 63
+          }
+
+          import_func docsh err_msg \
+              || return 62
         "
         docsh -TD
         return
@@ -44,6 +53,7 @@ import_func() {
         trap - return
     ' RETURN
 
+    # options
     local _force _all
     local _flag OPTARG OPTIND=1
     while getopts ':af' _flag
@@ -57,18 +67,18 @@ import_func() {
     done
     shift $(( OPTIND-1 ))
 
-    # check libdir
+    # check for expected library path
     local libdir
 
     if [[ -v BASH_FUNCLIB ]]
     then
         libdir=$BASH_FUNCLIB
     else
-        libdir=~/.bash_funclib.d
+        libdir=~/.bash_library.d
     fi
 
     [[ -d $libdir ]] ||
-        { err_msg 2 "libdir not found: '$libdir'"; return; }
+        { err_msg 9 "libdir not found: '$libdir'"; return; }
 
 
     if [[ -v _all ]]
@@ -76,7 +86,7 @@ import_func() {
         # import all files except those specified
         local fn fnxs=() find_cmd find_cmdline
 
-        find_cmd=$( type -P find ) \
+        find_cmd=$( builtin type -P find ) \
             || return
 
         find_cmdline=( "$find_cmd" -L "$libdir" )
@@ -129,24 +139,24 @@ import_func() {
 
         # NB, an alternative, with globstar set and filenames without newlines, would be
         # to use:
-        #   for fn in .bash_funclib.d/bashrc/**/*.sh; do source "$fn"; done
+        #   for fn in .bash_library.d/bashrc/**/*.sh; do source "$fn"; done
 
     else
-        # import specified functions
+        # import specified function(s)
 
         [[ $# -gt 0 ]] ||
             return 99
 
         local fn src_fns grep_cmd grep_ptn grep_cmdline
 
-        grep_cmd=$( type -P grep ) \
+        grep_cmd=$( builtin type -P grep ) \
             || return
 
         for fn in "$@"
         do
             if [[
-                ! -v _force
-                && $( type -at "$fn" ) == *function*
+                $( builtin type -at "$fn" ) == *function*
+                && ! -v _force
             ]]
             then
                 # skip existing function
@@ -154,7 +164,6 @@ import_func() {
             fi
 
             # search for the source file with grep
-
             grep_ptn="^(${fn}[[:blank:]]*\(\)|function[[:blank:]]+${fn})"
 
             grep_cmdline=( "$grep_cmd" -EIRl -e "$grep_ptn" "$libdir" )
@@ -182,4 +191,5 @@ import_func() {
 }
 
 # when sourcing this file, import supporting functions
-import_func err_msg docsh
+import_func err_msg docsh \
+    || return 62
