@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 path_check_symlink() {
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] && {

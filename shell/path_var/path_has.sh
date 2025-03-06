@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 path_has() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
