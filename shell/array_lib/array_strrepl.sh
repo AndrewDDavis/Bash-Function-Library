@@ -16,18 +16,18 @@ array_strrepl() {
     }
 
     # array name and pattern, then remaining args are new elements
-    local -n earr=$1    || return
+    local -n __earr__=$1    || return
     local s=$2          || return
     shift 2
 
     # check valid array
-    [[ -v earr[@]  &&  ${earr@a} == *[aA]* ]] ||
-        { err_msg 3 "not an array: '${!earr}'"; return; }
+    [[ -v __earr__[@]  &&  ${__earr__@a} == *[aA]* ]] ||
+        { err_msg 3 "not an array: '${!__earr__}'"; return; }
 
 
     # rely on other array functions where possible
     local k rs
-    k=$( array_match -nF -- "${!earr}" "$s" ) || {
+    k=$( array_match -nF -- "${!__earr__}" "$s" ) || {
         # allow status = 1 for no match
         rs=$?
         [[ $rs == 1 ]] && return 1
@@ -36,16 +36,16 @@ array_strrepl() {
     }
 
 
-    if [[ ${earr@a} == *A* ]]
+    if [[ ${__earr__@a} == *A* ]]
     then
         # associative array
         if [[ $# -eq 0 ]]
         then
-            unset earr["$k"]
+            unset __earr__["$k"]
 
         elif [[ $# -eq 1 ]]
         then
-            earr["$k"]=$1
+            __earr__["$k"]=$1
 
         else
             err_msg 5 "associative arrays can only take one element"
@@ -53,6 +53,6 @@ array_strrepl() {
         fi
     else
         # pass the original array name, to save a layer of abstraction
-        array_irepl "${!earr}" "$k" "$@"
+        array_irepl "${!__earr__}" "$k" "$@"
     fi
 }

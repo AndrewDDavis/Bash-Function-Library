@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 array_match () {
 
     # function docs
@@ -128,7 +126,7 @@ array_match () {
 
     _grep_run() {
         (
-            grep_cmd=$( type -P grep )
+            grep_cmd=$( builtin type -P grep )
             [[ $_verb -gt 1 ]] && set -x
             "$grep_cmd" "${grep_opts[@]}" -e "$ptn"
         )

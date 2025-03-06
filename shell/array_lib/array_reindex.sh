@@ -34,16 +34,16 @@ array_reindex() {
 
 
     # args
-    local -n iarr=$1    || return
+    local -n __iarr__=$1    || return
     shift
 
     # check valid array
-    [[ -v iarr[@]  &&  ${iarr@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!iarr}'"; return; }
+    [[ -v __iarr__[@]  &&  ${__iarr__@a} == *a* ]] ||
+        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
 
 
     # step through the array, keeping track of any gaps
-    for i in "${!iarr[@]}"
+    for i in "${!__iarr__[@]}"
     do
         # ignore earlier values and don't increment c when '-c' was used
         (( i < c )) && continue
@@ -52,8 +52,8 @@ array_reindex() {
 
             # if i > c, there is a gap in the index
             # - move the content
-            iarr[$c]=${iarr[$i]}
-            unset iarr[$i]
+            __iarr__[$c]=${__iarr__[$i]}
+            unset __iarr__[$i]
         }
 
         (( ++c ))

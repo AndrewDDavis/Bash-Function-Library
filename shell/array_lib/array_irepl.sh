@@ -1,6 +1,6 @@
 array_irepl() {
 
-    [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Replace array element at index with one or more new elements
 
@@ -24,13 +24,13 @@ array_irepl() {
     }
 
     # array name and index, then remaining args are new elements
-    local -n iarr=$1    || return
+    local -n __iarr__=$1    || return
     local k=$2          || return
     shift 2
 
     # check valid array and index
-    [[ -v iarr[@]  &&  ${iarr@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!iarr}'"; return; }
+    [[ -v __iarr__[@]  &&  ${__iarr__@a} == *a* ]] ||
+        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
 
     is_int $k ||
         { err_msg 4 "not an integer index: '$k'"; return; }
@@ -39,12 +39,12 @@ array_irepl() {
     if [[ $# -eq 0 ]]
     then
         # no new elements: delete the element and adjust the index
-        array_pop "${!iarr}" $k
+        array_pop "${!__iarr__}" $k
 
     elif [[ $# -eq 1 ]]
     then
         # one new element: trivial replacement
-        iarr[$k]=$1
+        __iarr__[$k]=$1
 
     else
         # add elements to the array, taking into account sparseness
@@ -93,7 +93,7 @@ array_irepl() {
 
         local i j=$k holes=1 i_last ign_holes=0 delta
 
-        for i in "${!iarr[@]}"
+        for i in "${!__iarr__[@]}"
         do
             # skip lower idcs, incl k
             [[ $i -le $k ]] && continue
@@ -116,7 +116,7 @@ array_irepl() {
         for (( i=i_last; i > k; i-- ))
         do
             # delta can increase at gaps
-            [[ ! -v iarr[$i] ]] && {
+            [[ ! -v __iarr__[$i] ]] && {
 
                 if [[ $ign_holes -gt 0 ]]
                 then
@@ -128,14 +128,14 @@ array_irepl() {
             }
 
             j=$(( i + delta ))
-            iarr[$j]=${iarr[$i]}
+            __iarr__[$j]=${__iarr__[$i]}
         done
 
         # then, write new elements to sequential indices from k
         for (( i=1; i <= $#; i++ ))
         do
             j=$(( k + i - 1 ))
-            iarr[$j]=${!i}
+            __iarr__[$j]=${!i}
         done
     fi
 }
