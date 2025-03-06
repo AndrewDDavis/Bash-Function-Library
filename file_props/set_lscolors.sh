@@ -1,8 +1,8 @@
 set_lscolors() {
 
-    [[ $# -gt 0 && $1 == @(-h|--help) ]] && {
+    [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
 
-        : "Set LS_COLORS to customize colours of GNU ls
+        : "Customize colours used by GNU ls, tree, and others
 
             Usage
 
@@ -91,22 +91,22 @@ set_lscolors() {
         unset -f _strip_dcfile
     ' RETURN
 
-    [[ -z $(command -v dircolors) ]] &&
+    [[ -n $( command -v dircolors ) ]] ||
         err_msg 2 "dircolors not found"
 
     # defaults and parse args
     local _chk_defs _prnt_defs
 
     local flag OPTARG OPTIND=1
-
     while getopts "cp" flag
     do
         case $flag in
-          ( c ) _chk_defs=1 ;;
-          ( p ) _prnt_defs=1 ;;
+            ( c ) _chk_defs=1 ;;
+            ( p ) _prnt_defs=1 ;;
+            ( * ) return ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
     # config directory
     local _lscdir=${XDG_CONFIG_HOME:-~/.config}/lscolors
@@ -124,7 +124,9 @@ set_lscolors() {
     elif [[ -n ${_chk_defs-} ]]
     then
         # check current defaults against existing file
-        local _chk_fn=$(mktemp -t lscolors_tmp.XXXXX)
+        local _chk_fn
+        _chk_fn=$( mktemp -t lscolors_tmp.XXXXX )
+
         dircolors -p > "$_chk_fn"
 
         if diff -q "$_chk_fn" "$_lscdir"/dircolors.defaults &> /dev/null
@@ -133,7 +135,7 @@ set_lscolors() {
             /bin/rm "$_chk_fn"
         else
             printf '%s\n' \
-                "Change detecteed in dircolors defaults."  \
+                "Change detected in dircolors defaults."  \
                 "New defaults written to \"$_lscdir/dircolors.defaults.new\"." \
                 "View the changes using e.g.: diff -u --color $_lscdir/dircolors.defaults{,.new}"  \
                 "Start using the new defaults using: mv -f $_lscdir/dircolors.defaults{.new,}"
