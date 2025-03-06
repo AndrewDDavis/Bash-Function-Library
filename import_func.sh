@@ -35,12 +35,12 @@ import_func() {
         Example: import dependencies in a script
 
           # import dependencies
-          [[ $( builtin type -t import_func ) == function ]] || {
-              source ~/.bash_library.d/import_func.sh \
+          [[ \$( builtin type -t import_func ) == function ]] || {
+              source ~/.bash_library.d/import_func.sh \\
                   || return 63
           }
 
-          import_func docsh err_msg \
+          import_func docsh err_msg \\
               || return 62
         "
         docsh -TD
