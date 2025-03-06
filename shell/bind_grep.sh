@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 bind-grep() {
 
     : "Search readline keybindings
@@ -79,7 +77,8 @@ bind-grep() {
 
     # preserve '--'
     (( OPTIND-- ))
-    [[ ${!OPTIND} == '--' ]] && grep_args+=( '--' )
+    [[ $OPTIND -gt 0  && ${!OPTIND} == '--' ]] &&
+        (( OPTIND-- ))
     shift $OPTIND
 
     grep_args+=( "$@" )
@@ -147,7 +146,7 @@ bind-grep() {
         alias_rslv -e grep grep_cmd \
             || grep_cmd=( grep )
 
-        array_strrepl grep_cmd grep "$(type -P grep)"
+        array_strrepl grep_cmd grep "$( builtin type -P grep )"
 
         "${grep_cmd[@]}" "${grep_args[@]}" <<< "$binddefs_str"
     fi

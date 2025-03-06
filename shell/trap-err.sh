@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Bash variables and so-on
 #
 # - Can use caller like:
@@ -196,3 +194,5 @@ trap-err() {
 
     printf >&2 '%s\n' "${_msgs[@]}"
 }
+
+export -f trap-err

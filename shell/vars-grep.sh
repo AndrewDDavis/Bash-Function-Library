@@ -1,5 +1,3 @@
-#!/bin/bash
-
 vars-grep() {
 
     [[ $# -gt 0  &&  $1 == @(-h|--help) ]] && {
@@ -42,8 +40,8 @@ vars-grep() {
         set -- '^'
 
     local grep_cmd sed_cmd
-    grep_cmd=$( type -P grep )
-    sed_cmd=$( type -P sed )
+    grep_cmd=$( builtin type -P grep )
+    sed_cmd=$( builtin type -P sed )
 
     [[ -n $( command -v greps ) ]] &&
         grep_cmd=greps

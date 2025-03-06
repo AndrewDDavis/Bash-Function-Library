@@ -93,7 +93,7 @@ run_vrb() {
 
     ## if A=B env var settings are present, the env command is needed
     [[ ${#evars[@]} -gt 0  &&  -z ${_env-} ]] &&
-        evars=( "$(type -P env )" "${evars[@]}" )
+        evars=( "$( builtin type -P env )" "${evars[@]}" )
 
 
     [[ -n ${_P-} ]] && {
@@ -102,7 +102,7 @@ run_vrb() {
         # - type -t returns alias, keyword, function, builtin, file or ''
         local t vct types=()
 
-        types=( $( type -at "$cmd" ) ) \
+        types=( $( builtin type -at "$cmd" ) ) \
             || return 125
 
         for t in "${types[@]}"
@@ -120,7 +120,7 @@ run_vrb() {
         elif [[ $vct == file ]]
         then
             # type -P gives path to executable
-            cmd=$( type -P "$cmd" )
+            cmd=$( builtin type -P "$cmd" )
 
         else
             return 126

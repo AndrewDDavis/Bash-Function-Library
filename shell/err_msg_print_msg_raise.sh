@@ -1,3 +1,6 @@
+# TODO:
+# - incorporate the functions from ~/Sync/Code/Backup/borg_go/bin/bgo_functions.sh
+
 err_msg() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
@@ -154,6 +157,7 @@ err_msg() {
     return $rs
 }
 
+export -f err_msg
 
 print_msg() {
 

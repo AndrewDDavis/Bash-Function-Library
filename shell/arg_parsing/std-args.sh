@@ -1,5 +1,3 @@
-#!/bin/bash
-
 std-args() {
 
     : "Filter arguments, setting aside some special ones
@@ -23,11 +21,11 @@ std-args() {
 
     Positional arguments (all required, but S1 and S2 may be empty):
 
-    - A1 : array to store option flags and their arguments, in the form passed on the
+      A1 : array to store option flags and their arguments, in the form passed on the
            command line
-    - A2 : array to hold positional arguments, in their original order
-    - S1 : string of short options that require an argument, e.g. 'abCD'
-    - S2 : string of long options that require an argument, seperated by spaces,
+      A2 : array to hold positional arguments, in their original order
+      S1 : string of short options that require an argument, e.g. 'abCD'
+      S2 : string of long options that require an argument, seperated by spaces,
            e.g. 'file regexp max-count after-context'
 
     Options:

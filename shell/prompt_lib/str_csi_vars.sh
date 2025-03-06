@@ -31,7 +31,7 @@ str_csi_vars() {
         In practice, to prevent re-running this function unnecessarily, a previous run
         may be detected using a test like the following:
 
-          if [[ -z \${_cbo-}  &&  \$( type -t str_csi_vars ) == function ]]
+          if [[ -z \${_cbo-}  &&  \$( builtin type -t str_csi_vars ) == function ]]
           then
               str_csi_vars
           fi

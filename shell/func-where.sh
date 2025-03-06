@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 func-where() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
@@ -22,7 +20,7 @@ func-where() {
 
         for func in "$@"
         do
-            command grep -q function < <( type -at "$func" ) ||
+            [[ $( builtin type -at "$func" ) == *function* ]] ||
                 { err_msg w "function not found: '$func'"; continue; }
 
             s=$( declare -F "$func" )

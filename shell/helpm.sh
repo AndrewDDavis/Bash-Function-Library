@@ -1,11 +1,10 @@
-#!/bin/bash
-
 # Use help bash-completion for helpm
 # - NB complete -p help -> complete -F _comp_cmd_help help
 #complete $(complete -p help | sed 's/^complete //; s/help$/helpm/')
 
 # TODO:
 # - completion
+# - scriptify?
 
 helpm() {
 
@@ -29,7 +28,7 @@ helpm() {
     shift
 
     # check command type
-    types=$( type -at "$cmd" )
+    types=$( builtin type -at "$cmd" )
 
     command grep -q 'builtin' <<< "$types" && _b=1
     command grep -q 'function' <<< "$types" && _f=1

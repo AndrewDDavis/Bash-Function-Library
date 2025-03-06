@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 term_detect() {
 
     [[ ${1-} == @(-h|--help) ]] && {

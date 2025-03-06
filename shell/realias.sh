@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 realias() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
