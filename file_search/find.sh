@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # File Search functions using find
 
 find-colour() {

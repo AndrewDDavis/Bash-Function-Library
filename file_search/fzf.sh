@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # file search and launch with fzf
 [[ -n $(command -v fzf) ]] && {
 

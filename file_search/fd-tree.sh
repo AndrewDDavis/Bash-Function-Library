@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 fd-tree() {
 
     : "Match files with fd, display as tree

@@ -1,9 +1,8 @@
-#!/bin/bash
-
 # TODO
 # - test loci long-option behaviour, esp --dir and --exec
 #   I think it will work with --dir=foo, but not --dir 'foo'
 # - add option to filter with grep pattern, rather than only using sed
+# - is std-args useful here?
 
 # locate with ERE regex patterns
 alias eloci='loci --regex'
@@ -336,7 +335,7 @@ loci() (
         #   _filt-grep <pattern>
 
         local gpth
-        gpth=$( type -P grep )
+        gpth=$( builtin type -P grep )
 
         "$gpth" ${_nulls:+-z} "$1"
     }
@@ -350,7 +349,7 @@ loci() (
         #   _filt-sed <pattern> <replacement>
 
         local spth
-        spth=$( type -P sed )
+        spth=$( builtin type -P sed )
 
         "$spth" -nE ${_nulls:+-z} "\\:$1: { s:$1:$2:; p; }"
     }

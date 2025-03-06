@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # notesh
 #
 # - searches notes for header containing the search string
@@ -34,23 +32,23 @@
 
 notesh() {
 
-    : "Search for notes using ugrep
+    : "Open notes matching a pattern
 
     Usage: notesh [grep-opts] 'pattern'
 
-    This function calls 'ugrep -UIjRl0' to search for text-like files with matches to
-    the pattern. By default, '~/Documents' is searched, any symlinks encountered are
-    followed, and smart-case matching is used. Ugrep uses POSIX ERE syntax by default.
+    This function searches a directory tree for text files with matches to a pattern,
+    and opens the selected file. If more than one file is matched by the pattern, an
+    interactive selection screen is presented.
 
-    If the pattern is a simple, containing only alphanumeric characters, spaces, dash,
-    and dot, it is expanded to match lines that are mardown or asciidoc headings. In
-    this case, a glob is also used to only match files with plausible extensions.
+    By default, text files in '~/Documents' are searched, and any symlinks encountered
+    are dereferenced and followed. If the working directory is a subdirectory of
+    '~/Documents', and '-d' is not used, the working directory is searched.
 
-    If the working directory is a subdirectory of '~/Documents', and '-d' is not used,
-    the working directory is searched.
-
-    If more than one file is matched by the pattern, an interactive selection screen is
-    presented.
+    The \`ugrep\` command is used to match the pattern, using smart-case matching and
+    POSIX ERE syntax by default. If the pattern is simple, containing only alphanumeric
+    characters, spaces, dash, and dot, it is expanded to match lines that are mardown
+    or asciidoc headings. In this case, a glob is also used to only match files with
+    plausible extensions.
 
     Options
 
@@ -64,7 +62,7 @@ notesh() {
       : search in 'dir/' instead of '~/Documents/'.
 
       -f
-      : match anywhere, rather than only markdown or adoc headings
+      : match anywhere in the file, rather than only section headings
     "
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
@@ -82,10 +80,10 @@ notesh() {
     str_split cmd "${PAGER:-less}"
 
     # args
-    local OPTIND=1 OPTARG flag
-    while getopts ':d:fx:pev' flag
+    local _flag OPTIND=1 OPTARG
+    while getopts ':d:fx:pev' _flag
     do
-        case $flag in
+        case $_flag in
             ( d )
                 _d=$OPTARG
                 [[ $_d != '/' ]] &&
@@ -104,13 +102,13 @@ notesh() {
                 str_split -q cmd "${EDITOR:-vi}"
             ;;
             ( v )
-                cmd=( $( type -P code ) -n )
+                cmd=( $( builtin type -P code ) -n )
             ;;
             ( \? )
                 # arguments for [u]grep should be preserved
-                # - OPTIND would have advanced if it was a lone option like -X, not a blob
-                flag=$(( OPTIND - 1 ))
-                [[ ${!flag} == -${OPTARG} ]] &&
+                # - OPTIND will have advanced if a lone option was used (like -X) rather than a blob
+                _flag=$(( OPTIND-1 ))
+                [[ ${!_flag} == -${OPTARG} ]] &&
                     (( OPTIND-- ))
                 break
             ;;
@@ -120,60 +118,68 @@ notesh() {
             ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
-    [[ $# -gt 0 ]] || return 2
 
     # debug
     # printf >&2 '<%s>\n' "$@"
     # set +x
     # return
 
-    # ugrep command path and default args
-    local ug_cmd ug_args
-    ug_cmd=$( type -P ugrep ) || return
-    ug_args=( '-UIjRl0' )
+    # [u]grep command path and default args
+    # - TODO: allow GNU grep as well
+    local grep_cmd grep_ptn grep_cmdline
+    grep_cmd=$( builtin type -P ugrep ) \
+        || return
+
+    # pattern argument required
+    # - all else should be grep options
+    [[ $# -gt 0 ]] ||
+        return 99
+
+    grep_ptn=${!#}
+
+    grep_cmdline=( "$grep_cmd" '-UIjRl0' "${@:1:$(($#-1))}" )
 
 
-    if [[ -z ${_f-} ]]
+    if [[ ! -v _f ]]
     then
         # for a simple pattern, add regex for heading lines
         # - refer to the  _expand_keyword() function in scw()
-        local pat=${!#}
 
-        if [[ $pat != *[![:alpha:][:digit:][:blank:].-]* ]]
+        if [[ $grep_ptn != *[![:alpha:][:digit:][:blank:].-]* ]]
         then
-            pat="^(#|=).*${pat}"
+            grep_ptn="^(#|=).*${grep_ptn}"
 
-            set -- "${@:1:$(($#-1))}" "$pat"
-
-            # match only files with a plausible extension, or no extension
-            # - matching no extension at the same time is tricky: it's possible with
-            #  the glob -g '!*.*', but that will exclude all the files with extensions
-            #  (--exclude patterns take priority over --include patterns).
+            # match only files with a plausible extension
+            # - NB, matching no extension at the same time is tricky: it's possible with
+            #   the glob -g '!*.*', but that will exclude all the files with extensions
+            #   (--exclude patterns take priority over --include patterns).
             # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
             # - or do a seperate search with the no-extension glob...
-            ug_args+=( -O 'md,adoc,txt,text,markdown' )
+            grep_cmdline+=( -O 'md,adoc,txt,text,markdown' )
         fi
     fi
+
+    grep_cmdline+=( -- "$grep_ptn" "$_d" )
 
     # capture filenames
     # - for quoted output to shell, use -m1 --format='%h%~'. In a script like this, it
     #   is better to simply use -l.
     # - consider --exclude-dir=.git if there are any git dirs in the search dir
-    local fn fns ug_pid ug_rs
+    local fn fns grep_pid grep_rs
 
-    IFS='' mapfile -d '' fns < \
-        <(  set -x
-            "$ug_cmd" "${ug_args[@]}" "$@" "$_d"
-        )
+    IFS='' mapfile -d '' fns < <(
+        set -x
+        "${grep_cmdline[@]}"
+    )
 
     # check ugrep return status from subprocess
-    ug_pid=$!
-    wait $ug_pid || {
-        ug_rs=$?
-        [[ $ug_rs -eq 1 ]] && return 1
-        err_msg $ug_rs "ugrep error"; return
+    grep_pid=$!
+    wait $grep_pid || {
+        grep_rs=$?
+        [[ $grep_rs -eq 1 ]] && return 1
+        err_msg $grep_rs "ugrep error"; return
     }
 
     # select a file

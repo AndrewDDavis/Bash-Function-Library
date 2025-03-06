@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 fd() {
 
     : "find variant with user-friendly syntax and defaults
@@ -100,8 +98,8 @@ fd() {
         { docsh -TD; return; }
 
     local fd_cmd
-    fd_cmd=$( type -P fd ) \
-        || fd_cmd=$( type -P fdfind ) \
+    fd_cmd=$( builtin type -P fd ) \
+        || fd_cmd=$( builtin type -P fdfind ) \
             || return
 
     "$fd_cmd" --no-ignore-vcs "$@"

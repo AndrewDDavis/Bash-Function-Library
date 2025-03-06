@@ -1,5 +1,3 @@
-#!/bin/bash
-
 function rg-zpg {
 
     : "search with ripgrep, open in pager"
