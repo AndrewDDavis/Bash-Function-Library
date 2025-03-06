@@ -249,9 +249,9 @@ ps-pgrep() {
     ### check for supported ps
     local _v ps_cmd pgrep_cmd grep_cmd
 
-    ps_cmd=$( type -P ps )
-    pgrep_cmd=$( type -P pgrep )
-    grep_cmd=$( type -P grep )
+    ps_cmd=$( builtin type -P ps )
+    pgrep_cmd=$( builtin type -P pgrep )
+    grep_cmd=$( builtin type -P grep )
 
     if ! {
         _v=$( "$ps_cmd" --version 2>/dev/null ) &&
@@ -259,7 +259,7 @@ ps-pgrep() {
         }
     then
         err_msg 2 "ps version not supported; \`type ps\` says:
-                   $( type ps | head -1 )"
+                   $( builtin type ps | head -1 )"
                    # ^^^ uses head to prevent printing of function definition
         return
    fi
