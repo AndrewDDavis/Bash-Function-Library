@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 sed-delln() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Smart-case egrep
 alias egreps="greps -E"
 
@@ -35,7 +33,7 @@ greps() {
     # use full patch to grep, but also keep any defined alias
     local grep_cmd grep_path
 
-    grep_path=$( type -P grep ) \
+    grep_path=$( builtin type -P grep ) \
         || return
 
     alias_rslv -e grep grep_cmd \
@@ -395,7 +393,7 @@ _parse_grepopts() {
 #         gopts+=( -i )
 
 #     local grep_cmd
-#     grep_cmd=$( type -P grep ) \
+#     grep_cmd=$( builtin type -P grep ) \
 #         || return
 
 #     (

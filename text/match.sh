@@ -1,5 +1,3 @@
-# shellcheck shell=bash
-
 match() {
 
     : "Test STDIN for match to a regex pattern using awk
