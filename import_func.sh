@@ -42,6 +42,11 @@ import_func() {
 
           import_func docsh err_msg \\
               || return 62
+
+
+          # NB, in the script files that define functions in the Bash_Function_Library,
+          # access to import_func will be assumed, and only the import_func line above
+          # will be used.
         "
         docsh -TD
         return

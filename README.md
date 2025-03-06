@@ -20,7 +20,6 @@ TODO:
   + research_tools.sh
   + shell/history_fc.sh
   + sys_admin/vmware.sh
-  + text/latex.sh
 
 
 The files in this directory tree with '.sh' or '.bash' extensions contain shell
@@ -49,6 +48,9 @@ source ~/.bash_library.d/import_func.sh
 import_func docsh err_msg str_split array_match \
     || return
 ```
+
+Within the script files of this library, access to `import_func` will be assumed, so
+the `source` line should be placed in the user's `~/.bashrc` file.
 
 I used to symlink a single file, `~/.bash_functions`, and source it from `~/.bashrc`.
 Now the alias, function, and environment variable definitions have been moved to
