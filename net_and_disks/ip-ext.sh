@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 ip-ext() {
 
     : "Print the external IP of the current machine

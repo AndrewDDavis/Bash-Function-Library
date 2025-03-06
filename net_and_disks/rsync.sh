@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Exclude annoying files from interactive transfers
 # - this uses the merge-files syntax of --filter
 # - another way to do this is -F, which uses per-dir files: --filter=': /.rsync-filter'
@@ -243,7 +241,7 @@ rsyncx() (
 
     # run rsync
     local rsync_cmd rs_ec=0
-    rsync_cmd=$( type -P rsync )
+    rsync_cmd=$( builtin type -P rsync )
 
     (
         [[ $_v -gt 0 ]] && set -x
