@@ -3,15 +3,27 @@
 # - For functions using 'grep -r' to search for matching files, see the
 #   '../file_search' dir.
 
+# Aliases for grep variants
+alias egrep='grep -E'
+alias fgrep='grep -F'
+alias rgrep='grep -r'
+
+alias grepi="grep -i"
+alias egrepi="grep -iE"
+alias fgrepi="grep -iF"
+alias rgrepi="grep -ir"
+
 # Colourized output
 if  [[ ${_term_n_colors:-2} -ge 8 ]] &&
     grep --color=auto . <<< test_string &>/dev/null
 then
-    # GNU and BSD grep
-    # - relies on GREP_COLOR or GREP_COLORS
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
+    import_func realias \
+        || return 63
+
+    # GNU and BSD grep rely on GREP_COLOR or GREP_COLORS
+    realias grep 'grep --color=auto'
+    realias fgrep -f 'fgrep --color=auto'
+    realias egrep -f 'egrep --color=auto'
 
     # GNU grep and ugrep colours
     # - refer:
@@ -23,8 +35,3 @@ then
     # - bold matched text, underline filenames, dim context, metadata gets white background
     export GREP_COLORS='sl=:cx=3:mt=1:fn=4;35;107:ln=107:bn=107:cn=107:se=2;107'
 fi
-
-# Case insensitive grep variants
-alias grepi="grep -i"
-alias egrepi="grep -iE"
-alias fgrepi="grep -iF"
