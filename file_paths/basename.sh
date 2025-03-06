@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 __version__="\
 basename function v0.1 (Feb 2025)
 by Andrew Davis
