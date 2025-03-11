@@ -1,51 +1,6 @@
-### Zip archives
-
-# TODO:
-# - set up completions for zip and these functions
-
-# Set zip command defaults
-export ZIPOPT="-roy -ws"
-
-[[ -r ~/.config/zip/zip_nlist ]] && {
-    # avoid compression of already compressed files (e.g. images)
-    ZIPOPT="${ZIPOPT} -n \"$( < $HOME/.config/zip/zip_nlist )\""
-}
-
-[[ -r ~/.config/zip/zip_xlist ]] && {
-    # exclude annoying files from archives (e.g. .DS_Store)
-    ZIPOPT="${ZIPOPT} \"-x@$HOME/.config/zip/zip_xlist\""
-}
-
-# Test zip archive integrity
-zip-test() { unzip -tq "$@"; }
-
-# List zip archive contents
-zip-list() { unzip -l "$@"; }
-alias unzip-list="zip-list"
-
-# Zip archive info and list
-zip-info() {
-    local docstr="Show zip archive info and file listing.
-
-    Usage: ${FUNCNAME[0]} [opts] archive.zip
-
-    Notes
-
-    - Use -v for maximum verbosity.
-    - This uses the -m option (medium verbosity), which includes the output of
-      -h (headers) and -t (totals). It also adds -z to print the archive
-      comment, if any.
-    - The only difference with -s (short) output, is that is omits the
-      compression ratio column, and with -l (long) is that is prints the
-      compressed size instead of ratio.
-    "
-
-    zipinfo -mz "$@" | more
-}
-
-
 zipit() (
-    docstr="Move files or directory trees to a zip archive.
+
+    : "Move files or directory trees to a zip archive.
 
     This is a wrapper function for quickly adding files to a zip archive,
     and then removing the source files to simulate a move operation.
@@ -55,7 +10,7 @@ zipit() (
 
     Usage
 
-        $FUNCNAME [options] [archive[.zip]] path1 [path2 ...]
+        zipit [options] [archive[.zip]] path1 [path2 ...]
 
     If only 1 non-option argument is issued, $FUNCNAME will create an archive
     in the same directory and named the same way as the input path, with
@@ -94,7 +49,8 @@ zipit() (
       wildcard patterns given on the command line to avoid their interpretation by
       the shell.
 
-    Important options:
+    Notable options:
+
      -r : Recurse paths, to include files under any directories provided in the
           arguments. Files included may be tweaked using -x and -i.
      -R : Scan the directory tree starting at the current directory for files
@@ -112,10 +68,8 @@ zipit() (
      -y : archive symlinks as symlinks.
     "
 
-	[[ $# -eq 0 || $1 =~ ^(-h|--?help)$ ]] && {
-        docsh -TD "$docstr"
-        return 0
-    }
+	[[ $# -eq 0 || $1 == @(-h|--help) ]] &&
+	    { docsh -TD; return; }
 
     # Parse args
     # Count non-option args
@@ -246,4 +200,3 @@ zipit() (
 
     return 0
 )
-
