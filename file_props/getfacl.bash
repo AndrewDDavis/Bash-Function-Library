@@ -1,16 +1,15 @@
-[[ -n $( command -v getfacl ) ]]
-{
+[[ -n $( command -v getfacl ) ]] && {
+
     ls-acl() {
 
         : "list file ACLs"
 
-        [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
-            docsh -TD
-            return
-        }
+        [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
+            { docsh -TD; return; }
 
-        ( set -x
-          getfacl -pt "$@"
+        (
+            set -x
+            getfacl -pt "$@"
         )
     }
 
