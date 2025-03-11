@@ -28,7 +28,8 @@
 
         See \`man tracker3-search\` etc., or \`tracker3 --help\` for all options.
         "
-        [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
+
+        [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
             { docsh -TD; return; }
 
         trap '
