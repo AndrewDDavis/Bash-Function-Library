@@ -9,7 +9,7 @@
         locate -ib "$@" | fzf
     }
 
-    # browse text files with fzf and less
+    # browse text files with fzf and open them in less, etc.
     fzf-less() {
         fzf --bind "enter:execute(less {})"
     }
