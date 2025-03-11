@@ -7,6 +7,6 @@ then
     alias gtrash-ls="gio trash --list"
 
     # NB, compared to gio, there is more functionality available in the trash-cli
-    # package, and it works in bind mounts and btrfs subvolumes, unlike gio. See the
-    # File Managers note file for usage notes.
+    # package, and it works in bind mounts and btrfs subvolumes, unlike gio. Refer to
+    # trash-wrapper function for trash-cli as well.
 fi
