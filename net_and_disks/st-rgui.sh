@@ -1,17 +1,12 @@
-# Syncthing
-
-# Now installed by apt to /usr/bin/syncthing
-path_check_add -o /usr/local/syncthing  \
-                  /Applications/Syncthing.app/Contents/Resources/syncthing
-
-st-gui() {
-    # start local syncthing GUI in browser
-    syncthing --browser-only
-}
-
 st-rgui() {
-    # start remote syncthing GUI in browser
-    # always connects to nemo for now
+
+    : "start remote syncthing GUI in browser
+
+    - currently, always connects to nemo
+    "
+
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
+	    { docsh -TD; return; }
 
     # arg1: -n : connect from outside the Hawthorne network
     local nat=false
