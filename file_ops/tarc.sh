@@ -1,200 +1,23 @@
-### Tar Archives
-
-# Notes:
+### Tar Archives Notes:
+#
 # - when extracting archives that have symlinks containing '..' in their paths, tar is
 #   very careful with the extraction, and does some checks to ensure nothing malicious
-#   is happening. This can add a lot of extra time. As [noted](https://mort.coffee/home/tar/),
+#   is happening. This can add a lot of extra time. As [noted](https://mort.coffee/home/tar),
 #   use the -P option to disable the security checks and speed up the process if you
 #   trust the archive.
 #
 # - a project that addresses tar's major shortcomings is [dar](https://github.com/Edrusb/DAR)
 #   (e.g. compression within the archive, archive index, checksum, encryption, ...), and
 #   still retains nice features from tar (e.g. transfer over ssh).
-
+#
+# - another nice alternative is tpxz archives... See my notes file.
 
 # TODO:
-# - maybe tar-cz and tarc are one function? or tarc calls tar-cz
 # - tarc: consider an option (-h) for generating an md5 for the archive
 # - create a function for appending to a tgz archive; part of tarc?
-
-
-tar-list() {
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
-
-        docsh -TD "List files in a tar archive.
-
-        Usage: ${FUNCNAME[0]} [opts] <archive-file>
-
-        Notes
-
-          - Tar starts listing right away, but must read the header for each file block
-            before it can finish the list. The file blocks occur sequentially throughout
-            the file, so this entails reading the whole file before the listing
-            operation completes. As long as the file is seekable (force with -n), this
-            may not be too bad.
-
-          - If a large archive is commonly listed, better archive formats include [zip](https://askubuntu.com/a/1036234/52041)
-            and possibly [dar](https://github.com/Edrusb/DAR).
-        "
-        return 0
-    }
-
-    local -a targs=( -tv )
-
-    # archive filename must be last arg
-    targs+=( "${@:1:$#-1}" -f "${@:(-1)}" )
-
-    command tar "${targs[@]}"
-}
-
-# check tar file, not really a test of the contents
-tar-check() {
-
-    : "Check archives using compression tools and tar.
-
-    Args: archive pathname(s)
-
-    From the tar manual:
-    > A tar-format archive contains a checksum that most likely will detect
-      errors in the metadata, but it will not detect errors in the data.
-    "
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
-        docsh -TD
-        return
-    }
-
-    local ifn ext
-
-    _test_archive() {
-        # use cmd ($1) to test infile ($ifn); optional message on $2
-        # afterward, report OK or provide a newline before an error message
-        printf '%s' "$ifn: checking $1${2:+ ($2)} checksum ... "
-
-        { if [[ $1 == tar ]]
-          then
-            command $1 -tf "$ifn" >/dev/null
-          else
-            command $1 -t "$ifn"
-          fi
-        } && printf '%s\n' "OK"
-    }
-
-    for ifn in "$@"
-    do
-        ext=${ifn##*.}
-
-        case $ext in
-            ( gz | tgz | taz )
-                _test_archive gzip CRC-32
-            ;;
-            ( bz2 | tbz | tbz2 | tz2 )
-                _test_archive bzip2
-            ;;
-            ( xz | txz | lzma | lz | tlz )
-                _test_archive xz
-            ;;
-            ( zst | tzst )
-                _test_archive zstd
-            ;;
-        esac
-
-        _test_archive tar metadata
-    done
-
-    unset -f _test_archive
-}
-
-tar-cz() (
-
-    # Create archive with progress updates
-    #
-    # Usage: tar-cz -f foo.tgz foo
-    #    or  tar-cz -f - foo | xz > foo.xz
-
-    _opts=( -cz )
-
-    # show totals at end
-    _opts+=( --totals )
-
-    # Calculate checkpoints from input size to make a crude progress meter
-    # - for --checkpoint usage, see
-    #   https://www.gnu.org/software/tar/manual/html_section/checkpoints.html
-    in_sz=$( du -sk --apparent-size "${@:(-1)}" | cut -f 1 )
-    chkpt=$( echo "scale=0; ${in_sz}/50" | bc )
-
-    # show est. size in human units
-    printf '%s\n' "Estimated data size: $(numfmt --from-unit=1024 --to=iec $in_sz)"
-
-    #_opts+=( --record-size=1K --checkpoint="$chkpt" --checkpoint-action="ttyout=>" )
-    #printf '%s\n' "Estimated: [==================================================]"
-    #printf '%s' "Progess:   ["
-
-    _opts+=( --record-size=1K --checkpoint="$chkpt" )
-    _opts+=( --checkpoint-action=ttyout='%{%Y-%m-%d %H:%M:%S}t (%d sec): %uK read, %T%*\r' )
-
-    tar "${_opts[@]}" "$@"
-
-    #printf '%s\n' "]"
-)
-
-copy-tree() {
-
-    : "Copy file hierarchies, preserving permissions with tar.
-
-	Usage: ${FUNCNAME[0]} [options] <srcdir> <destdir>
-
-	Copies full contents of srcdir to destdir, preserving permissions when
-    possible. If destdir does not exist, it will be created. This function
-    could be extended to work with e.g. a network location as well. See the tar
-    man page for details.
-
-    Notes:
-
-	- Additional options provided on the command line are passed to tar on the
-      create side (e.g., for compression or exclusion of files).
-
-	- Internally, tar data is passed through a pipe of this form:
-	  tar -cf - -C srcdir [options] . | tar -xpf - -C destdir
-
-    - By default, ${FUNCNAME[0]} prints the tar command before running it. Use
-      '-v' as the first argument to make the process more verbose.
-	"
-
-	[[ $# -lt 2 || $1 == @(-h|--help) ]] && {
-	    docsh -TD
-	    return
-	}
-
-    # trap ERR to cleanly return on errors
-    trap '
-        s=$?
-        printf "%s %s\n" "${FUNCNAME[0]} returning:"
-        printf "    %s\n" "status $s at l. ${BASH_LINENO[0]}," \
-                        "command is $BASH_COMMAND"
-        return $s
-    ' ERR
-
-    trap '
-        trap - return err
-    ' RETURN
-
-    # check for verbose
-    [[ $1 == -v ]] && {
-        local vrb="-v"
-        shift
-    }
-
-    # extract srcdir and destdir from the arguments
-    local src="${@:(-2):1}"
-    local dest="${@:(-1):1}"
-
-    set -- "${@:1:$(( $# - 2 ))}"
-
-    [[ ! -d $dest ]] && run_vrb -P mkdir ${vrb:-} "$dest"
-
-    run_vrb -P tar ${vrb:-} -cf - -C "$src" "$@" . \
-        | run_vrb -P tar -xpf - -C "$dest"
-}
+# - using tarc -maf foo ... shouldn't override the usual behaviour of tar -a,
+#    it's too confusing.
+# - NB, the progress meter from tar-cz has been incorporated into tarc
 
 tarc() (
 
@@ -204,8 +27,8 @@ tarc() (
 
     This is a wrapper function for quickly creating or adding to a tar archive,
     and optionally removing the source files to simulate a move operation.
-    Although most arguments are passed on to tar, tarc works
-    differently in the following ways:
+    Although most arguments are passed on to tar, tarc works differently in the
+    following ways:
 
     - If only non-option arguments are issued, or the -a option is used
       (see below), tarc will create an archive at the same path as
@@ -286,18 +109,22 @@ tarc() (
 
     Notes on Move (-m option)
 
-    - This turns on the -v option internally, but captures the output to track
-      added files for later removal. To see verbose output to the terminal,
-      issue the -v option early in the options list.
+      - Using -m has several differences compared to using --remove-files with GNU tar:
 
-    - Using GNU tar with --remove-files removes the files during program operation.
-      E.g.
-        command tar --remove-files -cvf foo2.tar foo2/bar/ foo2/nonfile
-      Upon hitting the 'nonfile' argument, which doesn't exist, tar exits, but has
-      already removed foo2/bar and its contents. This function is more conservative, and
-      only removes files after a successful run. The trade-off is that the complete disk
-      space to create the archive is required.
+          + GNU tar removes the files during program operation. Thus, if a later
+            command-line file argument does not exist, tar exits, but has already
+            removed the files specified earlier on the command line.
 
+          + This function is more conservative, and only removes files after a
+            successful run is completed. The trade-off is that it requires enough disk
+            space to create the full archive before any data is deleted.
+
+          + GNU tar also fails when there are excluded files, because it can't rmdir.
+
+      - To track the added files, this function turns on the -v argument to tar and
+        captures the output to track added files for later removal. Thus, to see verbose
+        output to the terminal when using -m, issue the -v option earlier on the
+        command-line.
 
     Other Notes
 
@@ -336,11 +163,26 @@ tarc() (
 	[[ $# -eq 0 || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }
 
+    # trap ERR to cleanly return on errors
+    # shellcheck disable=SC2154
+    trap '
+        s=$?
+        printf "%15s %s\n" \
+            "$FUNCNAME returning:" \
+            "status $s at l. ${BASH_LINENO[0]}," \
+            " " "command is $BASH_COMMAND"
+        return $s
+    ' ERR
+
+    trap '
+        trap - return err
+    ' RETURN
+
     # Parse args
     # - note default getopts behaviour:
     #     + breaks on -- by default and advances OPTIND
     #     + breaks on non-option arg and doesn't advance OPTIND
-    tar_opts=()
+    local _append _mv _verb tar_opts=()
 
     local flag OPTARG OPTIND=1
     while getopts ":cruma:v" flag
@@ -355,82 +197,84 @@ tarc() (
             tar_opts+=( -$flag )
         ;;
         ( m )
-            _move=True
-            [[ -z ${_verb:-} ]] && tar_opts+=( -v )
+            _mv=True
+            [[ -z ${_verb-} ]] && tar_opts+=( -v )
         ;;
         ( a )
             _ofx=${OPTARG#.}
         ;;
         ( v )
             _verb="-v"
-            [[ -z ${_move:-} ]] && tar_opts+=( -v )
+            [[ -z ${_mv-} ]] && tar_opts+=( -v )
         ;;
         ( \? )
             # ensure opts for tar are passed through
             (( OPTIND -= 1 ))
             break
         ;;
+        ( : )
+            err_msg 2 "missing argument for -$OPTARG"
+            return
         esac
     done
     shift $(( OPTIND-1 ))
 
-    # Set command to use (tar, gtar, or bsdtar)
-    local tar_cmd="tar"
+    _chk_tarv() {
+        # GNU tar or BSD tar
+        # - tar command to use (tar, gtar, or bsdtar)
+        local tar_cmd="tar" tar_type tar_vstr tar_vers tar_vout
 
-    # Prefer Gnu tar over BSD tar
-    # - since bsdtar doesn't take options to the compression program
-    # - Homebrew installs Gnu tar as gtar
-    [[ -n $( command -v gtar ) ]] && tar_cmd="gtar"
+        # - Prefer GNU since bsdtar doesn't take options to the compression program
+        # - Homebrew installs Gnu tar as gtar
+        [[ -n $( command -v gtar ) ]] &&
+            tar_cmd="gtar"
 
-    # trap ERR to cleanly return on errors
-    trap 's=$?
-          printf "%15s %s\n" "$FUNCNAME returning:" \
-                             "status $s at l. ${BASH_LINENO[0]}," \
-                             " " "command is $BASH_COMMAND"
-          return $s' ERR
-    trap 'trap - return err' RETURN
+        # ensure command is on path
+        tar_cmd=$( builtin type -P "$tar_cmd" ) \
+            || return 2
 
-    # ensure command on path is used
-    tar_cmd=$( type -P "$tar_cmd" ) \
-        || return 2
+        # Test tar version
+        # - BSD tar: bsdtar (on both Linux and macOS) 3.7.2 (Linux), 2.8.3 (macOS)
+        # - GNU tar: (GNU tar) 1.35
+        tar_vstr=$( "$tar_cmd" --version | head -n1 )
 
-    # Test tar version
-    # - BSD tar: bsdtar (on both Linux and macOS) 3.7.2 (Linux), 2.8.3 (macOS)
-    # - GNU tar: (GNU tar) 1.35
-    tar_vstr=$( "$tar_cmd" --version )
+        if command grep -q 'bsdtar' <<< "$tar_vstr"
+        then
+            tar_type=bsd
+            tar_vers=$( cut -d' ' -f2 <<< "$tar_vstr" )
+            tar_vout="BSD tar ${tar_vers}"
 
-    if grep -q 'bsdtar' <<< "$tar_vstr"
-    then
-        tar_type=bsd
-        tar_vers=$( cut -d' ' -f2 <<< "$tar_vstr" )
-        tar_vout="BSD tar ${tar_vers}"
+            [[ ${tar_vers:0:1} -lt 3 ]] && {
+                printf >&2 '%s\n' "Warning, older BSD tar version: $tar_vers"
+            }
 
-        [[ ${tar_vers:0:1} -lt 3 ]] && {
-            printf >&2 '%s\n' "Warning, older BSD tar version: $tar_vers"
-        }
+        elif command grep -q 'GNU tar' <<< "$tar_vstr"
+        then
+            tar_type=gnu
+            tar_vers=$( cut -d' ' -f4 <<< "$tar_vstr" )
+            tar_vout="GNU tar ${tar_vers}"
 
-    elif grep -q 'GNU tar' <<< "$tar_vstr"
-    then
-        tar_type=gnu
-        tar_vers=$( head -1 <<< "$tar_vstr" | cut -d' ' -f4 )
-        tar_vout="GNU tar ${tar_vers}"
+        else
+            err_msg w "unknown tar version string:" "$tar_vstr"
+        fi
 
-    else
-        printf >&2 '%s\n' "Warning, unable to determine tar type and version:" "$tar_vstr"
-    fi
+        [[ -n ${tar_type-} ]] &&
+            printf >&2 ' + %s\n' "$tar_vout"
+    }
 
-    [[ -n $tar_type ]] &&
-        printf >&2 '%s\n' " + $tar_vout"
+    _chk_tarv
 
 
     # Introduce archive name if needed
     # - this is only simple for 1 non-option arg, otherwise you would need to
     #   parse the args as tar does...
+    # TODO: use std-args here for tar
+
 
     # - count option and non-option args
-    n_opts=$(printf '%s\0' "$@" |
-               { egrep -zc '^-' || true; } )
-    n_args=$(( $# - $n_opts ))
+    n_opts=$( printf '%s\0' "$@" \
+                | { command grep -Ezc '^-' || true; } )
+    n_args=$(( $# - n_opts ))
 
     if [[ $n_args -eq 0 ]]
     then
@@ -439,7 +283,8 @@ tarc() (
     elif [[ $n_opts -eq 0 || -n $_ofx ]]
     then
         # create by default
-        [[ -z ${_append:-} ]] && tar_opts+=( -c )
+        [[ -z ${_append-} ]] &&
+            tar_opts+=( -c )
 
         # define archive name
         # last arg must be a source path
@@ -452,7 +297,7 @@ tarc() (
         [[ -e $ofn ]] &&
             of_sz=$( stat -c'%s' "$ofn" )
 
-        if [[ ${_append:-} != True  &&  -e $ofn ]]
+        if [[ ${_append-} != True  && -e $ofn ]]
         then
             [[ $of_sz -eq 0 ]] ||
                 err_msg 3 "outfile exists: $ofn"
@@ -466,10 +311,11 @@ tarc() (
 
 
     # Exclude annoying files (e.g. .DS_Store) if exclude file found
-    # - works with Gnu tar (Linux) and BSD tar (macOS)
+    # - works with GNU tar (Linux) and BSD tar (macOS)
     # - --exclude-from=FILE is also cross-platform, but not on older bsdtar
     xlist="$HOME/.config/zip/zip_xlist"
-    [[ -s $xlist ]] && tar_opts+=( -X "$xlist" )
+    [[ -s $xlist ]] &&
+        tar_opts+=( -X "$xlist" )
 
 
     # Echo tar command line, but not too verbose
@@ -493,11 +339,41 @@ tarc() (
     # - no need to test return status, errtrap takes care of it
     # - previously used separate tar and zip, e.g.:
     #   tar -cf - "$ifn" | $zp ${zo-} > "$ofn"
-    if [[ $tar_type == gnu ]]
+    if [[ ${tar_type-} == gnu ]]
     then
-        # Note on _move option:
-        # - used to use GNU's --remove-files, but this causes tar to fail when there
-        #   are excluded files, because it can't rmdir.
+
+        # Show totals on STDERR at end
+        tar_opts+=( --totals )
+
+        # Print a crude progress meter on STDERR
+        # - calculate input data size, and calc 2% for checkpoints
+        # - du calculates total number of 1K blocks
+        # - this assumes last arg is source file name
+        local data_sz data_sz_h cp_sz
+        data_sz=$( du -sk --apparent-size "${@:(-1)}" \
+                    | cut -f 1 )
+        cp_sz=$( bc <<< "scale=0; ${data_sz}/50" )
+
+        # show est. size in human units
+        data_sz_h=$( numfmt --from-unit=1024 --to=iec "$data_sz" )
+        printf >&2 '%s\n' \
+            "Estimated data size: $data_sz_h"
+
+        # configure checkpoint print format
+        # - ref man for --checkpoint:
+        #   https://www.gnu.org/software/tar/manual/html_section/checkpoints.html
+        tar_opts+=(
+            --record-size=1K
+            --checkpoint="$cp_sz"
+            --checkpoint-action=ttyout='%{%Y-%m-%d %H:%M:%S}t (%d sec): %uK read, %T%*\r'
+        )
+
+        # other output ideas:
+        #_opts+=( --record-size=1K --checkpoint="$chkpt" --checkpoint-action="ttyout=>" )
+        #printf '%s\n' "Estimated: [==================================================]"
+        #printf '%s' "Progess:   ["
+        #printf '%s\n' "]"
+
 
         # GNU tar outputs file list on stdout
         tar_msg=$( "$tar_cmd" "${tar_opts[@]}" "$@" )
@@ -516,10 +392,10 @@ tarc() (
     fi
 
 
-    if [[ -n ${_move:-} ]]
+    if [[ -n ${_mv-} ]]
     then
         # Print tar output only if -v was given on CL
-        [[ -n ${_verb:-} ]] && printf '%s\n' "$tar_msg"
+        [[ -n ${_verb-} ]] && printf '%s\n' "$tar_msg"
 
         # Process list of added files and dirs
         d_fns=()
@@ -532,8 +408,8 @@ tarc() (
                 continue
             }
 
-            # remove files to achieve the _move effect
-            command rm ${_verb:-} "$fn"
+            # remove files to achieve the _mv effect
+            command rm ${_verb-} "$fn"
 
         done < <( printf '%s\n' "$tar_msg" | sed 's/^a //' )
 
@@ -553,7 +429,7 @@ tarc() (
                 # - compgen -G takes globs and outputs filenames, one per line
                 while IFS='' read -r fn
                 do
-                    command rm ${_verb:-} "$fn"
+                    command rm ${_verb-} "$fn"
 
                 done < <( compgen -G "$dfn/$pat" )
 
@@ -562,11 +438,11 @@ tarc() (
 
             # Remove empty dirs
             find "$dfn" -depth -type d -empty -exec \
-                bash -c 'command rmdir $2 "$1"' - {} ${_verb:-} \;
+                bash -c 'command rmdir $2 "$1"' - {} ${_verb-} \;
 
 
             # Check for any remaining files
-            chk=$(find "$dfn" 2>/dev/null) && {
+            file_chk=$( command find "$dfn" 2>/dev/null ) && {
 
                 printf '%s\n' "Warning, files remaining:" "$file_chk"
             }
@@ -576,6 +452,4 @@ tarc() (
     then
         printf '%s\n' "$tar_msg"
     fi
-
-    return 0
 )
