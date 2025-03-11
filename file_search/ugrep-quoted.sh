@@ -1,6 +1,6 @@
 ugrep-quoted() {
 
-    : "quoted output of filenames with ugrep
+    : "Quoted output of filenames with ugrep
 
     also used -Ij to ignore binary files, and use smart-case on patterns
 
@@ -9,3 +9,6 @@ ugrep-quoted() {
 
     ugrep -Ij -m1 --format='%h%~' "$@"
 }
+
+# TODO:
+# - incorporate this into ugrep-files
