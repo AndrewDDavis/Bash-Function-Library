@@ -1,11 +1,14 @@
-fd() {
+alias fd='fd-wrapper'
 
-    : "find variant with user-friendly syntax and defaults
+fd-wrapper() {
 
-    Usage: fd [options] [pattern] [path ...]
+    : "Find variant with user-friendly syntax and defaults
 
-    This function calls either the \`fd\` or \`fdfind\` command to match filenames,
-    with the following behaviour:
+    Usage: fd-wrapper [options] [pattern] [path ...]
+
+    This function calls fd with the --no-ignore-vcs option. Depending on the system,
+    the fd command may actually be named fdfind, so the function will use that name if
+    necessary. The command matches filenames, with the following behaviour:
 
       - If the path is omitted, the tree under the current directory is searched.
         Symlinks are not followed, unless -L (--follow) is used. Mount points in the
@@ -94,13 +97,15 @@ fd() {
         fd -H '^(\\.)?Trash(-[0-9]+)?' ~/ \\
             -X du -hsc | sort -h
     "
+
+    # 0 args is allowed for fd
     [[ ${1-} == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
     local fd_cmd
     fd_cmd=$( builtin type -P fd ) \
         || fd_cmd=$( builtin type -P fdfind ) \
-            || return
+            || return 3
 
     "$fd_cmd" --no-ignore-vcs "$@"
 }
