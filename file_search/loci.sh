@@ -111,7 +111,7 @@ loci() (
         ls -1b new*
         # newline-\n-filename
 
-        sudo updatedb
+        sudo updatedb  # or locate.updatedb on macOS
         while IFS='' read -rd '' fn
         do
             printf 'fn: %s\n' \"\${fn@Q}\"
@@ -230,36 +230,47 @@ loci() (
     shift $#
 
 
-    [[ -n ${_udb-} ]] && {
+    if [[ -n ${_udb-} ]]
+    then
+        # updatedb run requested
 
-        # run updatedb if requested
+        if [[ $( uname -s ) == Darwin ]]
+        then
+            udb_cmd=$( builtin type -P locate.updatedb )
+        else
+            udb_cmd=$( builtin type -P updatedb )
+        fi
 
-        # if a LOCATE_PATH is set, the db file should be owned by the calling user
         if [[ -v LOCATE_PATH ]]
         then
-            [[ $( stat -c '%u' "$LOCATE_PATH" ) == $EUID ]] || return
+            # if LOCATE_PATH is set, the db file should be owned by the calling user
+            [[ $( stat -c '%u' "$LOCATE_PATH" ) == "$EUID" ]] ||
+                return
 
-            updatedb
+            "$udb_cmd"
 
         else
             # check that the database file is as expected:
             # -rw-r----- 1 root plocate 14M /var/lib/plocate/plocate.db
             local udb_fn=/var/lib/plocate/plocate.db
 
-            [[ $( stat -c '%u:%g' "$udb_fn" ) == '0:114' ]] || return
-            [[ $( stat -c '%a' "$udb_fn" ) == '640' ]] || return
+            [[ $( stat -c '%u:%g' "$udb_fn" ) == '0:114' ]] ||
+                return
+
+            [[ $( stat -c '%a' "$udb_fn" ) == '640' ]] ||
+                return
 
             if [[ $EUID == 0 ]]
             then
-                updatedb
+                "$udb_cmd"
             else
-                sudo updatedb
+                sudo "$udb_cmd"
             fi
         fi
 
         # return if no patterns were specified
         [[ -v pats ]] || return 0
-    }
+    fi
 
 
     # enact the exact-match, word, and smart-case options
