@@ -6,7 +6,8 @@ fd-tree() {
 
         All arguments are passed to fd. Refer to my fd wrapper script for usage details.
 	"
-	[[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
+
+	[[ $# -eq 0  || $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }
 
     # from the old grep-files code
@@ -20,8 +21,8 @@ fd-tree() {
     # - in particular, tree prints the file name as the root directory, which is '.'
     #   when reading from stdin, and that can look non-sensical.
     # - it also prints a summary at the end, which may or may not be necessary
-    local filt
-    filt='
+    local tree_filt
+    tree_filt='
         # trim first and last lines
         1 d; $ d
 
@@ -33,6 +34,6 @@ fd-tree() {
     '
 
     fd "$@" \
-        | tree "${tree_args[@]}" --fromfile . \
-        | sed -E "$filt"
+        | command tree "${tree_args[@]}" --fromfile . \
+        | command sed -E "$tree_filt"
 }
