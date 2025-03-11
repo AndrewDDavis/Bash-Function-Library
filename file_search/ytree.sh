@@ -1,28 +1,35 @@
-# ytree: classic TUI file manager
-[[ -n $(command -v ytree) ]] && {
+[[ -n $( command -v ytree ) ]] && {
 
+    # ytree: classic TUI file manager
     yt() {
-        # wrapper function to cd on exit
-        # - usage: ytree [archive file|directory], then
-        #          exit with ^Q
 
-        mkdir -p ~/.cache
-        local yt_file=~/.cache/ytree-$$.chdir
+        : "wrapper function to run ytree, then cd on exit
+
+            Usage: ytree [archive file|directory]
+
+            - exit with ^Q
+        "
+
+        local yt_file yt_cmd
+
+        # designate temp file and ensure clean-up
+        trap '
+            [[ -n ${yt_file-} ]] &&
+                /bin/rm -f "$yt_file"
+        ' RETURN
+
+        /bin/mkdir -p ~/.cache
+        yt_file=~/.cache/ytree-$$.chdir
 
         printf '%s\n' "cd $PWD" > "$yt_file"
 
         if command ytree "$@"
         then
-            local yt_cmd=$( < "$yt_file" )
-            command rm -f "$yt_file"
-
+            yt_cmd=$( < "$yt_file" )
             eval "$yt_cmd"
 
         else
-            local yt_code=$?
-            command rm -f "$yt_file"
-
-            return "$yt_code"
+            return $?
         fi
     }
 }
