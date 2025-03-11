@@ -1,3 +1,3 @@
 # mdfind on macOS
-[[ -n $( command -v mdfind ) ]] &&
+[[ $( uname -s ) == Darwin  && -n $( command -v mdfind ) ]] &&
     alias mdfindo="mdfind -onlyin"
