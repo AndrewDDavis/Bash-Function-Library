@@ -1,40 +1,49 @@
 st-rgui() {
 
-    : "start remote syncthing GUI in browser
+    : "Start remote syncthing GUI in browser
 
-    - currently, always connects to nemo
+    Usage: st-rgui [-n]
+
+      - with '-n' connects from outside the Hawthorne network
+      - currently, always connects to nemo
     "
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }
 
-    # arg1: -n : connect from outside the Hawthorne network
-    local nat=false
-    [[ $1 == -n ]] && nat=true
+    local port_args hostnm='hud@nemo'
 
+    # option -n
+    [[ ${1-} == -n ]] && {
+        port_args=( -o port=51022 )
+        hostnm='hud@spinup.ca'
+        shift
+    }
+
+    local ssh_cmd
+    ssh_cmd=$( builtin type -P ssh ) \
+        || return 5
 
     # set up the tunnel: bind localhost:lport to nemo's local port 8384
     # - `ssh -fNL ...` runs no command and goes to background immediately
     # - `ssh -fL ... sleep 300` waits for 5 min for a program to start using the
     #   tunnel, and exits if nothing starts using it
-    local lport=58384
-    local ec
+    local lport=58384 ssh_args
 
-    if [[ $nat == true ]]
-    then
-        ssh -o port=51022 -fL localhost:$lport:localhost:8384 hud@spinup.ca sleep 300
-        ec=$?
-    else
-        ssh -fL localhost:$lport:localhost:8384 hud@nemo sleep 300
-        ec=$?
-    fi
+    ssh_args=( -fL "localhost:${lport}:localhost:8384" )
+    ssh_args+=( "${port_args[@]}" )
+    ssh_args+=( "$hostnm" )
+    ssh_args+=( sleep 300 )
 
-    if (( ec == 0 ))
+    if "$ssh_cmd" "${ssh_args[@]}"
     then
-        printf '\n%s\n' "View remote syncthing gui at <http://localhost:$lport>"
+        printf >&2 '\n%s\n' "View remote syncthing gui at <http://localhost:$lport>"
+
     else
-        echo "error occurred"
-        echo "lsof -i :$lport says:"
-        lsof -i :$lport
+        local -i ssh_ec=$?
+        printf >&2 '%s\n' "An error occurred"
+        printf >&2 '%s\n' "Output of 'lsof -i :$lport':"
+        lsof -i ":$lport"
+        return $ssh_ec
     fi
 }
