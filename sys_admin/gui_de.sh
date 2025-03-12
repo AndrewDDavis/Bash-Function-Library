@@ -1,4 +1,4 @@
-# Commands for Desktop Environments and GUIs
+# Command aliases for Desktop Environments and GUIs
 
 # Allow root to run GUIs under Wayland (for BackInTime)
 #[[ $XDG_SESSION_TYPE = "wayland" ]] &&
