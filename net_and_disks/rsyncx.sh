@@ -1,27 +1,3 @@
-# Exclude annoying files from interactive transfers
-# - this uses the merge-files syntax of --filter
-# - another way to do this is -F, which uses per-dir files: --filter=': /.rsync-filter'
-# - note syntax to clear the include/exclude list: -f'!'
-[[ -r ~/.config/rsync/default.rules ]] && {
-
-    # shellcheck disable=SC2139
-    alias rsync="rsync -f '. ${HOME}/.config/rsync/default.rules'"
-}
-
-# - good default for local files
-# - my rsync on Debian testing doesn't have -N
-alias rsync-local='rsync -rlDvh -pAgo -tU -XH'
-
-# - check for differences:
-alias rsync-check='rsync-local -nc --delete'
-
-# - also note backups are a good option
-#   --backup --suffix='.rsbak'
-# - other useful items:
-#   --itemize-changes, -i
-#   --stats, for summary stats of the transfer
-#   --exclude=PATTERN
-
 rsyncx() (
 
     [[ $# -eq 0 || $1 =~ ^(-h|--help)$ ]] && {
