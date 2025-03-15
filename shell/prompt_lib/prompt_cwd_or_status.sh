@@ -1,8 +1,16 @@
-prompt_cwd_or_status () {
+# dependencies
+import_func csi_strvars str_trunc is_int \
+    || return 63
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+# prefer basename function for speed, but it's not fatal
+import_func basename \
+    || true
 
-        : "Print string for PS1, testing return status of previous command
+prompt_cwd_or_status() {
+
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
+
+        : "Print string for PS1, depending on return status of previous command
 
         Usage: prompt_cwd_or_status \$?
         "
@@ -11,94 +19,294 @@ prompt_cwd_or_status () {
     }
 
     # return status
-    local retstat=$1 || return
+    local -i retstat=$1 \
+        || return
     shift
 
     # generate shortened CWD string
-    local scwd=$( shrtn_cwd )
+    local scwd
+    scwd=$( _shrtn_cwd ) \
+        || return 9
 
-    if [ $retstat = 0 ]
+    if [[ $retstat -eq 0 ]]
     then
-        # just print the string
-        # - newline is stripped when output is captured
+        # Just print the CWD string
+        # - newline will be stripped when output is captured
         # - don't prepend with any reset, as colour is set in prompt_colourize
         printf '%s\n' "$scwd"
 
     else
-        # print return status instead of CWD
-        # - length of status string should be the same as shrtn_cwd would return
-        # - pad internally with spaces to prevent them getting stripped on return
-
-        # Define variables for control sequence codes
-        # - these CSI codes must be evaluated using printf's %b, since this function writes
-        #   into PS1 after they would be interpreted
-        # - for the same reason, not using the -p option here, but must wrap the control
-        #   sequences in \001 and \002, since \[ and \] won't be interpreted (as noted at
-        #   the [bash faq](https://mywiki.wooledge.org/BashFAQ/053)).
-        # - this is easily accomplished using the -d option to str_csi_vars
-        # - another way is to use the variable transformation @P to print a string "like a
-        #   prompt", e.g. 'echo "${foo@P}"', which will evaluate escape sequences _and_
-        #   \[...\], unlike printf '%b' ... .
-
-        # - these may be defined by a run in prompt_colourize; skip if so
-        [[ -z ${_cbo-} ]] && str_csi_vars -pd
-
-
-        # number of extra chars in short-cwd vs ret-status
-        local n_xchr=$(( ${#scwd} - ${#retstat} ))
-
-        # prepend return status value with a string that provides context
-        # - could use a no-break space ($'\u00A0') in places where a regular one would
-        #   get stripped away; doesn't seem to be an issue
-        local ststr c
-
-        if   [[ $n_xchr -lt 1 ]]; then { ststr=""  ; c=0; }
-        elif [[ $n_xchr -eq 1 ]]; then { ststr="?" ; c=1; }
-        elif [[ $n_xchr -lt 7 ]]; then { ststr="?:"; c=2; }
-        else { ststr="status:"; c=7; }
-        fi
-
-        # decrement no. of extra chars
-        n_xchr=$(( $n_xchr - $c ))
-
-        # apply prepend string using colours and bold
-        if [[ -n $ststr ]]
-        then
-            # make the pre-string red, except the colon if there was one
-            c=''
-            [[ $ststr == *: ]] && c=':'
-
-            ststr="${_cbo}${_cfg_r}${ststr%:}${_crs}${c}${_cbo}${retstat}${_crs}"
-        else
-            # if there's no extra space, just red-bold the return status
-            ststr="${_cbo}${_cfg_r}$retstat${_crs}"
-        fi
-
-        # pad with spaces as necessary, accounting for [ ... ]
-        local _add_br
-        [[ $n_xchr -gt 3 ]] && {
-
-            n_xchr=$(( $n_xchr - 4 ))
-            _add_br=1
-        }
-
-        [[ $n_xchr -gt 0 ]] && {
-
-            # split spaces front and back, checking for odd
-            local fs=$(( ${n_xchr}/2 + ${n_xchr}%2 ))
-            local bs=$(( ${n_xchr}/2 ))
-
-            # string of spaces to pull from
-            local i s=''
-            for i in $(seq $fs); do s="$s "; done
-
-            ststr="${s::$fs}${ststr}${s::$bs}"
-        }
-
-        # wrap in [ ... ] if indicated
-        [[ -n ${_add_br-} ]] && ststr="${_cbo}[${_crs} ${ststr} ${_cbo}]${_crs}"
-
-        # print status string, prepending a reset
-        printf "%s%s\n" "$_crs" "$ststr"
+        # Print string with return status instead of CWD
+        # - string length should be the same as scwd
+        _ret_statstr ${#scwd} $retstat
     fi
+}
+
+__scwd_docs() {
+
+    # keep the docs out of the func defn to keep it lean
+    : "Print truncated working directory path for use in PS1
+
+    Usage: _shrtn_cwd [options ...]
+
+    This function uses ~ and truncates PWD in a sensible place, respecting
+    PROMPT_DIRTRIM if optimal. It is intended to be used in concert with other shell
+    init scripts to set the PS1 prompt string.
+
+    If -P is issued, the physical value of the current working directory (CWD) is
+    used, as in 'pwd -P'. Otherwise, the shell's CWD value is used, which may contain
+    symlinks. The CWD value is inherited by the shell at initialization, then modified
+    by the cd, pushd, and popd commands. It also depends on the state of the
+    'physical' shell option. Changing the value of PWD or DIRSTACK[0] does not change
+    the shell's notion of the CWD.
+
+    In my testing, this function takes ~ 15 ms to execute with a long path on a
+    modest machine.
+
+    Options
+
+      -n d : limit the string to \`d\` characters; the default is 20% of the terminal
+          width, to a maximum of 24 chars, or 12 chars if the width is unknown.
+      -b   : print only the basename of the CWD path, rather than the whole path.
+      -L   : the value of PWD is used, wihout resolving symbolic links (default).
+      -P   : the physical path of PWD is used, after resolving symbolic links.
+
+    Example
+
+      _shrtn_cwd -n 12 -b
+    "
+    docsh -TD
+}
+
+_shrtn_cwd() {
+
+    [[ ${1-} == @(-h|--help) ]] &&
+        __scwd_docs
+
+    # Defaults and args
+
+    # max string length: default 20% of screen or 24 columns
+    local -i clim
+
+    if [[ -n ${COLUMNS-} ]]
+    then
+        clim=$(( COLUMNS/5 ))
+
+    elif [[ -n $( command -v tput ) ]]
+    then
+        clim=$(( $( tput cols )/5 ))
+
+    else
+        clim=12
+    fi
+
+    [[ $clim -gt 24 ]] &&
+        clim=24
+
+
+    local bw=w      # basename or whole path
+    local lp=l      # linked or physical CWD
+
+
+    local flag OPTARG OPTIND=1
+    while getopts ":n:bLP" flag
+    do
+        case $flag in
+            ( n ) clim=$OPTARG ;;
+            ( b ) bw=b ;;
+            ( L ) lp=l ;;
+            ( P ) lp=p ;;
+            ( \? | : ) return 2 ;;
+        esac
+    done
+    shift $(( OPTIND-1 ))
+
+
+    # Get CWD path and basename
+    # - could also use 'dirs +0', which already uses ~ notation
+    local swd swd_bn pwd_cmd
+
+    pwd_cmd=( builtin pwd )
+
+    # physical path or PWD
+    [[ $lp == p ]]  &&
+        pwd_cmd+=( -P )
+
+    swd=$( "${pwd_cmd[@]}" )
+    swd=${swd/#"$HOME"/'~'}
+
+    # sanity check: e.g. for when under a mount point that got disconnected
+    [[ -n ${swd-} ]] ||
+        return 9
+
+    swd_bn=$( basename "$swd" )
+
+
+    ### Shorten according to settings
+
+    if [[ $swd == '/' ]]
+    then
+        # root dir is a special case
+        true
+
+    elif [[ $bw == b  || ${#swd_bn} -gt $(( clim-5 )) ]]
+    then
+        # Only basename considered if requested, or if swd is already long
+        # - clim needs a bit of padding in the above comparison to account for '.../'
+        swd=$( str_trunc $clim "$swd_bn" )
+
+    else
+        # Whole path considered
+        local swd_arr trim_dir
+        local -i n
+
+        # if DIRTRIM is set, respect it
+        [[ -n ${PROMPT_DIRTRIM-} ]] && {
+
+            # should be positive int
+            is_int -p "$PROMPT_DIRTRIM" \
+                || return 31
+
+            # create array from path elements
+            IFS="/" read -ra swd_arr <<< "${swd#/}"  # split at /, omitting root dir
+
+            # keep DIRTRIM dirs in addition to ~/ and /, as the shell would
+            # - testing Bash behaviour:
+            #   PROMPT_DIRTRIM=1; abc='\w'; echo "${abc@P}"
+            #   from ~/Scratch/src_exe/d, should print:
+            #   '~/.../d', or '~/.../src_exe/d' for PDT=2
+            #   but from /etc/apt/apt.conf.d, should print:
+            #   '.../apt.conf.d', or '.../apt/apt.conf.d' for PDT=2
+            [[ ${swd_arr[0]} == '~' ]] &&
+                unset 'swd_arr[0]'
+
+            [[ "${#swd_arr[@]}" -gt $PROMPT_DIRTRIM ]] && {
+
+                # trim dir is the boundary, remove everything before it
+                trim_dir=${swd_arr[-$PROMPT_DIRTRIM]}
+
+                swd=${trim_dir}/${swd#*"/${trim_dir}/"}
+            }
+        }
+
+        # truncate as necessary
+        (( ${#swd} > clim )) && {
+
+            # shorten the leading path; account for basename, then add it back
+            n=$(( clim - ${#swd_bn} ))
+            swd=$( str_trunc -s $n "${swd%"${swd_bn}"}" )
+            swd=${swd}${swd_bn}
+        }
+    fi
+
+    printf '%s\n' "$swd"
+}
+
+_ret_statstr() {
+
+    : "Usage: _ret_statstr <n> <code>
+
+    - n is the target number of characters for the string
+    - code is the return status code of the previous command
+    "
+
+    # Define variables for control sequence codes
+    #
+    # - These CSI codes must be evaluated using printf's %b, since this function writes
+    #   into PS1 after they would be interpreted.
+    #
+    # - For the same reason, not using the -p option here, but must wrap the control
+    #   sequences in \001 and \002, since \[ and \] won't be interpreted (as noted at
+    #   the [bash faq](https://mywiki.wooledge.org/BashFAQ/053)).
+    #
+    # - This is easily accomplished using the -d option to csi_strvars.
+    #
+    # - Another way is to use the variable transformation @P to print a string "like a
+    #   prompt", e.g. 'echo "${foo@P}"', which will evaluate escape sequences _and_
+    #   \[...\], unlike printf '%b' ... .
+
+    # - these may be defined by a run in prompt_colourize; skip if so
+    [[ -n ${_cbo-}  && -n ${_cfg_r-}  && -n ${_crs-} ]] ||
+        csi_strvars -pd
+
+
+    # extra chars in short-cwd vs ret-status value (may be more than 1 digit)
+    local -i nchars rs_code n_xchr
+
+    nchars=$1 || return
+    rs_code=$2 || return
+    shift 2
+
+    n_xchr=$(( nchars - ${#rs_code} ))
+
+    # prepend return status value with a string that provides context
+    # - could use a no-break space ($'\u00A0') in places where a regular one would
+    #   get stripped away; doesn't seem to be an issue
+    local ststr
+
+    if (( n_xchr < 1 ))
+    then
+        ststr=""
+    elif (( n_xchr == 1 ))
+    then
+        ststr="?"
+    elif (( n_xchr < 7 ))
+    then
+        ststr="?:"
+    else
+        ststr="status:"
+    fi
+
+    # decrement no. of extra chars
+    n_xchr=$(( n_xchr - ${#ststr} ))
+
+    if [[ -n $ststr ]]
+    then
+        # add the style and status code value to the string
+        # - make the pre-string red, except any colon
+        local c=''
+        [[ $ststr == *: ]] &&
+            c=':'
+
+        ststr="${_cbo}${_cfg_r}${ststr%:}${_crs}${c}${_cbo}${rs_code}${_crs}"
+    else
+        # just red-bold the return status
+        ststr="${_cbo}${_cfg_r}${rs_code}${_crs}"
+    fi
+
+    # pad with spaces as necessary, accounting for [ ... ]
+    # - spaces added internally to prevent them getting stripped on return
+    local -i wrap_br fs bs i
+
+    (( n_xchr > 3 )) && {
+
+        n_xchr=$(( n_xchr - 4 ))
+        wrap_br=1
+    }
+
+    (( n_xchr > 0 )) && {
+
+        # split spaces front and back, checking for odd
+        fs=$(( n_xchr/2 + n_xchr%2 ))
+        bs=$(( n_xchr/2 ))
+
+        # string of spaces to pull from
+        local s=''
+
+        for (( i=0; i<fs; i++ ))
+        do
+            s+=' '
+        done
+
+        ststr="${s::$fs}${ststr}${s::$bs}"
+    }
+
+    [[ -n ${wrap_br-} ]] && {
+
+        # wrap in [ ... ]
+        ststr="${_cbo}[${_crs} ${ststr} ${_cbo}]${_crs}"
+    }
+
+    # - prepend a reset so the status string style rules
+    printf '%s%s\n' "$_crs" "$ststr"
 }

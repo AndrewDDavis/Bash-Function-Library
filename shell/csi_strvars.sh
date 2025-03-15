@@ -1,21 +1,21 @@
-str_csi_vars() {
+csi_strvars() {
 
-    [[ $# -gt 0 && $1 == @(-h|--help) ]] && {
+    [[ ${1-} == @(-h|--help) ]] && {
 
-        docsh -TD "Define variables to apply styles and colours to terminal text.
+        : "Define variables to apply styles and colours to terminal text.
 
         Usage
 
-          str_csi_vars [options]
+          csi_strvars [options]
 
-        The string variables defined by \`str_csi_vars\` all begin with '_c', e.g. \`_cbo\`
-        for bold text, and \`_crs\` to reset all styling back to default.
+        This function defines styling string variables that begin with '_c', e.g.
+        \`_cbo\` for bold text, and \`_crs\` to reset all styling back to default.
 
         By default, this function defines the variables without evaluating the ANSI
         escape codes and control sequences. Thus, they are suitable for printing (e.g.
         \`printf '%s' ...\` will contain backslash escapes) or evaluating (e.g. in a
         prompt, or with \`printf %b ...\`). However, in my .bashrc, I run
-        \`str_csi_vars -pd\`, to allow the strings to be used in prompts and in shell
+        \`csi_strvars -pd\`, to allow the strings to be used in prompts and in shell
         functions.
 
         Options
@@ -25,16 +25,17 @@ str_csi_vars() {
             \`\\[...\\]\` to avoid problems with Bash history).
 
           -d
-          : Output in dynamic format (control sequences are evaluated, rather than using
-            backslash escapes). This is useful e.g. for functions called in PS1.
+          : Output in dynamic format (control sequences are evaluated, rather than
+            using backslash escapes). This is useful e.g. for functions called in PS1.
 
         In practice, to prevent re-running this function unnecessarily, a previous run
         may be detected using a test like the following:
 
-          if [[ -z \${_cbo-}  &&  \$( builtin type -t str_csi_vars ) == function ]]
-          then
-              str_csi_vars
-          fi
+          [[ -n \${_cbo-} ]] ||
+              csi_strvars
+
+        To import the function itself it is recommended to use the import_func
+        function, or a test like \`[[ \$( type -t csi_strvars ) == function ]]\`.
 
         Running this function also defines the \`_csi_str\` function, which may be used
         to define custom string variables that are wrapped in control sequences:
@@ -64,45 +65,8 @@ str_csi_vars() {
             + \`reset=\$( tput sgr0 )\`
             + \`dim=\$( tput dim )\`
         "
-        return 0
-    }
-
-    _csi_str() {
-
-        [[ $# -eq 0 || $# -lt 2 || $1 == -h ]] &&
-            { str_csi_vars -h; return; }
-
-        # opts and args
-        local _p _d flag OPTIND=1
-
-        while getopts 'pd' flag
-        do
-            case $flag in
-                ( p ) _p=1 ;;
-                ( d ) _d=1 ;;
-            esac
-        done
-        shift $(( OPTIND - 1 ))
-
-        # nameref var
-        local -n _s=$1  || return
-        local _c=$2     || return
-        shift 2
-
-        # define ctrl seq and prompt introducers and terminators
-        local CSI='\e['
-        local CST='m'
-        local prNPI='\['
-        local prNPT='\]'
-
-        # wrap code with CSI and CST
-        _s="${CSI}${_c}${CST}"
-
-        # for prompt string (-p), enclose in '\[...\]'
-        [[ -n ${_p-} ]] && _s="${prNPI}${_s}${prNPT}"
-
-        # for evaluated string (-d), evaluate the escapes
-        [[ -n ${_d-} ]] && _s="${_s@P}"
+        docsh -TD
+        return
     }
 
     # Text style sequences
@@ -132,18 +96,17 @@ str_csi_vars() {
 
 
     # Get terminal colour capability, unless defined in enclosing shell
-    [[ -z ${_term_n_colors-} ]] && {
+    [[ -v _term_nclrs ]] || {
 
-        _term_n_colors=$( command tput colors ) \
-          || {
-            # safe default
-            _term_n_colors=8
-        }
+        # use tput or safe-ish default
+        declare -i _term_nclrs
+        _term_nclrs=$( command tput colors ) \
+            || _term_nclrs=8
     }
 
 
     # Define standard FG + BG colours from the 8-colour palette (+ default)
-    if (( $_term_n_colors >= 8 ))
+    if (( _term_nclrs >= 8 ))
     then
         _csi_str "$@" _cfg_r '31'  # red FG
         _csi_str "$@" _cfg_g '32'  # green FG
@@ -169,10 +132,52 @@ str_csi_vars() {
 
     # If supported, define colours using the 256-colour palette instead
     # - would like to use '38:5:x' instead, but not supported in ChromeOS terminal
-    if (( $_term_n_colors >= 256 ))
+    if (( _term_nclrs >= 256 ))
     then
         _csi_str "$@" _cfg_r '38;5;124'
         _csi_str "$@" _cfg_g '38;5;28'
         _csi_str "$@" _cfg_b '38;5;25'
     fi
+}
+
+
+_csi_str() {
+
+    [[ $# -eq 0  || $# -lt 2  || $1 == -h ]] &&
+        { csi_strvars -h; return; }
+
+    # opts and args
+    local _p _d flag OPTIND=1
+
+    while getopts 'pd' flag
+    do
+        case $flag in
+            ( p ) _p=1 ;;
+            ( d ) _d=1 ;;
+            ( * ) return 2 ;;
+        esac
+    done
+    shift $(( OPTIND-1 ))
+
+    # nameref var
+    local -n _s=$1  || return
+    local _c=$2     || return
+    shift 2
+
+    # define ctrl seq and prompt introducers and terminators
+    local CSI='\e['
+    local CST='m'
+    local prNPI='\['
+    local prNPT='\]'
+
+    # wrap code with CSI and CST
+    _s="${CSI}${_c}${CST}"
+
+    # for prompt string (-p), enclose in '\[...\]'
+    [[ -n ${_p-} ]] &&
+        _s="${prNPI}${_s}${prNPT}"
+
+    # for evaluated string (-d), evaluate the escapes
+    [[ -n ${_d-} ]] &&
+        _s="${_s@P}"
 }
