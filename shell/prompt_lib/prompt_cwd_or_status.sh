@@ -151,8 +151,8 @@ _shrtn_cwd() {
 
     elif [[ $bw == b  || ${#swd_bn} -gt $(( clim-5 )) ]]
     then
-        # Only basename considered if requested, or if swd is already long
-        # - clim needs a bit of padding in the above comparison to account for '.../'
+        # Only basename considered if requested, or if swd_bn is already long
+        # - clim gets a bit of padding in the above comparison to account for '.../'
         swd=$( str_trunc $clim "$swd_bn" )
 
     else
@@ -164,35 +164,55 @@ _shrtn_cwd() {
         [[ -n ${PROMPT_DIRTRIM-} ]] && {
 
             # should be positive int
-            is_int -p "$PROMPT_DIRTRIM" \
-                || return 31
+            if is_int -p "$PROMPT_DIRTRIM"
+            then
+                # keep DIRTRIM dirs in addition to ~/..., as Bash would
 
-            # create array from path elements
-            IFS="/" read -ra swd_arr <<< "${swd#/}"  # split at /, omitting root dir
+                # NB, Bash behaviour, using the test: abc='\w'; echo "${abc@P}"
+                #
+                # - in ~/Scratch/src_exe/d, with PROMPT_DIRTRIM=1:
+                #   ~/.../d
+                # - in ~/Scratch/src_exe/d, with PROMPT_DIRTRIM=2:
+                #   ~/.../src_exe/d
+                # - in /etc/apt/apt.conf.d, with PROMPT_DIRTRIM=1:
+                #   .../apt.conf.d
+                # - in /etc/apt/apt.conf.d, with PROMPT_DIRTRIM=2:
+                #   .../apt/apt.conf.d
+                #
+                # However, I think printing ~/.../ and .../ is superfluous then you're
+                # printing untruncated directory names, since a/b is obviously not a
+                # full path of the filesystem.
 
-            # keep DIRTRIM dirs in addition to ~/ and /, as the shell would
-            # - testing Bash behaviour:
-            #   PROMPT_DIRTRIM=1; abc='\w'; echo "${abc@P}"
-            #   from ~/Scratch/src_exe/d, should print:
-            #   '~/.../d', or '~/.../src_exe/d' for PDT=2
-            #   but from /etc/apt/apt.conf.d, should print:
-            #   '.../apt.conf.d', or '.../apt/apt.conf.d' for PDT=2
-            [[ ${swd_arr[0]} == '~' ]] &&
-                unset 'swd_arr[0]'
+                # create array from path elements
+                # - split at /, omitting root dir to avoid an empty swd_arr[0]
+                # - e.g. /a/b/c/d should give 4 elements
+                # - NB, this read cmd only takes ~ 3 ms... just counting the '/' takes 2 ms
+                IFS='/' read -rd '' -a swd_arr < \
+                    <( printf '%s\0' "${swd#/}" )
 
-            [[ "${#swd_arr[@]}" -gt $PROMPT_DIRTRIM ]] && {
+                # don't consider ~/ as a dir when trimming
+                [[ ${swd_arr[0]} == '~' ]] &&
+                    unset 'swd_arr[0]'
 
-                # trim dir is the boundary, remove everything before it
-                trim_dir=${swd_arr[-$PROMPT_DIRTRIM]}
+                (( ${#swd_arr[@]} > PROMPT_DIRTRIM )) && {
 
-                swd=${trim_dir}/${swd#*"/${trim_dir}/"}
-            }
+                    # trim dir is the boundary, remove everything before it
+                    trim_dir=${swd_arr[-$PROMPT_DIRTRIM]}
+
+                    # - care needed for PDT=1
+                    swd=${swd#*"/${trim_dir}"}
+                    swd=${trim_dir}${swd}
+                }
+            else
+                err_msg w "illegal PROMPT_DIRTRIM: '$PROMPT_DIRTRIM'"
+            fi
         }
 
         # truncate as necessary
         (( ${#swd} > clim )) && {
 
-            # shorten the leading path; account for basename, then add it back
+            # shorten the leading path, adding ... as necessary
+            # - account for basename, then add it back
             n=$(( clim - ${#swd_bn} ))
             swd=$( str_trunc -s $n "${swd%"${swd_bn}"}" )
             swd=${swd}${swd_bn}
