@@ -85,9 +85,11 @@ cd-wrapper() {
 
     local tgt_dir
 
-    if [[ $# -eq 1  && $1 =~ ^(+|-)[0-9]+$ ]]
+    if [[ $# -eq 1  && $1 =~ ^(\+|-)[0-9]+$ ]]
     then
         # +N/-N are sent straight to pushd
+        [[ -v _P  || -v _L ]] &&
+            { err_msg 5 '-L and -P not supported with +/-N'; return; }
         tgt_dir=$1
     else
         # use cd to get the physical version of the intended dir
