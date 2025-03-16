@@ -77,7 +77,7 @@ notesh() {
         _d=.
 
     # command to open file: -p = pager (default), -e = EDITOR, -v = vs-code
-    str_split cmd "${PAGER:-less}"
+    str_to_words cmd "${PAGER:-less}"
 
     # args
     local _flag OPTIND=1 OPTARG
@@ -93,13 +93,13 @@ notesh() {
                 _f=1
             ;;
             ( x )
-                str_split -q cmd "$OPTARG"
+                str_to_words -q cmd "$OPTARG"
             ;;
             ( p )
-                str_split -q cmd "${PAGER:-less}"
+                str_to_words -q cmd "${PAGER:-less}"
             ;;
             ( e )
-                str_split -q cmd "${EDITOR:-vi}"
+                str_to_words -q cmd "${EDITOR:-vi}"
             ;;
             ( v )
                 cmd=( $( builtin type -P code ) -n )

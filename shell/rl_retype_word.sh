@@ -14,7 +14,7 @@ rl_retype_word() {
         w=$READLINE_ARGUMENT
 
     # split the current command line into words
-    str_split words "$READLINE_LINE" ||
+    str_to_words words "$READLINE_LINE" ||
         return
 
     # sanity

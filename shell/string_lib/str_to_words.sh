@@ -1,10 +1,10 @@
-str_split() {
+str_to_words() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
         : "Split string into words, respecting quoting and escaped whitespace
 
-        Usage: str_split [-q] <array-name> [string ...]
+        Usage: str_to_words [-q] <array-name> [string ...]
 
         This function uses a call to 'xargs' to split a string and place the resulting
         words into an array. Whitespace and newlines within the string are preserved
@@ -13,11 +13,13 @@ str_split() {
         considered together, so that multiple arguments may be combined into one array
         element if they are connected by quotes.
 
-        Example: str_split ls_cmd \"\${BASH_ALIASES[ls]}\"
-
         Options
 
-          -q : suppresses the warning when the array is not empty.
+          -q : suppress the warning when the array is not empty.
+
+        Example
+
+          str_to_words ls_cmd \"\${BASH_ALIASES[ls]}\"
 
         Notes
 
@@ -29,15 +31,15 @@ str_split() {
 
           string='abc def \"g h\" \"*\" * \$(echo pwned)'
 
-        Using str_split safely splits the string into words, keeping 'g' and 'h'
+        Using str_to_words safely splits the string into words, keeping 'g' and 'h'
         together in one word, having two words of only '*', and two words at the end
         consisting of '\$(echo' and 'pwned)':
 
-          str_split arr <<< \"\$string\"
+          str_to_words arr <<< \"\$string\"
 
         or
 
-          str_split arr \"\$string\"
+          str_to_words arr \"\$string\"
 
         On the other hand, the following code splits the third word into '\"g' and 'h\"',
         and expands the glob so that 'x', 'y', and 'z' are array elements:

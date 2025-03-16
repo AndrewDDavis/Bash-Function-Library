@@ -64,7 +64,7 @@ alias_rslv() {
     while builtin alias "$cmd" &>/dev/null
     do
         # fetch defined alias and split into words, respecting quoting
-        str_split -q new_words "${BASH_ALIASES[$cmd]}"
+        str_to_words -q new_words "${BASH_ALIASES[$cmd]}"
 
         # replace cmd in the al_words array with its alias words (e.g. ll -> ls -l)
         array_strrepl al_words "$cmd" "${new_words[@]}"

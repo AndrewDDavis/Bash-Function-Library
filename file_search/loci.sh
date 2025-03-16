@@ -193,7 +193,7 @@ loci() (
                 [[ $flag == l1 ]] && _pp_cmd+=( -1 )
             ;;
             ( exec )
-                str_split _pp_cmd "$OPTARG"
+                str_to_words _pp_cmd "$OPTARG"
             ;;
 
             # handle inter-mixed locate options that require an arg

@@ -392,7 +392,7 @@ ugrep-files() {
 #         local -a _tree_args=()
 
 #         # test for colour support
-#         if [[ ${_term_n_colors:-2} -ge 8 ]]
+#         if (( ${_term_nclrs:-2} >= 8 ))
 #         then
 #             _tree_args+=( "-C" )
 #         fi
@@ -420,7 +420,7 @@ ugrep-files() {
 #         if alias ls &>/dev/null
 #         then
 #             # word splitting that respects quotes
-#             str_split -q ls_cmd "${BASH_ALIASES[ls]}"
+#             str_to_words -q ls_cmd "${BASH_ALIASES[ls]}"
 
 #             # env is needed for aliases of the form 'KEY=val cmd'
 #             [[ ${ls_cmd[0]} == *=* ]] && ls_cmd=( env "${ls_cmd[@]}" )

@@ -1,5 +1,5 @@
 # import dependencies
-import_func str_split array_match array_irepl array_reindex \
+import_func str_to_words array_match array_irepl array_reindex \
     || return 63
 
 realias() {
@@ -100,8 +100,8 @@ realias() {
 
         local -a al_words new_words
 
-        str_split al_words "${BASH_ALIASES[$alname]}"
-        str_split new_words "$newal_str"
+        str_to_words al_words "${BASH_ALIASES[$alname]}"
+        str_to_words new_words "$newal_str"
 
         # identify the command, after any env var assignments
         # - NB the BASH_ALIASES[$alname] entry may contain the value of alname, but not

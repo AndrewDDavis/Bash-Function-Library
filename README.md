@@ -38,14 +38,14 @@ prompt, colours, etc.:
   - docsh
   - term_detect
 
-It also contains functions that are commonly used by other functions, e.g. str_split,
+It also contains functions that are commonly used by other functions, e.g. str_to_words,
 array_match, and so on. To use these functions from within scripts, they should be
 imported using the `import_func` function, like so:
 
 ```bash
 source ~/.bash_library.d/import_func.sh
 
-import_func docsh err_msg str_split array_match \
+import_func docsh err_msg str_to_words array_match \
     || return
 ```
 

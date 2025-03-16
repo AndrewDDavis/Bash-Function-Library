@@ -1,4 +1,4 @@
-import_func str_split \
+import_func str_to_words \
     || return 63
 
 rename-nameswap() {
@@ -17,7 +17,7 @@ rename-nameswap() {
 
         # place filename words in array
         # IFS=$'\n' read -ra bn_words -d '' < <( compgen -W "$bn" )
-        str_split bn_words "$bn"
+        str_to_words bn_words "$bn"
 
         # generate new basename
         c=$(( ${#bn_words[@]} - 1 ))

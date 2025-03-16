@@ -58,8 +58,8 @@ rename-sstr() {
                 break
         else
             # use bold and dim to emphasize replaced text
-            # - refer to the str_csi_vars function:
-            #   [[ -z ${_cbo-} ]] && str_csi_vars -d
+            # - refer to the csi_strvars function:
+            #   [[ -z ${_cbo-} ]] && csi_strvars -d
             # - not using _cbo, as it's got prompt \[...\] chars
             local _bld _dim _rsb _rsd _rst
             _bld=$'\e[1m'
