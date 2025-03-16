@@ -56,9 +56,14 @@ __scwd_docs() {
     If -P is issued, the physical value of the current working directory (CWD) is
     used, as in 'pwd -P'. Otherwise, the shell's CWD value is used, which may contain
     symlinks. The CWD value is inherited by the shell at initialization, then modified
-    by the cd, pushd, and popd commands. It also depends on the state of the
-    'physical' shell option. Changing the value of PWD or DIRSTACK[0] does not change
-    the shell's notion of the CWD.
+    by the cd command (or pushd and popd, which internally call cd). Whether the
+    physical value is written to PWD also depends on the state of the 'physical' shell
+    option. Attempting to directly change the value of PWD or DIRSTACK[0] does not
+    change the shell's notion of the CWD.
+
+    It is recommended to set the PWD value to the physical path, to prevent unexpected
+    inconsistencies between the prompt and other tools (refer to the notes below). The
+    cd-wrapper function is useful to ensure the physical path is used in the prompt.
 
     In my testing, this function takes ~ 15 ms to execute with a long path on a
     modest machine.
@@ -66,7 +71,7 @@ __scwd_docs() {
     Options
 
       -n d : limit the string to \`d\` characters; the default is 20% of the terminal
-          width, to a maximum of 24 chars, or 12 chars if the width is unknown.
+             width, to a maximum of 24 chars, or 12 chars if the width is unknown.
       -b   : print only the basename of the CWD path, rather than the whole path.
       -L   : the value of PWD is used, wihout resolving symbolic links (default).
       -P   : the physical path of PWD is used, after resolving symbolic links.
@@ -74,6 +79,22 @@ __scwd_docs() {
     Example
 
       _shrtn_cwd -n 12 -b
+
+    Notes on -P
+
+    If -P is not used, and the 'physical' shell option is not set, the value of PWD
+    written in the prompt may contain symlinks. This can have suprising effects when
+    working with tools other than cd, e.g.:
+
+    cd -P /etc
+    mkdir -p d1/d2
+    ln -s d1/d2 l1
+    # now, l1 points to d1/d2
+    cd -L l1
+    # prompt and PWD show /etc/l1
+    # now, with 'cd -L ..', prompt and PWD would return to /etc
+    # however 'ls ..' lists the contents of d1
+    # also 'mkdir ../d3' creates the directory /etc/d1/d3, not /etc/d3!
     "
     docsh -TD
 }
@@ -81,7 +102,7 @@ __scwd_docs() {
 _shrtn_cwd() {
 
     [[ ${1-} == @(-h|--help) ]] &&
-        __scwd_docs
+        { __scwd_docs; return; }
 
     # Defaults and args
 
