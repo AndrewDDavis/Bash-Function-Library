@@ -64,8 +64,8 @@ helpm() {
         help_txt=$( builtin help -m "$cmd" )
 
         # use sed to make the headings bold, like a man page
-        # - for more, see the str_csi_vars function:
-        #   [[ -z ${_cbo-} ]] && str_csi_vars -pd
+        # - for more, see the csi_strvars function:
+        #   [[ -z ${_cbo-} ]] && csi_strvars -pd
         # - not using _cbo, as it includes the prompt-specific \[...\]
         local _bld _rsb _rst
         _bld=$'\e[1m'

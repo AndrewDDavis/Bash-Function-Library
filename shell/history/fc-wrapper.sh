@@ -1,14 +1,3 @@
-# The built-in commands to access shell history are 'fc' and 'history'. Consider
-# 3rd-party tools:
-# - atuinsh
-# - mcfly
-# - fzf
-
-# fc aliases
-alias fce="fc"
-alias fcl="fc -l"
-alias fcs="fc -s"
-
 # quickly re-execute lines using fc -s
 alias fcx='fc-wrapper'
 alias rx='fc-wrapper'

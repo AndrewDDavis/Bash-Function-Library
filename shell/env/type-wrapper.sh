@@ -1,12 +1,3 @@
-# import dependencies
-[[ $( builtin type -t import_func ) == function ]] || {
-    source ~/.bash_library.d/import_func.sh \
-        || return 63
-}
-
-import_func docsh err_msg \
-    || return 62
-
 # alias type-wrapper to add -F to the type builtin
 alias type='type-wrapper'
 
@@ -35,7 +26,7 @@ type-wrapper() {
     # - the type Bash builtin takes only option flags and names
     local i a filt
     local args=( . "$@" )
-    unset args[0]
+    unset 'args[0]'
 
     for (( i=1; i<=$#; i++ ))
     do
@@ -64,7 +55,7 @@ type-wrapper() {
 
             if [[ $a == -F ]]
             then
-                unset args[i]
+                unset 'args[i]'
             else
                 a=${a//F/}
                 args[i]=$a
