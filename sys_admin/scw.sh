@@ -1,24 +1,3 @@
-# Systemd
-
-jc-unit() {
-
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
-
-	    docsh -TD "Show 100 lines of journalctl output for a unit
-
-	    Usage: ${FUNCNAME[0]} [jc-opts] <unit>
-
-	    Example: jc-unit dnsmasq
-	    "
-	    return 0
-    }
-
-	journalctl -n 100 --no-hostname -u "$@"
-}
-
-#jcw() ...
-# - document the grep option, and other filters
-
 # TODO:
 # is there a place for a compound command like this?
 #   while troubleshooting bind-mounts, used commands like:
@@ -33,9 +12,9 @@ jc-unit() {
 
 scw() {
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        docsh -DT "Convenience wrapper for systemctl command lines
+        : "Convenience wrapper for systemctl command lines
 
         This function saves typing compared to the full systemctl command, including
         shorter aliases to command names, shorter option names for the Systemd context,
@@ -171,23 +150,26 @@ scw() {
           # show all nuances of dependencies for a unit (wanted, requiers, after, ...)
           scw [-u] show <unit>
         "
-        return 0
+        docsh -DT
+        return
     }
 
     # Ensure smooth return on errors
-    trap 'trap-err $?
-          return
-          ' ERR
+    trap '
+        trap-err $?
+        return
+    ' ERR
 
-    trap 'trap - ERR RETURN
-          unset -f _sc_call _is_keyword _expand_keyword
-          ' RETURN
+    trap '
+        trap - ERR RETURN
+        unset -f _sc_call _is_keyword _expand_keyword
+    ' RETURN
 
 
     ### Configure systemctl command call
 
     # check for systemctl
-    [[ -z $( command -v systemctl ) ]] &&
+    [[ -n $( command -v systemctl ) ]] ||
         err_msg 2 "systemctl not found"
 
     # parse flag for systemd context
@@ -242,7 +224,8 @@ scw() {
 
 
     ### Parse command
-    local cmd=$1 _args=() rs _use_sudo
+    local _use_sudo cmd
+    cmd=$1
     shift
 
     # use sudo for system context with non-root user
@@ -256,11 +239,13 @@ scw() {
 	    sudo true
     fi
 
-    if [[ $cmd =~ ^(list-.*|ls.?(-all)?|find)$ ]]
+    local _args=() rs cmd_regex
+    cmd_regex='^(list-.*|ls.?(-all)?|find)$'
+
+    if [[ $cmd =~ $cmd_regex ]]
     then
-        # listing command
+        # listing type command
         # ( list-* | ls | ls? | ls-all | ls?-all | find )
-        local rs _args=()
 
         [[ $cmd == *-all ]] &&
             _args+=( --all )
@@ -283,10 +268,16 @@ scw() {
         esac
 
         # allow return status=1 for nothing found
-        _sc_call "$cmd" "${_args[@]}" ||
-            { rs=$?; [[ $rs == 1 ]] && return 1 || ( exit $rs; ) }
+        _sc_call "$cmd" "${_args[@]}" || {
+            rs=$?
+            [[ $rs == 1 ]] \
+                && return 1 \
+                || ( exit $rs )
+        }
 
     else
+        # non listing command
+
         _sc_call "$cmd" "$@"
 
     fi
