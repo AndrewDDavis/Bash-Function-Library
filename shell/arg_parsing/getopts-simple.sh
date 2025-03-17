@@ -1,11 +1,14 @@
-getopts-simple ()
-{
-    : Demonstrate and test simple getopts functionality
-    : - Silent error reporting is enabled.
-    : - NB, with default error reporting, getopts prints error messages but still
-    :   returns with status 0, so the loop merrily carries on. Another important
-    :   difference when using default error reporting is that OPT becomes '?', not ':',
-    :   for a missing argument.
+getopts-simple() {
+
+    : "Demonstrate and test simple getopts functionality
+
+        - Silent error reporting is enabled.
+
+        - NB, with default error reporting, getopts prints error messages but still
+          returns with status 0, so the loop merrily carries on. Another important
+          difference when using default error reporting is that OPT becomes '?', not ':',
+          for a missing argument.
+    "
 
     printf '%s\n\n' "args: ${*@Q}"
     local n=1 i=1
@@ -46,5 +49,5 @@ getopts-simple ()
     shift $(( OPTIND - 1 ))
 
     printf '%s\n' "n: ${n@Q}"
-    echo "args: ${@@Q}"
+    echo "args: ${*@Q}"
 }
