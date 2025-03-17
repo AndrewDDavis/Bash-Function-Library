@@ -2,6 +2,7 @@
 
 # TODO:
 # - check command, to see if an update is available
+# - see TODO below
 
 eget-wrapper() {
 
