@@ -1,12 +1,8 @@
-str_trunc()
-(
-    [[ $# -lt 2  ||  $1 == @(-h|--help) ]] &&
-    {
-        docsh -TD "Shorten a string, substituting '...'.
+str_trunc() {
 
-        Usage
+    : "Shorten a string, substituting '...'.
 
-          ${FUNCNAME[0]} [opts] <n> <str>
+        Usage: str_trunc [opts] <n> <str>
 
             n : maximum character length allowed
           str : string to shorten (e.g. path, directory name)
@@ -19,28 +15,33 @@ str_trunc()
 
         Example
 
-          ${FUNCNAME[0]} 12 the_path_to_shorten
-        "
-        return 0
-    }
+          str_trunc 12 the_path_to_shorten
+    "
+
+    [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
+        { docsh -TD; return; }
 
 	local sloc=m
 
-    local OPT OPTARG OPTIND=1
-
-    while getopts "mse" OPT
+    local flag OPTARG OPTIND=1
+    while getopts "mse" flag
     do
-        case $OPT in
+        case $flag in
             ( m ) sloc=m ;;
             ( s ) sloc=s ;;
             ( e ) sloc=e ;;
+            ( * ) return 2 ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
-    local n=$1 pstr=$2
+    [[ $# -eq 2 ]] ||
+        return 5
 
-    if (( ${#pstr} <= $n ))
+    local -i n=$1
+    local pstr=$2
+
+    if (( ${#pstr} <= n ))
     then
         printf '%s\n' "$pstr"
 
@@ -73,4 +74,4 @@ str_trunc()
 
         printf '%s\n' "${pstr::$a}...${pstr:($b)}"
     fi
-)
+}

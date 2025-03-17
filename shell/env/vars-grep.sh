@@ -1,6 +1,6 @@
 vars-grep() {
 
-    [[ $# -gt 0  &&  $1 == @(-h|--help) ]] && {
+    [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
 
         : "Print variables that match a pattern in their name, attributes, and/or value
 

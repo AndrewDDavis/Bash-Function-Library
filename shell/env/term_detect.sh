@@ -3,6 +3,7 @@ term_detect() {
     [[ ${1-} == @(-h|--help) ]] && {
 
         : "Try to detect current terminal emulator, and set TERM_PROGRAM"
+
         docsh -TD
         return
     }

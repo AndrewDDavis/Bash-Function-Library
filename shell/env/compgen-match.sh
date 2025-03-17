@@ -1,20 +1,34 @@
+alias ls-aliases='compgen-match alias'
+alias ls-arrays='compgen-match arrayvar'
+alias ls-bindings='compgen-match binding'
+alias ls-builtins='compgen-match builtin'
+alias ls-cmds='compgen-match command'
+alias ls-exports='compgen-match export'
+alias ls-funcs='compgen-match function'
+alias ls-helptopics='compgen-match helptopic'
+alias ls-jobs='compgen-match job'
+alias ls-keywords='compgen-match keyword'
+alias ls-setopts='compgen-match setopt'
+alias ls-shopts='compgen-match shopt'
+alias ls-signals='compgen-match signal'
+alias ls-vars='compgen-match variable'
+
 compgen-match() {
 
-    [[ $# == 0  ||  $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "List shell features and definitions using compgen.
 
-        compgen-match is a wrapper function for \`compgen\` that's meant to be used
-        with the aliases defined in this file. The aliases based on the list of
-        available compgen "actions" to generate completions, which is available in
-        \`man bash\`, in the section on the \`complete\` builtin. Alternatively, the
-        list of actions can be generated using \`compgen -A [Tab]\`.
+        Usage: compgen-match <action> [string]
 
-        The return status is 0, unless there were no matches for the completion.
+        This function calls \`compgen -A\` with an appropriate keyword, and is typically
+        used with the aliases defined in this file, such as \`ls-cmds\` and \`ls-jobs\`.
+        The list of available compgen 'actions' for generating completions is available
+        on the Bash manpage, in the section on the \`complete\` builtin. Alternatively,
+        the list of actions can be generated using \`compgen -A [Tab]\`.
 
-        Usage
-
-          compgen-match <action> [string]
+        The function returns with status code 0, unless there were no matches for the
+        completion.
 
         The optional string argument is taken as the start of a completion operation,
         so that matches starting with the string are displayed. Of course, the listed
@@ -46,18 +60,3 @@ compgen-match() {
 
     compgen -A "$@"
 }
-
-alias ls-aliases='compgen-match alias'
-alias ls-arrays='compgen-match arrayvar'
-alias ls-bindings='compgen-match binding'
-alias ls-builtins='compgen-match builtin'
-alias ls-cmds='compgen-match command'
-alias ls-exports='compgen-match export'
-alias ls-funcs='compgen-match function'
-alias ls-helptopics='compgen-match helptopic'
-alias ls-jobs='compgen-match job'
-alias ls-keywords='compgen-match keyword'
-alias ls-setopts='compgen-match setopt'
-alias ls-shopts='compgen-match shopt'
-alias ls-signals='compgen-match signal'
-alias ls-vars='compgen-match variable'

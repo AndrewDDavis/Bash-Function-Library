@@ -194,5 +194,3 @@ trap-err() {
 
     printf >&2 '%s\n' "${_msgs[@]}"
 }
-
-export -f trap-err

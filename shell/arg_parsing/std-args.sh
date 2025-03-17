@@ -72,14 +72,14 @@ std-args() {
     declare -p opt_arr posarg_arr spec_idcs spec_args _stdopts
     "
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
     [[ $# -gt 3 ]] ||
         return 3
 
     # name-refs to handle opt and posn arg arrays
-    local -n opts=$1 posargs=$2
+    local -n opts=$1 pargs=$2
     shift 2
 
     # short and long option strings for flags that require args
@@ -117,7 +117,8 @@ std-args() {
     done
 
     # -- to terminate std-args option parsing
-    [[ ${1-} == '--' ]] && shift
+    [[ ${1-} != '--' ]] ||
+        shift
 
     # convert long flags that require an OPTARG to a pattern string, as in
     # "foo|bar|baz", after allowing the shell to split words
@@ -127,14 +128,16 @@ std-args() {
     then
         lf_pat=''
     else
+        # shellcheck disable=SC2086
         lf_pat=$( IFS=$' \t\n'; str_join_with '|' $lfs )
     fi
 
     # clear opt and posn arg arrays
     opts=()
-    posargs=()
+    pargs=()
 
-    # loop over arguments (-v tests $1 is set, but may be empty)
+    # loop over arguments
+    # - test -v tests that $1 is set (may be empty)
     local i
     while [[ -v 1 ]]
     do
@@ -142,17 +145,17 @@ std-args() {
 
             ( [!-]* | - )
                 # positional arg
-                posargs+=( "$1" )
+                pargs+=( "$1" )
                 shift
             ;;
 
             ( -- )
                 # terminate option parsing
-                posargs+=( "$1" )
+                pargs+=( "$1" )
 
                 # all following args are positional args
                 [[ -v 2 ]] &&
-                    posargs+=( "${@:2}" )
+                    pargs+=( "${@:2}" )
 
                 shift $#
             ;;
@@ -174,9 +177,9 @@ std-args() {
                     # check for special flags
                     for i in "${!sp_sfa[@]}"
                     do
-                        [[ -n ${sp_lfa[$i]}  &&  ${1#--} == ${sp_lfa[$i]} ]] && {
+                        [[ -n ${sp_lfa[i]}  &&  ${1#--} == "${sp_lfa[i]}" ]] && {
 
-                            spec_idcs[$i]+=",${#spec_args[@]}"
+                            spec_idcs[i]+=",${#spec_args[@]}"
                             spec_args+=( "$2" )
                             break
                         }
@@ -194,9 +197,9 @@ std-args() {
                         # check for special flags
                         for i in "${!sp_sfa[@]}"
                         do
-                            [[ -n ${sp_lfa[$i]}  &&  ${1%%=*} == --${sp_lfa[$i]} ]] && {
+                            [[ -n ${sp_lfa[i]}  && ${1%%=*} == "--${sp_lfa[i]}" ]] && {
 
-                                spec_idcs[$i]+=",${#spec_args[@]}"
+                                spec_idcs[i]+=",${#spec_args[@]}"
                                 spec_args+=( "${1#*=}" )
                                 break
                             }
@@ -234,15 +237,15 @@ std-args() {
                     # check for special flags
                     for i in "${!sp_sfa[@]}"
                     do
-                        [[ ${BASH_REMATCH[2]} == ${sp_sfa[$i]} ]] && {
+                        [[ ${BASH_REMATCH[2]} == "${sp_sfa[i]}" ]] && {
 
-                            spec_idcs[$i]+=",${#spec_args[@]}"
+                            spec_idcs[i]+=",${#spec_args[@]}"
                             spec_args+=( "$2" )
                             break
                         }
                     done
 
-                    while [[ -n "${BASH_REMATCH[1]}" ]]
+                    while [[ -n ${BASH_REMATCH[1]} ]]
                     do
                         _stdopts+=( "-${BASH_REMATCH[1]:0:1}" )
                         BASH_REMATCH[1]=${BASH_REMATCH[1]:1}
@@ -267,16 +270,16 @@ std-args() {
                         BASH_REMATCH[1]=${BASH_REMATCH[1]:1}
                     done
 
-                    [[ -n "${BASH_REMATCH[2]}" ]] && {
+                    [[ -n ${BASH_REMATCH[2]} ]] && {
 
                         # check for special flags and capture the OPTARG
-                        optarg="${1#-*${BASH_REMATCH[3]}}"
+                        optarg=${1#-*"${BASH_REMATCH[3]}"}
 
                         for i in "${!sp_sfa[@]}"
                         do
-                            [[ ${BASH_REMATCH[3]} == ${sp_sfa[$i]} ]] && {
+                            [[ ${BASH_REMATCH[3]} == "${sp_sfa[i]}" ]] && {
 
-                                spec_idcs[$i]+=",${#spec_args[@]}"
+                                spec_idcs[i]+=",${#spec_args[@]}"
                                 spec_args+=( "$optarg" )
                                 break
                             }
@@ -295,6 +298,6 @@ std-args() {
     # trim initial ',' from spec_idcs
     for i in "${!spec_idcs[@]}"
     do
-        spec_idcs[$i]=${spec_idcs[$i]/#,/}
+        spec_idcs[i]=${spec_idcs[i]/#,/}
     done
 }

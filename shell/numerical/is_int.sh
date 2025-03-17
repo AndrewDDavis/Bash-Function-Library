@@ -1,7 +1,7 @@
 # posix
 is_int () {
 
-    [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Check for valid integer
 
@@ -42,7 +42,7 @@ is_int () {
                 break ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
     local s="$1"
     shift

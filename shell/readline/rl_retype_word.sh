@@ -2,9 +2,9 @@ rl_retype_word() {
 
     : "While editing a line using Readline, re-type the previous word
 
-    If issued an argument in the Readline way (e.g. alt-2), the specified word
-    will be retyped instead of the last one, where 1 is the last word, 2 is the second-
-    last, etc.
+        If issued an argument in the Readline way (e.g. alt-2), the specified word
+        will be retyped instead of the last one, where 1 is the last word, 2 is the
+        second-last, etc.
     "
 
     local word words c=0 w=1

@@ -34,5 +34,5 @@ path_rm() {
     printf '%s\n' "$PATH"
 }
 
-# AWK version
+# or using AWK...
 # awk '{ gsub("/home/andrew/Sync/Code/python/misc",""); gsub(/:/,"\n"); print; }' <<< "$PATH"

@@ -10,10 +10,7 @@ str_rep() {
 	"
 
     [[ $# -lt 2 || $1 == -h ]] &&
-    {
-        docsh -TD
-        return
-    }
+        { docsh -TD; return; }
 
     local i n=$2
 

@@ -1,6 +1,6 @@
 str_join_with() {
 
-    [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Join all arguments into a string using a delimiter
 
@@ -29,17 +29,17 @@ str_join_with() {
         in simple cases.
         "
         docsh -TD
-        [[ $# -gt 0 ]] || ( exit 2 )
         return
     }
 
-    [[ $# -gt 1 ]] || return 2
+    [[ $# -gt 1 ]] ||
+        return 2
 
     local delim=$1
     local elem1=$2
     shift 2
 
     # pattern substitution: # matches the start of the string
-    printf '%s' "$elem1" "${@/#/${delim}}" &&
-        printf '\n'
+    printf '%s' "$elem1" "${@/#/${delim}}" \
+        && printf '\n'
 }
