@@ -43,7 +43,7 @@ array_match, and so on. To use these functions from within scripts, they should 
 imported using the `import_func` function, like so:
 
 ```bash
-source ~/.bash_library.d/import_func.sh
+source ~/.bash_lib/import_func.sh
 
 import_func docsh err_msg str_to_words array_match \
     || return
@@ -54,7 +54,7 @@ the `source` line should be placed in the user's `~/.bashrc` file.
 
 I used to symlink a single file, `~/.bash_functions`, and source it from `~/.bashrc`.
 Now the alias, function, and environment variable definitions have been moved to
-individual files in this directory, symlinked as `~/.bash_library.d/`. Any files herein
+individual files in this directory, symlinked as `~/.bash_lib/`. Any files herein
 with a '.sh' or '.bash' extension will be sourced from `~/.bashrc`.
 
 

@@ -14,7 +14,7 @@ import_func() {
         directory tree for function definitions matching the requested name, and imports
         the function into the current shell by sourcing its file.
 
-        By default, the search is performed in ~/.bash_library.d, but the library path
+        By default, the search is performed in ~/.bash_lib/, but the library path
         may be overridden by setting the BASH_FUNCLIB variable. Symlinks within the
         library are dereferenced and followed.
 
@@ -36,7 +36,7 @@ import_func() {
 
           # import dependencies
           [[ \$( builtin type -t import_func ) == function ]] || {
-              source ~/.bash_library.d/import_func.sh \\
+              source ~/.bash_lib/import_func.sh \\
                   || return 63
           }
 
@@ -79,7 +79,7 @@ import_func() {
     then
         libdir=$BASH_FUNCLIB
     else
-        libdir=~/.bash_library.d
+        libdir=~/.bash_lib
     fi
 
     [[ -d $libdir ]] ||
@@ -143,8 +143,8 @@ import_func() {
         done 3< <( "${find_cmdline[@]}" )
 
         # NB, an alternative, with globstar set and filenames without newlines, would be
-        # to use:
-        #   for fn in .bash_library.d/bashrc/**/*.sh; do source "$fn"; done
+        # to use e.g.:
+        #   for fn in .bash_lib/shell/**/*.sh; do source "$fn"; done
 
     else
         # import specified function(s)
