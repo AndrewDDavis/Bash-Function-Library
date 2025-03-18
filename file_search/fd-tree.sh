@@ -14,8 +14,9 @@ fd-tree() {
     local tree_args=( '-aF' )
 
     # use colour, even though the output is going to sed
-    [[ -t 1  && ${_term_n_colors:-2} -ge 8 ]] &&
-        tree_args+=( '-C' )
+    [[ -t 1 ]] \
+        && (( ${_term_nclrs:-2} >= 8 )) \
+        && tree_args+=( '-C' )
 
     # sed script to trim the cruft of the --fromfile output
     # - in particular, tree prints the file name as the root directory, which is '.'
