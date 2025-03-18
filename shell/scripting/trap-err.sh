@@ -1,67 +1,6 @@
-# Bash variables and so-on
-#
-# - Can use caller like:
-#   read -r ln fn < <( caller )
-#   echo "${FUNCNAME[0]} was called at ln. $ln of $fn"
-#
-#   Using 'caller 0' should give more info, but I don't understand its output.
-#
-# - Shell functions and scripts executed with '.' or 'source' are considered to be
-#   subroutines.
-#
-# - Line numbers: LINENO is the line that's executing right now,
-#   whereas BASH_LINENO[0] is the line that called the current function
-#
-# - Source files and $0: BASH_SOURCE is an empty array for an interactive shell,
-#   but is non-empty for any file executing, whether by `bash ./file` or `. ./file`.
-#   In an executed file, $0 == BASH_SOURCE[0], but in a sourced file, $0 is the
-#   shell command name, like '-bash' for a login shell.
-#
-# - Functions: When executing a function, its name is added to the FUNCNAME array,
-#   and the file containing the function definition is added to the BASH_SOURCE
-#   array. If the function is defined in an interactive shell, BASH_SOURCE[0]="main".
-#   If the function is executed in an interactive shell, FUNCNAME[1] and
-#   BASH_SOURCE[1] are unset, but BASH_LINENO[0] is the line number in the
-#   interactive shell.
-#
-# - Sourced or not: a function executed in the body of a script file will have
-#   FUNCNAME[1]="main" in when the file is run using `bash ./file` or
-#   FUNCNAME[1]="source" in a sourced file.
-#
-#
-
-# testing
-#             | interactive | ddd() int. |   . ./dotted | bash ./execed
-# ------------|-------------|------------|--------------|---------------
-# LINENO      |         629 |          2 |            3 |            3
-# BASH_LINENO |          () |    [0]=640 |      [0]=642 |        [0]=0
-# BASH_SOURCE |          () |   [0]=main | [0]=./dotted | [0]=./execed
-# $0          |       -bash |      -bash |        -bash |     ./execed
-# FUNCNAME    |   # unbound |    [0]=ddd |    # unbound |    # unbound
-# caller      |    # $? = 1 |   640 NULL |     642 NULL |       0 NULL
-# caller 0    |    # $? = 1 |   # $? = 1 |     # $? = 1 |     # $? = 1
-# caller 1    |    # $? = 1 |   # $? = 1 |     # $? = 1 |     # $? = 1
-# ( exit 13 ) |
-
-# trap testing (TODO: finish or move to file)
-trap_tester() {
-    # avoid printing the trap for interactive completion functions
-    # e.g. echo $SO<Tab>
-    # - would be nice, but some still print; 'set +o errtrace' silences it
-    # - '[[ -t 1 ]]' makes sure STDOUT is open on a terminal.
-    trap -- '
-        [[ -t 1  &&  -v FUNCNAME[0] ]] && {
-            echo "ERR trap from ${FUNCNAME[0]}()" >&2
-            { printf '%s' "caller 1: "; caller 1; } >&2
-            return
-        }
-    ' ERR
-}
-
-
 trap-err() {
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Show a useful message on non-zero return status
 

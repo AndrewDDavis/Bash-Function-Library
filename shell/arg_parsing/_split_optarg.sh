@@ -44,7 +44,7 @@ _split_optarg() {
     }
 
     [[ $# -eq 1 ]] ||
-        { err_msg 2 "args error: $@"; return; }
+        { err_msg 2 "args error, got: '$*'"; return; }
 
     local -n _f=$1
     shift
