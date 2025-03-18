@@ -1,9 +1,13 @@
 # TODO:
 #
 # - make a --in-headings option, to be called from notesh() for a pattern like '##.*flatpak'
+#
 # - make a --shellcode option, to search the shell code repository in ~/Projects, using
 #   a line like:
 #   ugrep -RIUY --sort --exclude='*_history_*' --heading -F '_run_vrb'
+#
+# - make a --nohist option to exclude shell history files, like:
+#   -g '!*_history_*'
 #
 # - testing in ~/Scratch/grepfiles
 #
@@ -16,7 +20,7 @@ alias egrep-files='ugrep-files'
 
 ugrep-files() {
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Search for files by their content
 
@@ -67,30 +71,31 @@ ugrep-files() {
         Notable \`ugrep\` options
 
           -r (--recursive), -R (--dereference-recursive), -S (--dereference-files)
-          : search recursively within files and directories. '-R' will follow symlinks
-            in the sub-paths. '-S' will follow symlinks to files, but not directories.
+          : Search recursively within files and directories. '-R' will follow all
+            symlinks within the search tree. '-S' will follow symlinks to files, but
+            not directories.
 
           -l (--files-with-matches)
-          : print only the list of filenames, without matching lines
+          : Print only the list of filenames, without printing matched lines.
 
           -c (--count)
-          : print the count of matching lines for each filename, rather than the
-            text of the lines. Prints the count of total matches with '-o', and omits
-            files with zero matches with '-m 1,'.
+          : Print the count of matching lines for each filename, rather than the
+            text of the lines. Print the count of total matches with '-o'. Omit files
+            with zero matches using '-m 1,'.
 
           -i (--ignore-case), -j (--smart-case)
-          : case insensitive search. '-j' is case-insensitive unless the pattern has an
-            upper case ASCII letter.
+          : Case insensitive search. '-j' is case-insensitive unless the pattern has
+            an upper-case ASCII letter.
 
           -w (--word-regexp)
-          : match the pattern as a word, surrounded by non-word characters. Words are
+          : Match the pattern as a word, surrounded by non-word characters. Words are
             formed from letters, digits, and underscores.
 
           -x (--line-regexp)
-          : match whole lines only (i.e. pattern is surrounded by '^' and '$')
+          : Match whole lines only (i.e. pattern is surrounded by '^' and '$').
 
           -I (--ignore-binary)
-          : ignore binary files. Once grep determines that a file contains binary rather
+          : Ignore binary files. Once grep determines that a file contains binary rather
             than text data (e.g. when a NUL byte is encountered), the rest of the file
             is skipped as if it contains no matches. By default, grep reports matches in
             binary files with a message to STDERR, but suppresses output.
@@ -99,41 +104,46 @@ ugrep-files() {
           : Match hidden files, which are otherwise ignored by default.
 
           -U (--ascii)
-          : disable Unicode matching. The pattern matches bytes, as in GNU grep, rather
+          : Disable Unicode matching. The pattern matches bytes, as in GNU grep, rather
             than Unicode characters.
 
           -Y (--empty)
-          : allow empty-matching patterns like 'x*' to pass through unchanged and match
+          : Allow empty-matching patterns like 'x*' to pass through unchanged and match
             all lines (or files) as other grep variants would. By default, ugrep would
             change such a pattern to 'x+', in an effort to guess what you meant.
 
           -% (--bool), -%% (--bool --files)
-          : boolean matching of lines or whole files. The AND operator is represented by
+          : Boolean matching of lines or whole files. The AND operator is represented by
             space, OR by '|', and NOT by '-', and grouping occurs with '(...)'. E.g.
             'A -B' is the same as 'A AND NOT B'. The options '--and', '--andnot', and
-            '--not' are also available, so that the above could be written
-            '-e A --andnot B'.
+            '--not' are also available, so that the above could be written '-e A
+            --andnot B'.
 
-          -g GLOB, --(ex|in)clude[-dir]=GLOB, --(ex|in)clude-from=FILE, --ignore-files[=...]
-          : include or exclude files to search using glob patterns. The '--exclude' form
-            is the same as \"-g '!GLOB'\". Globs match only files, except for globs that
-            end in '/', which match only directories as in the --include-dir form. Globs
-            match the whole path if they include '/', otherwise only the basename. The
-            '--include-from' form specifies a file of globs to use. The '--ignore-files'
-            option causes \`ugrep\` to respect ignores found in a standard file in the
-            filesystem, by default '.gitignore'. All globs use gitignore syntax, which
-            is a bit quirky, refer to \`ugrep --help globs\`.
+          -g GLOB, --(ex|in)clude[-dir]=GLOB
+          : Use glob patterns search only certain files, or exclude some files from the
+            search. The '--exclude' form is the same as \"-g '!GLOB'\". Globs usually
+            only match files, but globs ending in '/' match only directories as in the
+            --include-dir form. Globs usally match only the basename, but they match
+            the whole path if they contain '/' somewhere other than the end.
+
+            All globs use the gitignore syntax, which has slight differences compared
+            to Bash. Refer to \`ugrep --help globs\`.
+
+            The similar '--(ex|in)clude-from=FILE' options specify a file of globs to
+            to specify the searched files. The '--ignore-files[=...]' option causes
+            \`ugrep\` to respect ignore rules found in a standardized filename in the
+            search tree, by default '.gitignore'.
 
           --sort
-          : sort output, rather than presenting matches as they are found. Without an
+          : Sort output, rather than presenting matches as they are found. Without an
             argument, sorts by name, but can also sort by times, size, or best during
             fuzzy matches.
 
           -^ (--tree)
-          : display file matches as tree when using -c, -l, or -L.
+          : Display file matches as tree when using -c, -l, or -L.
 
           --index
-          : speed up recursive searches by using index files created by 'ugrep-indexer'
+          : Speed up recursive searches by using index files created by 'ugrep-indexer'
         "
         docsh -TD
         return
