@@ -1,8 +1,8 @@
 # diff
 
 ### Colourized output
-if [[ ${_term_n_colors:-2} -ge 8 ]] &&
-    diff --color /dev/null /dev/null &>/dev/null
+if  (( ${_term_nclrs:-2} >= 8 )) \
+        && diff --color /dev/null /dev/null &>/dev/null
 then
     alias diff="diff --color=auto"
 fi
@@ -12,7 +12,8 @@ fi
 complete -F _comp_complete_longopt diff-u diff-y diff-w diff-yw
 
 diff-u() {
-    docstr="Show a patch diff with colour in a pager
+
+    : "Show a patch diff with colour in a pager
 
     Usage: diff-u [diff-opts] file1 file2
 
@@ -66,7 +67,8 @@ alias diff-gw="git diff --minimal --no-index \
 
 # - dwdiff is better, allows punct as word boundary; still shares the annoyance of
 #   sometimes introducing a space into the output
-[[ -n $( command -v dwdiff ) ]] && alias diff-dw="dwdiff --color"
+[[ -n $( command -v dwdiff ) ]] &&
+    alias diff-dw="dwdiff --color"
 
 
 ### Side-by-side diff
