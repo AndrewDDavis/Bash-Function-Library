@@ -8,6 +8,9 @@ duh() {
     grand-total of disk usage. If the path-root is omitted, the current directory is
     used.
 
+    By default, only the sizes of the root directory and its subdirectories are
+    printed. Use '-a' or a glob to print file sizes as well.
+
     Notable du options:
 
       -a (--all)
@@ -34,6 +37,9 @@ duh() {
       -x (--one-file-system)
       : do not cross file-system boundaries
     "
+
+	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
+    	{ docsh -TD; return; }
 
     command du -hc "$@" \
         | command sort -h
