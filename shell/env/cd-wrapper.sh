@@ -23,7 +23,7 @@ cd-wrapper() {
         This function supports the -L and -P options of the cd command to explicity
         use the physical path, or allow a path with symlinks, regardless of the status
         of the 'physical' shell option. This allows paths like 'cd -P l1/..' to be
-        interpreted as expected. Refer to the docs of the canon_dirpath and _shrtn_cwd
+        interpreted as expected. Refer to the docs of the phys_dirpath and _shrtn_cwd
         functions for more details.
 
         This function allows the pushd notation '+N' to specify a directory from the
