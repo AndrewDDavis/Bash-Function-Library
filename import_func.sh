@@ -159,10 +159,8 @@ import_func() {
 
         for fn in "$@"
         do
-            if [[
-                $( builtin type -at "$fn" ) == *function*
-                && ! -v _force
-            ]]
+            if [[ $( builtin type -at "$fn" ) == *function* \
+                    && ! -v _force ]]
             then
                 # skip existing function
                 continue
