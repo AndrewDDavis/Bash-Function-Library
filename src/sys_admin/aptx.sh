@@ -1,1 +1,0 @@
-../../aptx/aptx.sh
