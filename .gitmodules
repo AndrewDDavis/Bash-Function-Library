@@ -1,0 +1,12 @@
+[submodule "modules/aptx"]
+	path = modules/aptx
+	url = git@github.com:AndrewDDavis/Aptx.git
+[submodule "modules/docsh"]
+	path = modules/docsh
+	url = git@github.com:AndrewDDavis/docsh.git
+[submodule "modules/physpath"]
+	path = modules/physpath
+	url = git@github.com:AndrewDDavis/Physpath.git
+[submodule "modules/getopts_long"]
+	path = modules/getopts_long
+	url = git@github.com:AndrewDDavis/getopts_long.git
