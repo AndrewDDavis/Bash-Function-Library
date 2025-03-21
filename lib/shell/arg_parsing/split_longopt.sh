@@ -1,5 +1,7 @@
 # TODO:
 # - test optstring
+# - test sourcing instead of calling
+# - incorporate a check on OPTERR=1
 
 split_longopt() {
 
