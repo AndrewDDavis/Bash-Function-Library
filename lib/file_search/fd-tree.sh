@@ -2,26 +2,35 @@ fd-tree() {
 
     : "Match files with fd, display as tree
 
-        Usage: fd-tree [args for fd]
+        Usage: fd-tree [fd-opts] [fd-pattern]
 
-        All arguments are passed to fd. Refer to my fd wrapper script for usage details.
+        All arguments are passed to \`fd\`, which generates a list of matching
+        filenames. The list displayed in a tree-like format by filtering it using the
+        \`tree\` command and a \`sed\` filter.
+
+        Refer to my fd-wrapper function for relevant options and usage details.
 	"
 
-	[[ $# -eq 0  || $1 == @(-h|--help) ]] &&
+	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }
 
-    # from the old grep-files code
-    local tree_args=( '-aF' )
+    # show hidden files
+    # - used to use -F to show callification suffixes like ls -F, but I prefer colour
+    local tree_args=( '-a' )
 
     # use colour, even though the output is going to sed
     [[ -t 1 ]] \
         && (( ${_term_nclrs:-2} >= 8 )) \
         && tree_args+=( '-C' )
 
-    # sed script to trim the cruft of the --fromfile output
-    # - in particular, tree prints the file name as the root directory, which is '.'
-    #   when reading from stdin, and that can look non-sensical.
-    # - it also prints a summary at the end, which may or may not be necessary
+    ## sed script to trim the cruft of the --fromfile output
+    #
+    # - In particular, tree prints the file name as the root directory, which is '.'
+    #   when reading from stdin, and that can cause confusion.
+    #
+    # - It also prints a summary at the end, which can be useful, but is slightly wrong
+    #   when it considers the '.' filename to be a dir.
+
     local tree_filt
     tree_filt='
         # trim first and last lines

@@ -12,7 +12,7 @@ fd-wrapper() {
 
       - If the path is omitted, the tree under the current directory is searched.
         Symlinks are not followed, unless -L (--follow) is used. Mount points in the
-        tree are searched, unless --one-file-system is used.
+        tree are searched, unless --xdev (--one-file-system) is used.
 
       - Substrings of file basenames are matched. The pattern is interpreted as a
         regular expression using the Rust regex engine, with syntax similar to ERE

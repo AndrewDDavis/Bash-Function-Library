@@ -4,6 +4,9 @@
 # - add option to filter with grep pattern, rather than only using sed
 # - is std-args useful here?
 
+# dependencies
+import_func array_max
+
 # locate with ERE regex patterns
 alias eloci='loci --regex'
 
@@ -307,17 +310,18 @@ loci() (
 
     _run_loc() {
 
-        # run locate, possibly printing the command to STDERR
+        ## Run locate, possibly printing the command to STDERR
         # - return status will be that of locate
         (
-            [[ -n ${_v-} ]] && set -x
+            [[ -n ${_v-} ]] &&
+                set -x
             locate "$@"
         )
     }
 
     _run_filt() {
 
-        # filter locate output if requested
+        ## Filter locate output if requested
         # - NB, can't use '<<< "..."' or 'var=$(...)' with null-terminated lines
         # - start with a null filter
         local _f1='^' _f2=''
@@ -331,10 +335,12 @@ loci() (
             <( _run_loc "$@" ) \
             || return
 
-        # check locate return status from the process substitution
-        # - return status 1 is sometimes OK: can be just nothing found, like grep; but
-        #   can also be an error, but should print an error message
-        wait $! || return
+        ## Check locate return status from the process substitution
+        # - NB, return status 1 is sometimes OK: it can be just nothing found, like
+        #   grep. But it can also be an error, in which case it should print an error
+        #   message.
+        wait $! \
+            || return
     }
 
     _filt-grep() {
@@ -345,10 +351,11 @@ loci() (
         # usage:
         #   _filt-grep <pattern>
 
-        local gpth
-        gpth=$( builtin type -P grep )
+        local grep_path
+        grep_path=$( builtin type -P grep ) \
+            || return 9
 
-        "$gpth" ${_nulls:+-z} "$1"
+        "$grep_path" ${_nulls:+-z} "$1"
     }
 
     _filt-sed() {
@@ -394,9 +401,12 @@ loci() (
     # ( true; echo $?; ) > "$fifo1" 2>&1
     # echo $?
 
-    # check return status from the filtered locate process
+    ## Check return status from the filtered locate process
     # also, maybe just use pipes, and check array_max on a copy of PIPESTATUS
     # - we're relying on sed and locate to print error messages if there was a real
     #   problem, otherwise exit code 1 should just mean locate didn't find anything.
-    return $( array_max ps_arr )
+    local -i rs_code
+    rs_code=$( array_max ps_arr )
+
+    return $rs_code
 )
