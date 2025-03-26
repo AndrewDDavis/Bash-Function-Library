@@ -22,41 +22,52 @@ mst() {
     Gnome help browser application.
     "
 
-    [[ $# -gt 0  && $1 == @(-h|--help) ]] &&
+    [[ ${1-} == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
-    local a noa=0 opts=( --follow --hidden )
+    local mst_pth mst_cmd
+    mst_pth=$( builtin type -P mate-search-tool ) \
+        || return 9
+
+    mst_cmd=( "$mst_pth" --follow --hidden )
 
     # filter args for positional (non-option) args
-    for a in "$@"
+    # - m-s-t only takes arguments of the form --flag or --flag=value
+    local -i n=0
+
+    while [[ -v 1 ]]
     do
-        # m-s-t only takes arguments of the form --flag or --flag=value
-        if [[ $a == -* ]]
+        if [[ $1 == -* ]]
         then
-            opts+=( "$a" )
+            # option
+            mst_cmd+=( "$1" )
 
         else
-            if [[ $noa -eq 0 ]]
+            if [[ $n -eq 0 ]]
             then
-                opts+=( --regex="$a" --start )
+                # 1st posnl arg is pattern
+                mst_cmd+=( --regex="$1" --start )
 
-            elif [[ $noa -eq 1 ]]
+            elif [[ $n -eq 1 ]]
             then
-                opts+=( --path="$a" )
+                # 2nd posnl arg is path
+                mst_cmd+=( --path="$1" )
 
             else
                 err_msg 3 "too many positional args"
                 return
             fi
-            (( ++noa ))
+            (( ++n ))
         fi
+
+        shift
     done
 
-    [[ $noa -lt 2 ]] &&
-        opts+=( --path='.' )
+    [[ $n -lt 2 ]] &&
+        mst_cmd+=( --path='.' )
 
     (
         set -x
-        mate-search-tool "${opts[@]}" &
+        "${mst_cmd[@]}" &
     )
 }
