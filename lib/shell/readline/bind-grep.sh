@@ -1,3 +1,7 @@
+# deps
+import_func alias-resolve array_strrepl \
+    || return 63
+
 bind-grep() {
 
     : "Search readline keybindings
@@ -143,7 +147,7 @@ bind-grep() {
 
         # Use the calling shell's alias for grep, if any (e.g. 'grep --color=auto')
         local grep_cmd
-        alias_rslv -e grep grep_cmd \
+        alias-resolve -e grep grep_cmd \
             || grep_cmd=( grep )
 
         array_strrepl grep_cmd grep "$( builtin type -P grep )"

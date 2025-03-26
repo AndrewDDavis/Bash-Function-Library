@@ -7,8 +7,8 @@ array_match () {
 
         Usage: array_match [options ...] <array-name> <pattern>
 
-        The 'array_name' argument is the variable name of an existing array; don't pass
-        the whole expanded array. If the variable pointed to by 'array_name' is a scalar
+        The 'array-name' argument is the name of an existing array variable; don't pass
+        the whole expanded array. If the variable pointed to by 'array-name' is a scalar
         string rather than an array, the shell will treat it as an array of length 1.
 
         By default, matching uses Posix ERE regular expression syntax to match an entire

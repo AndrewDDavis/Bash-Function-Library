@@ -1,3 +1,7 @@
+# deps
+import_func alias-resolve \
+    || return 63
+
 ls-dot() {
 
     [[ $# -gt 0  &&  $1 == @(-h|--help) ]] && {
@@ -31,7 +35,7 @@ ls-dot() {
 
     ## Resolve aliases like 'll', 'lw', etc., and honour any alias for 'ls' defined in
     #  the execution environment (e.g. 'ls --color')
-    alias_rslv -e "$ls_cmd" lscmd_words \
+    alias-resolve -e "$ls_cmd" lscmd_words \
         || lscmd_words=( "$ls_cmd" )
 
     array_strrepl lscmd_words ls "$( builtin type -P ls )"

@@ -31,7 +31,7 @@ realias() {
         within a shell function, since alias definitions in the body of a function do
         not take effect until after the function is executed (refer to the Bash manual
         for details). To use an alias defined in the environment within a function,
-        refer to the 'alias_rslv' function.
+        refer to the 'alias-resolve' function.
 
         Options
 
@@ -96,7 +96,7 @@ realias() {
         # - do word splitting and quote removal on the old and new alias strings, while
         #   respecting quotes and escapes.
         # - NB, not recursively resolving the alias for alname, only redifining the alias;
-        #   the alias_rslv function can resolve recursively.
+        #   the alias-resolve function can resolve recursively.
 
         local -a al_words new_words
 

@@ -1,3 +1,7 @@
+# deps
+import_func alias-resolve array_strrepl \
+    || return 63
+
 # Smart-case egrep
 alias egreps="greps -E"
 
@@ -36,7 +40,7 @@ greps() {
     grep_path=$( builtin type -P grep ) \
         || return
 
-    alias_rslv -e grep grep_cmd \
+    alias-resolve -e grep grep_cmd \
         || grep_cmd=( grep )
 
     array_strrepl grep_cmd grep "$grep_path"

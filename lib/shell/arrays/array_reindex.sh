@@ -11,7 +11,7 @@ array_reindex() {
         Options
 
           -c <n>
-          : ignore any gaps lower than index 'n'
+          : ignore gaps before index 'n'
         "
         docsh -TD
         return
@@ -30,7 +30,7 @@ array_reindex() {
             ( ':' ) err_msg 2 "Missing arg for '$OPTARG'"; return ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
 
     # args
@@ -52,8 +52,8 @@ array_reindex() {
 
             # if i > c, there is a gap in the index
             # - move the content
-            __iarr__[$c]=${__iarr__[$i]}
-            unset __iarr__[$i]
+            __iarr__[c]=${__iarr__[i]}
+            unset '__iarr__[i]'
         }
 
         (( ++c ))
