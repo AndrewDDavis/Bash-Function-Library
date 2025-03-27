@@ -147,7 +147,7 @@ bind-grep() {
 
         # Use the calling shell's alias for grep, if any (e.g. 'grep --color=auto')
         local grep_cmd
-        alias-resolve -e grep grep_cmd \
+        alias-resolve grep grep_cmd \
             || grep_cmd=( grep )
 
         array_strrepl grep_cmd grep "$( builtin type -P grep )"
