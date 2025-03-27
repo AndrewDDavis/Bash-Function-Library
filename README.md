@@ -1,27 +1,5 @@
 # Bash Function Library ReadMe
 
-TODO:
-- need to go through the other func files and check for dependencies, and files
-  that only set env vars, not aliases and funcs.
-- three types of files:
-  + functions (e.g. docsh, basename, array_match)
-  + scripts (i.e. convert these from functions to scripts)
-  + aliases and env vars only (these can go into Shell Operation/Bash_Env, and be imported separatetly with a simple loop)
-- candidates for revision:
-  + file_ops/zip.sh
-  + file_ops/cd_mkdir_pushd.sh
-  + file_search/ls.sh
-  + net_and_disks/syncthing.sh
-  + net_and_disks/openssl.sh
-  + net_and_disks/w3m.sh
-  + programming/python.sh
-  + programming/go.sh
-  + programming/haskell.sh
-  + research_tools.sh
-  + shell/history_fc.sh
-  + sys_admin/vmware.sh
-
-
 The files in this directory tree with '.sh' or '.bash' extensions contain shell
 functions and alias definitions, as well as some environment configuration. They are
 meant to be sourced during shell initialization, or from partner files as dependencies.
