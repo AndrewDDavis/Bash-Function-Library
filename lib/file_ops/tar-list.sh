@@ -1,8 +1,19 @@
 tar-list() {
 
-    : "List files in a tar archive.
+    : "List files in a tar archive
 
-    Usage: tar-list [opts] <archive-file>
+    Usage: tar-list [tar-options] <archive-file>
+
+    This function runs 'tar -tv -Gv' on the supplied archive filename, along with any
+    other options supplied.
+
+    The -t option directs tar to list the file paths, and the -v increases the
+    verbosity so that file permissions, ownership, size, and modification times are
+    shown, similar to 'ls -l'.
+
+    The extra -G and -v options have no effect for regular archives, but print extra
+    information for incremental archives that shows which files were included and
+    excluded when the archive was made.
 
     Notes
 
@@ -13,16 +24,19 @@ tar-list() {
         may not be too bad.
 
       - If a large archive is commonly listed, better archive formats include [zip](https://askubuntu.com/a/1036234/52041)
-        and possibly [dar](https://github.com/Edrusb/DAR).
+        and possibly [dar](https://github.com/Edrusb/DAR), and tpxz.
     "
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
-    local targs=( '-tv' )
+    local tar_cmd
+    tar_cmd=( "$( builtin type -P tar )" -tv -Gv )
 
     # archive filename must be last arg
-    targs+=( "${@:1:$#-1}" -f "${@:(-1)}" )
+    tar_cmd+=( "${@:1:$#-1}" -f "${!#}" )
 
-    command tar "${targs[@]}"
+    ( set -x
+    "${tar_cmd[@]}"
+    )
 }
