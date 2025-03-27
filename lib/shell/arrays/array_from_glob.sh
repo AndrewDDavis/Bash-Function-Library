@@ -3,7 +3,7 @@ import_func array_reindex \
     || return 63
 
 # alias for discoverability
-alias glob_to_array='array_from_glob'
+alias glob-to-array='array_from_glob'
 
 array_from_glob() {
 
@@ -34,22 +34,26 @@ array_from_glob() {
     local pattern=${2:?missing pattern}
     shift 2
 
-    # check pattern for initial /abc or ./
-    local bare_ptn abs_rgx glob_init
+    # check pattern for initial ./, ../, or /abc
+    local bare_ptn abs_rgx ptn_init
     abs_rgx='^/[a-zA-Z0-9_ .]*'
 
     if [[ $pattern =~ $abs_rgx ]]
     then
-        glob_init=${BASH_REMATCH[0]}
+        ptn_init=${BASH_REMATCH[0]}
+
+    elif [[ $pattern == ./* ]]
+    then
+        ptn_init='./'
+
+    elif [[ $pattern == ../* ]]
+    then
+        ptn_init='../'
 
     else
-        glob_init='./'
-
-        if [[ $pattern != ./* ]]
-        then
-            bare_ptn=1
-            pattern=./$pattern
-        fi
+        bare_ptn=1
+        pattern=./$pattern
+        ptn_init='./'
     fi
 
     # expand glob
@@ -60,16 +64,16 @@ array_from_glob() {
     [[ -v __res_arr__[*] ]] ||
         return
 
-    # check that all results start with glob_init
+    # check that all results start with ptn_init
     local reidx
     # ( set -x
     for i in "${!__res_arr__[@]}"
     do
-        if [[ ${__res_arr__[i]} == $glob_init* ]]
+        if [[ ${__res_arr__[i]} == $ptn_init* ]]
         then
             # for bare pattern, strip search_root
             [[ -v bare_ptn ]] &&
-                __res_arr__[i]=${__res_arr__[i]#"$glob_init"}
+                __res_arr__[i]=${__res_arr__[i]#"$ptn_init"}
 
         else
             # otherwise, there must have been a newline
