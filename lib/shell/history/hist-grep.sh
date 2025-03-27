@@ -1,9 +1,19 @@
 # TODO:
 # - also highlight the pattern match in the usual way for grep
+# - print history lines like history does, with the line no. and date;
+#   the history file contains lines for the date, and you can roughly
+#   filter them with:
+#   grep -v '^#[0-9]' .bash_extended_history | wc -l
+
+# deps
+import_func array_from_glob \
+    || return 63
 
 hist-grep() {
 
     : "Search the shell history file(s) for occurrences of a pattern
+
+        Usage: hist-grep [grep-args] <pattern>
 
         Pattern matching is performed by \`grep -E\`, and the glob for history files
         is \`~/.bash*history\`.
@@ -12,26 +22,41 @@ hist-grep() {
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
-    local grep_cmd sed_cmd grep_out rxc sfilt fn hfns
+    local grep_cmd sed_cmd rxc
 
-    grep_cmd=$( builtin type -P grep ) \
-        || return 4
+    grep_cmd=( "$( builtin type -P grep )" -E ) \
+        || return 6
 
-    sed_cmd=$( builtin type -P sed ) \
-        || return 5
+    sed_cmd=( "$( builtin type -P sed )" -E ) \
+        || return 7
+
+    # all arguments passed to grep
+    grep_cmd+=( "$@" )
+    shift $#
 
     # regex to match commands
     rxc='((sudo|export|local|declare|typeset)[ ]+(-[^ ]+[ ]+)?)?[^ =]+=?'
 
-    hfns=( ~/.bash*history )
+    # history files to search
+    local hfn_glob hfns=()
+
+    hfn_glob="$HOME/.bash*history"
+    array_from_glob hfns "$hfn_glob"
+    # hfns=( $hfn_glob )
+
+    [[ -v hfns[*] ]] ||
+        { err_msg 9 "no history files matched glob: '$hfn_glob'"; return; }
+
+    # search each file
+    local fn grep_out sfilt
 
     for fn in "${hfns[@]}"
     do
         # search, then filter output
-        if grep_out=$( "$grep_cmd" -E "$@" "$fn" )
+        if grep_out=$( "${grep_cmd[@]}" "$fn" )
         then
             # report history filename (underlined)
-            printf '\n%s:\n\n' "${_cul-}${fn/#$HOME/\~}${_cru-}"
+            printf '\n%s:\n\n' "${_cul-}${fn/#"$HOME"/\~}${_cru-}"
 
             # sed filter
             sfilt="
@@ -49,7 +74,7 @@ hist-grep() {
             "
 
             printf '%s\n\n' "$grep_out" \
-                | "$sed_cmd" -E "$sfilt"
+                | "${sed_cmd[@]}" "$sfilt"
         fi
     done
 }
