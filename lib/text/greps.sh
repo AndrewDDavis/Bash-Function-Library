@@ -40,7 +40,7 @@ greps() {
     grep_path=$( builtin type -P grep ) \
         || return
 
-    alias-resolve -e grep grep_cmd \
+    alias-resolve grep grep_cmd \
         || grep_cmd=( grep )
 
     array_strrepl grep_cmd grep "$grep_path"
