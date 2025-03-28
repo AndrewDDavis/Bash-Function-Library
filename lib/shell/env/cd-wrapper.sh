@@ -9,7 +9,7 @@ cd-wrapper() {
         Usage
 
           cd-wrapper [-L|-P] [path]
-          cd-wrapper (+|-)N
+          cd-wrapper [+|-]N
 
         This function is meant to be aliased as 'cd' to combine the best features of
         the cd and pushd built-in commands:
@@ -24,7 +24,8 @@ cd-wrapper() {
             directory.
 
           - Using 'cd +N' is allowed, which acts like 'pushd +N' to change to a
-            directory from the stack.
+            directory from the stack. Unlike with pushd, the sign is optional, with
+            'N' being synonymous with '+N'.
 
         Background Notes
 
@@ -101,11 +102,15 @@ cd-wrapper() {
 
     local tgt_dir cd_cmd
 
-    if [[ $# -eq 1  && $1 =~ ^(\+|-)[0-9]+$ ]]
+    if [[ $# -eq 1  && $1 =~ ^(\+|-)?[0-9]+$ ]]
     then
         # +N/-N are sent straight to pushd
         tgt_dir=$1
         shift
+
+        # check for N = +N
+        [[ -n ${BASH_REMATCH[1]} ]] ||
+            tgt_dir="+$tgt_dir"
 
         [[ -v _LP ]] && {
             err_msg 5 '-L and -P not supported with +/-N'
