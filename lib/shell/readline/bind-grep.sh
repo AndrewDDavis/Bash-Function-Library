@@ -6,57 +6,79 @@ bind-grep() {
 
     : "Search readline keybindings
 
-      bind-grep [grep-options] 'pattern'
-      bind-grep -k 'string'
+        Usage
 
-    This function filters a list of readline keybindings for functions, macros, and
-    shell commands, and reformats the output to improve readability. Unless using '-k',
-    all arguments are passed through to the 'grep' command. By default, the '-E' and
-    '-i' options are included to match using ERE patterns in a case-insensitive manner.
-    bind-grep removes 'self-insert' lines from bind's output.
+          bind-grep [grep-options] 'pattern'
+          bind-grep -k 'string'
 
-    When using the '-k' form, bind-grep prints bindings to the supplied string. This is
-    often a single character (e.g. 'n'), but may be a sequence (e.g. '^[[5~' for PgUp).
-    If the string contains '^[', which represents the escape character, it is removed.
-    This allows matching to the sanitized string produced from bind's output. When using
-    '-k', matching is performed by 'awk', in the same way that 'grep -iE' would.
-    Unmatched opening brackets and parentheses ('[', '('), which would cause an error,
-    are automatically escaped by bind-grep. Other regex meta-chars ('\', '^', '$', '.',
-    '|', '*', '+', '?') should be escaped with '\' to be matched literally.
+        This function filters a list of readline keybindings for functions, macros, and
+        shell commands, and reformats the output to improve readability. Unless using '-k',
+        all arguments are passed through to the 'grep' command. By default, the '-E' and
+        '-i' options are included to match using ERE patterns in a case-insensitive manner.
+        bind-grep removes 'self-insert' lines from bind's output.
 
-    Most characters, including all letters and digits, are regular expressions that match
-    themselves. To match literal meta-characters such as '.', '*', '(', '[', '|', '{',
-    '^', and '$', they should be quoted by preceding with a backslash or enclosing in
-    square brackets, e.g. '\*' or '[.]'. This includes the backslash character itself,
-    which is also double printed in bind's double-quoted output; thus, to search for
-    bindings on '\', you would use -k '\\\\' or -k '[\][\]'.
+        When using the '-k' form, bind-grep prints bindings to the supplied string. This is
+        often a single character (e.g. 'n'), but may be a sequence (e.g. '^[[5~' for PgUp).
+        If the string contains '^[', which represents the escape character, it is removed.
+        This allows matching to the sanitized string produced from bind's output. When using
+        '-k', matching is performed by 'awk', in the same way that 'grep -iE' would.
+        Unmatched opening brackets and parentheses ('[', '('), which would cause an error,
+        are automatically escaped by bind-grep. Other regex meta-chars ('\', '^', '$', '.',
+        '|', '*', '+', '?') should be escaped with '\' to be matched literally.
 
-    Other common queries that can be accomplished using bind:
+        Most characters, including all letters and digits, are regular expressions that match
+        themselves. To match literal meta-characters such as '.', '*', '(', '[', '|', '{',
+        '^', and '$', they should be quoted by preceding with a backslash or enclosing in
+        square brackets, e.g. '\*' or '[.]'. This includes the backslash character itself,
+        which is also double printed in bind's double-quoted output; thus, to search for
+        bindings on '\', you would use -k '\\\\' or -k '[\][\]'.
 
-    - To filter a list of the **readline function-names** without showing their bindings,
-      you can use 'bind -l | grep ...'.
-    - To filter a list of **readline variables** and print their state, you can use
-      'bind -v | grep...'.
-    - To query which keys invoke a function, you can use 'bind -q <name>'. The return
-      status also indicates whether the function is bound to any keys.
+        Other common queries that can be accomplished using bind:
 
-    Examples
+          - To filter a list of the **readline function-names** without showing their bindings,
+            you can use 'bind -l | grep ...'.
 
-      # print bindings that have to do with history or completion
-      bind-grep 'hist|comp'
+          - To filter a list of **readline variables** and print their state, you can use
+            'bind -v | grep...'.
 
-      # print bindings on 'n'
-      bind-grep -k n
-      # '\\en', '\\e\\C-n', '\\C-x\\C-n', etc.
+          - To query which keys invoke a function, you can use 'bind -q <name>'. The return
+            status also indicates whether the function is bound to any keys.
 
-      # print bindinds to '{'
-      bind-grep -k '\{'
+        Examples
+
+          # print bindings that have to do with history or completion
+          bind-grep 'hist|comp'
+
+          # print bindings on 'n'
+          bind-grep -k n
+          # '\\en', '\\e\\C-n', '\\C-x\\C-n', etc.
+
+          # print bindinds to '{'
+          bind-grep -k '\{'
     "
 
     [[ $# -eq 0  ||  $1 == -h ]] &&
         { docsh -TD; return; }
 
-    local _k grep_args=( -Ei )
+
+    # grep command and default args
+    local grep_pth grep_cmd=()
+
+    grep_pth=$( builtin type -P grep ) \
+        || return 9
+
+    # - use the calling shell's alias for grep, if any (e.g. 'grep --color=auto')
+    alias-resolve grep grep_cmd \
+        || grep_cmd=( grep )
+
+    # - avoids replacing /path/to/grep with /path/to/path/to/grep
+    array_strrepl grep_cmd grep "$grep_pth"
+
+    grep_cmd+=( -Ei )
+
+
+    # defaults and opt-parsing
+    local _k _filt n
 
     local flag OPTARG OPTIND=1
     while getopts ':k:' flag
@@ -70,32 +92,42 @@ bind-grep() {
                     s/\^\[//g
                     s/(^|[^\])(\[[^]]*|\([^)]*)$/\1\\\2/
                 '
-                OPTARG=$( sed -E "$_filt" <<< "$OPTARG" )
-                _k=$OPTARG
-                ;;
-            ( '?' )
-                grep_args+=( -"$OPTARG" )
-                ;;
+
+                _k=$( command sed -E "$_filt" <<< "$OPTARG" )
+            ;;
+            ( \? )
+                # preserve arguments for grep
+                (( OPTIND-- ))
+                break
+            ;;
+            ( : )
+                err_msg 3 "missing argument for '-$OPTARG'"
+                return
+            ;;
         esac
     done
 
     # preserve '--'
-    (( OPTIND-- ))
-    [[ $OPTIND -gt 0  && ${!OPTIND} == '--' ]] &&
-        (( OPTIND-- ))
-    shift $OPTIND
+    n=$(( OPTIND-1 ))
+    [[ $n -gt 0  && ${!n} == '--' ]] &&
+        (( n-- ))
 
-    grep_args+=( "$@" )
+    shift $n
+
+    # all other args are for grep
+    grep_cmd+=( "$@" )
 
 
     # gather the binding definitions for functions, macros, and shell commands
-    local binddefs_str _filt
+    # - trailing newlines are stripped away by $(...)
+    local binddefs_str
 
-    binddefs_str=$( builtin bind -p )
-    binddefs_str+=$( builtin bind -s )
-    binddefs_str+=$( builtin bind -X )
+    binddefs_str=$( builtin bind -p )$'\n'
+    binddefs_str+=$( builtin bind -s )$'\n'
+    binddefs_str+=$( builtin bind -X )$'\n'
 
-    # formatting
+
+    # format the binding definitions
     _filt='
         # remove empty lines and self-insert lines
         /^$/ { next; }
@@ -111,19 +143,27 @@ bind-grep() {
         # align function names
         { printf "%-10s : %s\n", $1, $2; }
     '
+
+    # awk's -F sets field-separator
     binddefs_str=$( command awk -F ': ' "$_filt" - <<< "$binddefs_str" )
 
 
-    if [[ -n ${_k-} ]]
+    if [[ -z ${_k-} ]]
     then
-        # with -k, search only in bindings
+        # match against the whole line: keys, functions, macros, and shell commands
+        "${grep_cmd[@]}" <<< "$binddefs_str"
+
+    else
+        # with -k, only match against bindings
 
         # awk beats sed for this appliction:
+        #
         # - you can store the original line as a variable, and still match against
         #   the scrubbed key-string; or use a function, etc. Then you don't have to
         #   bother with line numbers and arrays, etc., as you would with sed.
-        # - also you can pass the _k variable in using -v, and keep the program in
-        #   single-quotes, which simplifies having to escape some chars.
+        #
+        # - also you can pass the _k variable into the program using -v, and keep the
+        #   program in single-quotes, which simplifies escaping some chars.
 
         _filt='
             # ignore (not bound) lines
@@ -140,30 +180,21 @@ bind-grep() {
                 return ( tolower(s) ~ tolower(c) ? 1 : 0 )
             }
         '
+
         command awk -v "k=${_k}" "$_filt" <<< "$binddefs_str"
-
-    else
-        # otherwise, grep the whole line
-
-        # Use the calling shell's alias for grep, if any (e.g. 'grep --color=auto')
-        local grep_cmd
-        alias-resolve grep grep_cmd \
-            || grep_cmd=( grep )
-
-        array_strrepl grep_cmd grep "$( builtin type -P grep )"
-
-        "${grep_cmd[@]}" "${grep_args[@]}" <<< "$binddefs_str"
     fi
+}
 
+# vvv OLD code
 
-    # improve formatting of (not bound) lines
-    # _filt='
-    #     /^#.*(not bound)$/ {
-    #         s/ (not bound)$//
-    #         s/^#/# (none):/
-    #     }
-    # '
-    # binddefs_str=$( command sed "$_filt" <<< "$binddefs_str" )
+# improve formatting of (not bound) lines
+# _filt='
+#     /^#.*(not bound)$/ {
+#         s/ (not bound)$//
+#         s/^#/# (none):/
+#     }
+# '
+# binddefs_str=$( command sed "$_filt" <<< "$binddefs_str" )
 
 
 #         # array of matching line numbers (1-based)
@@ -240,4 +271,3 @@ bind-grep() {
 #         #   like 'NR ~ /^1|2|3$/ {print}'
 #         #   or the in operator: 'NR in array', with line numbers as array subscripts
 #     fi
-}
