@@ -29,12 +29,15 @@
 
 # TODO: if matching a heading, search using a plausible glob
 
+# TODO:
+# - if two args are passed for pattern, maybe treat it like -%% 'word1 word2'?
+# - otherwise, how to pass -%% ...
 
 notesh() {
 
     : "Open notes matching a pattern
 
-    Usage: notesh [grep-opts] 'pattern'
+    Usage: notesh [options] [--] [grep-options] 'pattern'
 
     This function searches a directory tree for text files with matches to a pattern,
     and opens the selected file. If more than one file is matched by the pattern, an
@@ -69,12 +72,12 @@ notesh() {
         { docsh -TD; return; }
 
     # defaults
-    local cmd _f _d
+    local cmd _f doc_root
 
     # dir to search
-    _d=~/Documents
-    [[ $PWD == ${_d}/* ]] &&
-        _d=.
+    doc_root=$HOME/Documents
+    [[ $PWD == ${doc_root}/* ]] &&
+        doc_root=.
 
     # command to open file: -p = pager (default), -e = EDITOR, -v = vs-code
     str_to_words cmd "${PAGER:-less}"
@@ -85,9 +88,9 @@ notesh() {
     do
         case $_flag in
             ( d )
-                _d=$OPTARG
-                [[ $_d != '/' ]] &&
-                    _d=${_d%/}
+                doc_root=$OPTARG
+                [[ $doc_root != '/' ]] &&
+                    doc_root=${doc_root%/}
             ;;
             ( f )
                 _f=1
@@ -102,10 +105,10 @@ notesh() {
                 str_to_words -q cmd "${EDITOR:-vi}"
             ;;
             ( v )
-                cmd=( $( builtin type -P code ) -n )
+                cmd=( "$( builtin type -P code )" -n )
             ;;
             ( \? )
-                # arguments for [u]grep should be preserved
+                # likely [u]grep option: preserve it and stop processing options
                 # - OPTIND will have advanced if a lone option was used (like -X) rather than a blob
                 _flag=$(( OPTIND-1 ))
                 [[ ${!_flag} == -${OPTARG} ]] &&
@@ -128,9 +131,10 @@ notesh() {
 
     # [u]grep command path and default args
     # - TODO: allow GNU grep as well
-    local grep_cmd grep_ptn grep_cmdline
-    grep_cmd=$( builtin type -P ugrep ) \
-        || return
+    local grep_cmdline grep_ptn
+
+    grep_cmdline=( "$( builtin type -P ugrep )" ) \
+        || return 9
 
     # pattern argument required
     # - all else should be grep options
@@ -139,29 +143,29 @@ notesh() {
 
     grep_ptn=${!#}
 
-    grep_cmdline=( "$grep_cmd" '-UIjRl0' "${@:1:$(($#-1))}" )
+    grep_cmdline+=( '-UIjrl0' "${@:1:$(($#-1))}" )
+
+    shift $#
 
 
-    if [[ ! -v _f ]]
+    if  [[ ! -v _f
+        && $grep_ptn != *[![:alpha:][:digit:][:blank:].-]*
+    ]]
     then
         # for a simple pattern, add regex for heading lines
         # - refer to the  _expand_keyword() function in scw()
+        grep_ptn="^(#|=).*${grep_ptn}"
 
-        if [[ $grep_ptn != *[![:alpha:][:digit:][:blank:].-]* ]]
-        then
-            grep_ptn="^(#|=).*${grep_ptn}"
-
-            # match only files with a plausible extension
-            # - NB, matching no extension at the same time is tricky: it's possible with
-            #   the glob -g '!*.*', but that will exclude all the files with extensions
-            #   (--exclude patterns take priority over --include patterns).
-            # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
-            # - or do a seperate search with the no-extension glob...
-            grep_cmdline+=( -O 'md,adoc,txt,text,markdown' )
-        fi
+        # match only files with a plausible extension
+        # - NB, matching no extension at the same time is tricky: it's possible with
+        #   the glob -g '!*.*', but that will exclude all the files with extensions
+        #   (--exclude patterns take priority over --include patterns).
+        # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
+        # - or do a seperate search with the no-extension glob...
+        grep_cmdline+=( -O 'md,adoc,txt,text,markdown' )
     fi
 
-    grep_cmdline+=( -- "$grep_ptn" "$_d" )
+    grep_cmdline+=( -- "$grep_ptn" "$doc_root" )
 
     # capture filenames
     # - for quoted output to shell, use -m1 --format='%h%~'. In a script like this, it
@@ -169,9 +173,9 @@ notesh() {
     # - consider --exclude-dir=.git if there are any git dirs in the search dir
     local fn fns grep_pid grep_rs
 
-    IFS='' mapfile -d '' fns < <(
-        set -x
-        "${grep_cmdline[@]}"
+    mapfile -d '' fns < \
+        <(  set -x
+            "${grep_cmdline[@]}"
     )
 
     # check ugrep return status from subprocess
@@ -188,25 +192,27 @@ notesh() {
         fn=${fns[0]}
 
     else
-        # modify file paths for display:
+        ## improve file path strings for display:
         # - replace HOME in root dir with ~
         # - strip root dir from filenames
         # - wrap file paths at a comfortable width, with indentation
         # - bold file basenames and root dir
-        local _d_dsp fn_bn fns_dsp=() _bld _rsb _rst
 
+        local _bld _rsb _rst
         _bld=$'\e[1m'
         _rsb=$'\e[22m'
         _rst=$'\e[0m'
 
-        _d_dsp=${_bld}${_d/#${HOME}/\~}/${_rsb}
+        local dr_dsp fn_bn fns_dsp=()
+
+        dr_dsp=${_bld}${doc_root/#${HOME}/\~}/${_rsb}
 
         for fn in "${fns[@]}"
         do
-            fn=$( fmt -sw88 <<< "${fn#${_d}/}" )
-            fn=$( sed '1 {p;d;}; s/^/    /' <<< "$fn" )
+            fn=$( command fmt -sw88 <<< "${fn#"${doc_root}"/}" )
+            fn=$( command sed '1 {p;d;}; s/^/    /' <<< "$fn" )
             fn_bn=${fn##*/}
-            fn=${fn%${fn_bn}}${_bld}${fn_bn}${_rsb}
+            fn=${fn%"${fn_bn}"}${_bld}${fn_bn}${_rsb}
 
             fns_dsp+=( "$fn" )
         done
@@ -220,7 +226,7 @@ notesh() {
         #   1) filename from this/long/path
 
         # or the Bash builtin 'select'
-        printf '\n%s\n\n' "Matching files from '${_d_dsp}':"
+        printf '\n%s\n\n' "Matching files from '${dr_dsp}':"
 
         PS3=$'\n'"Select a file to open, by number (^D to cancel): "
 
@@ -237,7 +243,7 @@ notesh() {
         fn=${fn/${_bld}/}
         fn=${fn/${_rsb}/}
         fn=${fn//$'\n    '/ }
-        fn=${_d}/${fn}
+        fn=${doc_root}/${fn}
     fi
 
     printf '\n%s\n\n' "Opening file with ${cmd[0]}: '$fn'"
