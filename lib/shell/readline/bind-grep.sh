@@ -4,34 +4,47 @@ import_func alias-resolve array_strrepl \
 
 bind-grep() {
 
-    : "Search readline keybindings
+    : "Search readline or stty keybindings
 
         Usage
 
-          bind-grep [grep-options] 'pattern'
-          bind-grep -k 'string'
+          bind-grep [-s] [grep-options] [pattern]
+          bind-grep -k <string>
 
-        This function filters a list of readline keybindings for functions, macros, and
-        shell commands, and reformats the output to improve readability. Unless using '-k',
-        all arguments are passed through to the 'grep' command. By default, the '-E' and
-        '-i' options are included to match using ERE patterns in a case-insensitive manner.
-        bind-grep removes 'self-insert' lines from bind's output.
+        This function gathers a list of readline keybindings for functions, macros, and
+        shell commands, then runs a 'grep' command to filter the list. The list is
+        prefiltered to improve readability and remove the numerous 'self-insert' lines.
+        Unless using '-k', all command-line arguments are passed to 'grep'. The default
+        grep options are '-E' and '-i', to match using ERE patterns in a case-
+        insensitive manner. If no pattern is supplied, all entries are matched.
 
-        When using the '-k' form, bind-grep prints bindings to the supplied string. This is
-        often a single character (e.g. 'n'), but may be a sequence (e.g. '^[[5~' for PgUp).
-        If the string contains '^[', which represents the escape character, it is removed.
-        This allows matching to the sanitized string produced from bind's output. When using
-        '-k', matching is performed by 'awk', in the same way that 'grep -iE' would.
-        Unmatched opening brackets and parentheses ('[', '('), which would cause an error,
-        are automatically escaped by bind-grep. Other regex meta-chars ('\', '^', '$', '.',
-        '|', '*', '+', '?') should be escaped with '\' to be matched literally.
+        Options
 
-        Most characters, including all letters and digits, are regular expressions that match
-        themselves. To match literal meta-characters such as '.', '*', '(', '[', '|', '{',
-        '^', and '$', they should be quoted by preceding with a backslash or enclosing in
-        square brackets, e.g. '\*' or '[.]'. This includes the backslash character itself,
-        which is also double printed in bind's double-quoted output; thus, to search for
-        bindings on '\', you would use -k '\\\\' or -k '[\][\]'.
+          -s
+          : Print or match against the filtered output of 'stty -a' to show the
+            terminal's keybindings rather than Readline's.
+
+          -k
+          : Print the bindings to the supplied string. The string is often a single
+            character (e.g. 'n'), but may be a sequence (e.g. '^[[5~' for PgUp).
+
+            If the string contains '^[', which represents the escape character, it is
+            removed. This allows matching to a sanitized string produced from bind's
+            output.
+
+            When using '-k', matching is performed by 'awk', in the same way that
+            'grep -iE' would. Unmatched opening brackets and parentheses ('[', '('),
+            which would cause an error, are automatically escaped by bind-grep. Other
+            regex meta-chars ('\', '^', '$', '.', '|', '*', '+', '?') should be escaped
+            with '\' to be matched literally.
+
+            Most characters, including all letters and digits, are regular expressions
+            that match themselves. To match literal meta-characters such as '.', '*',
+            '(', '[', '|', '{', '^', and '$', they should be quoted by preceding with a
+            backslash or enclosing in square brackets, e.g. '\*' or '[.]'. This includes
+            the backslash character itself, which is also double printed in bind's
+            double-quoted output; thus, to search for bindings on '\', you would use
+            -k '\\\\' or -k '[\][\]'.
 
         Other common queries that can be accomplished using bind:
 
@@ -55,6 +68,9 @@ bind-grep() {
 
           # print bindinds to '{'
           bind-grep -k '\{'
+
+          # print all defined terminal bindings
+          bind-grep -s -v undef
     "
 
     [[ $# -eq 0  ||  $1 == -h ]] &&
@@ -78,10 +94,10 @@ bind-grep() {
 
 
     # defaults and opt-parsing
-    local _k _filt n
+    local _k _s _filt n
 
     local flag OPTARG OPTIND=1
-    while getopts ':k:' flag
+    while getopts ':k:s' flag
     do
         case $flag in
             ( k )
@@ -94,6 +110,9 @@ bind-grep() {
                 '
 
                 _k=$( command sed -E "$_filt" <<< "$OPTARG" )
+            ;;
+            ( s )
+                _s=1
             ;;
             ( \? )
                 # preserve arguments for grep
@@ -114,38 +133,58 @@ bind-grep() {
 
     shift $n
 
+
     # all other args are for grep
+    # - by default, match all
+    (( $# > 0 )) ||
+        set -- '^'
+
     grep_cmd+=( "$@" )
 
 
-    # gather the binding definitions for functions, macros, and shell commands
-    # - trailing newlines are stripped away by $(...)
+    # gather the binding definitions to match
     local binddefs_str
 
-    binddefs_str=$( builtin bind -p )$'\n'
-    binddefs_str+=$( builtin bind -s )$'\n'
-    binddefs_str+=$( builtin bind -X )$'\n'
+    if [[ -v _s ]]
+    then
+        # use the bindings output of stty
+        binddefs_str=$(
+            set -o pipefail
+            command stty -a \
+                | command sed 's/;[[:blank:]]*/\n/g' \
+                | command grep ' = ' \
+                | command grep -Ev '^(line|min|time)'
+        ) || return
+
+    else
+        # gather the binding definitions for functions, macros, and shell commands
+        # - trailing newlines are stripped away by $(...)
+
+        binddefs_str=$( builtin bind -p )$'\n'
+        binddefs_str+=$( builtin bind -s )$'\n'
+        binddefs_str+=$( builtin bind -X )$'\n'
 
 
-    # format the binding definitions
-    _filt='
-        # remove empty lines and self-insert lines
-        /^$/ { next; }
-        /: self-insert$/ { next; }
+        # format the binding definitions
+        _filt='
+            # remove empty lines and self-insert lines
+            /^$/ { next; }
+            /: self-insert$/ { next; }
 
-        # improve formatting of (not bound) lines
-        /^# .*\(not bound\)$/ {
-            sub(/ \(not bound\)$/, "")
-            sub(/^#/, "# (none):")
-            next
-        }
+            # improve formatting of (not bound) lines
+            /^# .*\(not bound\)$/ {
+                sub(/ \(not bound\)$/, "")
+                sub(/^#/, "# (none):")
+                next
+            }
 
-        # align function names
-        { printf "%-10s : %s\n", $1, $2; }
-    '
+            # align function names
+            { printf "%-10s : %s\n", $1, $2; }
+        '
 
-    # awk's -F sets field-separator
-    binddefs_str=$( command awk -F ': ' "$_filt" - <<< "$binddefs_str" )
+        # awk's -F sets field-separator
+        binddefs_str=$( command awk -F ': ' "$_filt" - <<< "$binddefs_str" )
+    fi
 
 
     if [[ -z ${_k-} ]]
@@ -184,90 +223,3 @@ bind-grep() {
         command awk -v "k=${_k}" "$_filt" <<< "$binddefs_str"
     fi
 }
-
-# vvv OLD code
-
-# improve formatting of (not bound) lines
-# _filt='
-#     /^#.*(not bound)$/ {
-#         s/ (not bound)$//
-#         s/^#/# (none):/
-#     }
-# '
-# binddefs_str=$( command sed "$_filt" <<< "$binddefs_str" )
-
-
-#         # array of matching line numbers (1-based)
-#         local match_lines=()
-#         _filt="
-#             # ignore (not bound) lines
-#             /^# / d
-#
-#             # strip quotes, meta keys, and everything after colon
-#             s/(^\"|\": [^:]+\$|\\\\C-|\\\\e)//g
-#
-#             # match
-#             /$_k/I =
-#         "
-#         match_lines=( $( command sed -nE "$_filt" <<< "$binddefs_str" ) )
-#
-#         # to match with grep instead of sed or awk, use '-n' to print the line no.s
-#         # - in my test, the result is identical to the sed matching
-#         # match_lines=( $( command grep "${grep_args[@]}" -n -e"$_k" <<< "$bound_chars" |
-#         #                      command sed -E 's/([0-9]+):.*/\1/' ) )
-#
-#         # convert defs str to array
-#         local m binddefs_arr=()
-#         IFS='' mapfile -t -O1 binddefs_arr <<< "$binddefs_str"
-#
-#         # print matching lines
-#         for m in "${match_lines[@]}"
-#         do
-#             printf '%s\n' "${binddefs_arr[$m]}"
-#             sed -n "$m p" <<< "$bound_chars"
-#         done
-
-
-#     if false
-#         # testing ways to match
-#         # - could use sed to print each line from the array, but that seems inefficient
-#
-#         # make an array with indices of the matching line numbers
-#         local m ms=()
-#         for m in "${match_lines[@]}"
-#         do
-#             ms[$m]=a
-#         done
-#
-#         # step through the string line-by-line and test
-#         local i=1
-#         while IFS='' read -r line
-#         do
-#             [[ -v ms[$i] ]] &&
-#                 printf '%s\n' "$line"
-#             (( i++ ))
-#
-#         done <<< "$binddefs_str"
-#
-#         # awk way: make an array with indices matching the line numbers
-#         awk_prgm='
-#             BEGIN {
-#                 # split the string into an array of line nums
-#                 split(s, A)
-#
-#                 # make the line nums the index, so we can use "in"
-#                 for (i in A)
-#                     B[A[i]] = ""
-#             }
-#             # print matching lines
-#             (NR in B) {print}
-#         '
-#         awk -v s="$lns" "$awk_prgm" <<< "$binddefs_str"
-#
-#         # another awk way
-#         # pattern string of line numbers that match
-#         match_ptn=$( sed -nE "/$_k/I =" | head -c'-1' | tr '\n' '|' )
-#         # - maybe make an awk script out of the line numbers
-#         #   like 'NR ~ /^1|2|3$/ {print}'
-#         #   or the in operator: 'NR in array', with line numbers as array subscripts
-#     fi
