@@ -1,1 +1,1 @@
-../../../modules/docsh/docsh.sh
+../../modules/docsh/docsh.sh
