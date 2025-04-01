@@ -13,6 +13,12 @@ man-wrapper() {
           - It adds the --nj option to the man command. This disables full-width
             justification of the page (ragged-right).
 
+        The page width is limited by dynamically setting the MANWIDTH environment
+        variable, depending on the present terminal width. The variable is set to 95%
+        of the terminal width if it's less than the limit value. This is better than
+        a blanket value, as a terminal width lower than e.g. the default value of 80
+        causes awkward wrapping of the displayed page.
+
         Option:
 
           --mw=<n> : width limit in chars (default 88)
@@ -54,15 +60,22 @@ man-wrapper() {
     done
 
 
+    # terminal width may limit the width to less than the max
+    local tw
+    tw=${COLUMNS:-$( tput cols )}
+    tw=$( awk -v "n=$tw" 'BEGIN { print int(n*0.95) }' )
+
+    (( tw >= _manwidth )) ||
+        _manwidth=$tw
+
+
     # array of environment variables to set
+    # - set MANWIDTH if needed
     local -a evars
 
-    # limit width if needed
-    if  [[ -z ${MANWIDTH:-}
-        && ${COLUMNS:-$( tput cols )} -gt $_manwidth ]]
-    then
+    [[ -n ${MANWIDTH-} ]] ||
         evars+=( "MANWIDTH=$_manwidth" )
-    fi
+
 
     # disable justification
     # - quoting is OK: don't add escaped quotes, they will become part of the value
