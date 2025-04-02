@@ -20,11 +20,11 @@ calc-bc() {
 
     Functions from the standard math library may be used, which include:
 
-        s(x) : Sine of x (x in radians)
-        c(x) : Cosine of x (x in radians)
+        s(x) : Sine function (x in radians)
+        c(x) : Cosine function (x in radians)
         a(x) : Arctangent of x (returns radians)
-        l(x) : Natural logarithm of x
         e(x) : Exponential function (e^x)
+        l(x) : Natural logarithm of x
       j(n,x) : Bessel function of integer order n of x
 
     Options
@@ -52,6 +52,9 @@ calc-bc() {
 
       # calculate the value of pi to 10 decimal places
       calc-bc -s10 '4*a(1)'
+
+      # sine of pi/4, with precision 4
+      calc-bc -f '%.4f' 'pi=4*a(1)' 's(pi/4)'
 
     Background
 

@@ -2,7 +2,21 @@ calc-awk() {
 
     : "Print result of math expression using awk
 
-    Usage: calc-awk [options] <expression>
+    Usage: calc-awk [options] <expression> ...
+
+    If multiple expressions are provided, the result of the last is printed. This can
+    be useful for evaluating intermediate results (see example).
+
+    The mawk implementation of awk makes several mathematical functions available,
+    including:
+
+        sin(x) : Sine function (x in radians)
+        cos(x) : Cosine function (x in radians)
+    atan2(y,x) : Arctan of y/x between -pi and pi
+        exp(x) : Exponential function (e^x)
+        log(x) : Natural logarithm of x
+       sqrt(x) : Square root of x
+        rand() : Returns a random number between zero and one
 
     Options
 
@@ -23,6 +37,9 @@ calc-awk() {
 
       # integer-rounded result of 7/3
       calc-awk -i -v 'a=3' -v 'b=7' 'b/a'
+
+      # sine of pi/4
+      calc-awk 'pi=atan2(0, -1)' 'sin(pi/4)'
     "
 
     # defaults and option parsing
@@ -65,16 +82,20 @@ calc-awk() {
     (( $# > 0 )) ||
         { err_msg 4 "missing expression"; return; }
 
-    (( $# == 1 )) ||
-        { err_msg 5 "too many arguments: ${*@Q}"; return; }
 
-    # script
+    # awk script
+    local ascr exprs
+
+    # prepend print command to the last expression
+    set -- "${@:1:$#-1}" "print ${!#}"
+    exprs=$( printf '%s\n' "$@" )
+
     # - NB, awk lacks the ability to evaluate a string variable as an expression,
-    #   so expand the variable directly into the script
-    local ascr="
+    #   so the variable is expanded directly into the script
+    ascr="
         BEGIN {
             OFMT = _fmt
-            print $1
+            $exprs
         }
     "
 
