@@ -1,52 +1,81 @@
 func-where() {
 
-    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
+    : "Show file path containing a function definition
 
-        : "Show file path containing a function definition
+        Usage: func-where [-s] <func-name> ...
 
-        Usage: func-where <func-name> ...
+        This function prints the file path and line number for the definition of a
+        function. It temporarily enables the extdebug option, then runs 'declare -F'
+        to get the information.
 
-        This function temporarily enables the extdebug option, then runs
-        \`declare -F\` with the supplied arguments.
-        "
-        docsh -TD
-        return
-    }
+        If the -s option is passed, the file path is sourced, to reread the function
+        definition.
+    "
 
-    local func_nm s src_fn src_ln regex_ptn
+    # defaults and options
+    local _s
 
-    # define regex separately to avoid shell quoting issues
+    local flag OPTARG OPTIND=1
+    while getopts ':sh' flag
+    do
+        case $flag in
+            ( s ) _s=1 ;;
+            ( h ) docsh -TD; return ;;
+            ( \? ) err_msg 3 "unknown option: '-$OPTARG'"; return ;;
+            ( : )  err_msg 4 "missing argument for -$OPTARG"; return ;;
+        esac
+    done
+    shift $(( OPTIND-1 ))
+
+    # record state of extdebug, and enable it
+    local _ed_state
+    if shopt extdebug >/dev/null
+    then
+        _ed_state=1
+    fi
+
+    shopt -s extdebug
+
+
+    # gather func defn info
+    local regex_ptn func_nm dec_out src_fn src_ln src_cmd
+
+    # Define regex separately to avoid shell quoting issues
+    # - Pattern matches function name, line number, and source file path
+    # - E.g. for the_func() defined in 'a func.sh', declare -F would output:
+    #   'the_func 1 a func.sh'
+    # - Then, [[ $sss =~ ^([^ ]+)\ ([0-9]+)\ (.+)$ ]] would produce:
+    #   BASH_REMATCH=([0]="the_func 1 a func.sh" [1]="the_func" [2]="1" [3]="a func.sh")
     regex_ptn='^([^ ]+) ([0-9]+) (.+)$'
 
-    (
-        shopt -s extdebug
+    for func_nm in "$@"
+    do
+        dec_out=$( declare -F "$func_nm" ) \
+            || { err_msg w "function not found: '$func_nm'"; continue; }
 
-        for func_nm in "$@"
-        do
-            [[ $( builtin type -at "$func_nm" ) == *function* ]] ||
-                { err_msg w "function not found: '$func_nm'"; continue; }
+        [[ $dec_out =~ $regex_ptn ]]
+        src_fn=${BASH_REMATCH[3]}
+        src_ln=${BASH_REMATCH[2]}
 
-            s=$( declare -F "$func_nm" )
+        # source if requested
+        if [[ -v _s ]]
+        then
+            src_cmd=( builtin source "$src_fn" )
+            printf >&2 '%s\n' "${PS4}${src_cmd[*]}"
+            "${src_cmd[@]}"
 
-            # E.g.:
-            # - for the_func() defined in 'a func.sh', declare -F would output:
-            #   'the_func 1 a func.sh'
-            # - then, [[ $sss =~ ^([^ ]+)\ ([0-9]+)\ (.+)$ ]] would produce:
-            #   BASH_REMATCH=([0]="the_func 1 a func.sh" [1]="the_func" [2]="1" [3]="a func.sh")
-
-            [[ $s =~ $regex_ptn ]]
-            src_fn=${BASH_REMATCH[3]}
-            src_ln=${BASH_REMATCH[2]}
-
-            # src_fn=${s#* * }
-            # src_ln=${s#* }
-            # src_ln=${src_ln% ${src_fn}}
-
+        else
             # grep-style output
             [[ $# -gt 1 ]] &&
                 printf '%s' "${func_nm}: "
 
             printf '%s\n' "ln. $src_ln in '$src_fn'"
-        done
-    )
+        fi
+    done
+
+    # reset extdebug
+    if [[ -v _ed_state ]]
+    then
+        shopt -s extdebug
+    fi
 }
