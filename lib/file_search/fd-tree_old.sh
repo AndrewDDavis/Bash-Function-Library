@@ -1,3 +1,6 @@
+# TODO:
+# - I think this file is obscelete
+
 # alias for discoverability
 # alias tree-fd='fd-tree'
 

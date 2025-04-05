@@ -1,4 +1,12 @@
+# alias fd to the wrapper function
 alias fd='fd-wrapper'
+alias fda='fd-wrapper -HI'  # like ls -a
+
+# fd-tree command
+alias fd-tree='fd-wrapper --tree'
+
+import_func array_strrepl tree-fromfiles \
+    || return 63
 
 fd-wrapper() {
 
@@ -6,17 +14,20 @@ fd-wrapper() {
 
     Usage: fd-wrapper [options] [pattern] [path ...]
 
-    This function calls fd with the --no-ignore-vcs option. Depending on the system,
-    the fd command may actually be named fdfind, so the function will use that name if
-    necessary. The command matches filenames, with the following behaviour:
+    This function matches filesnames by calling fd with the --no-ignore-vcs option.
+    Depending on the system, the fd command may actually be called fdfind. This
+    wrapper adds a --tree option, which will prodes a tree view by passing the output
+    from fd through the tree command. Otherwise, it operates just like the fd command.
+
+    The pattern matches filenames, with the following behaviour:
 
       - If the path is omitted, the tree under the current directory is searched.
         Symlinks are not followed, unless -L (--follow) is used. Mount points in the
         tree are searched, unless --xdev (--one-file-system) is used.
 
-      - Substrings of file basenames are matched. The pattern is interpreted as a
-        regular expression using the Rust regex engine, with syntax similar to ERE
-        (<https://docs.rs/regex/1.0.0/regex/#syntax>).
+      - The pattern is interpreted as a regular expression using the Rust regex engine,
+        with syntax similar to ERE (<https://docs.rs/regex/1.0.0/regex/#syntax>).
+        Substrings of file basenames are matched.
 
           + Use -p (--full-path) to match full paths.
 
@@ -98,14 +109,37 @@ fd-wrapper() {
             -X du -hsc | sort -h
     "
 
-    # 0 args is allowed for fd
+    # bare fd command with 0 args is allowed
     [[ ${1-} == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
     local fd_cmd
-    fd_cmd=$( builtin type -P fd ) \
-        || fd_cmd=$( builtin type -P fdfind ) \
-            || return 3
+    fd_cmd=( "$( builtin type -P fd )" ) \
+        || fd_cmd=( "$( builtin type -P fdfind )" ) \
+            || return 9
 
-    "$fd_cmd" --no-ignore-vcs "$@"
+    fd_cmd+=( --no-ignore-vcs )
+
+    # args to array
+    local fd_args
+    fd_args=( "$@" )
+    shift $#
+
+    # parse args
+    # - NB, array_strrepl returns T/F for match, then deletes the element when
+    #   called with no replacement string
+    local _tree
+    array_strrepl fd_args '--tree' \
+        && _tree=1
+
+
+    if [[ -v _tree ]]
+    then
+        # pass file list to tree
+        tree-fromfiles < <( "${fd_cmd[@]}" --print0 "${fd_args[@]}" )
+
+    else
+        # typical fd command
+        "${fd_cmd[@]}" "${fd_args[@]}"
+    fi
 }
