@@ -34,17 +34,23 @@ import_func() {
             function with the same name is already defined. This option forces such
             functions to be reimported by sourcing the relevant file.
 
+        The function normally returns 0 (true), but returns 62 if it cannot find the
+        funclib directory, 63 if it cannot find a source file for a function named
+        on the command line, or 64 if it finds multiple source files. It also returns
+        3, 4 or 5 if there is a problem parsing the command-line arguments, or 9 if
+        executables for the find or grep command cannot be located.
+
         Example 1
 
           # import dependencies in a script
 
           [[ \$( builtin type -t import_func ) == function ]] || {
               source ~/.bash_lib/import_func.sh \\
-                  || return 63
+                  || return 9
           }
 
           import_func docsh err_msg \\
-              || return 62
+              || return
 
         Example 2
 
@@ -71,8 +77,8 @@ import_func() {
         case $_flag in
             ( a ) _all=1 ;;
             ( f ) _force=1 ;;
-            ( \? ) err_msg 2 "Unrecognized option: '-$OPTARG'"; return ;;
-            ( : )  err_msg 2 "Missing argument for -$OPTARG"; return ;;
+            ( \? ) err_msg 3 "Unrecognized option: '-$OPTARG'"; return ;;
+            ( : )  err_msg 4 "Missing argument for -$OPTARG"; return ;;
         esac
     done
     shift $(( OPTIND-1 ))
@@ -84,7 +90,7 @@ import_func() {
         libdir=$BASH_FUNCLIB
 
     [[ -d $libdir ]] ||
-        { err_msg 9 "libdir not found: '$libdir'"; return; }
+        { err_msg 62 "libdir not found: '$libdir'"; return; }
 
 
     _xfn() {
@@ -114,7 +120,7 @@ import_func() {
         local find_cmd fn
 
         find_cmd=( "$( builtin type -P find )" -L "$libdir" ) \
-            || return 9
+            || { err_msg 9 "no executable found for find"; return; }
 
         if [[ $# -gt 0 ]]
         then
@@ -151,15 +157,14 @@ import_func() {
 
     else
         # import specified function(s)
-
         [[ $# -gt 0 ]] ||
-            return 99
+            { err_msg 5 "function name required"; return; }
 
         # grep path and opts (recursive ERE, follow symlinks, limit to text-format files)
         local grep_cmd grep_ptn
 
         grep_cmd=( "$( builtin type -P grep )" -EIRl ) \
-            || return 9
+            || { err_msg 9 "no executable found for grep"; return; }
 
         # limit to .sh and .bash filenames
         grep_cmd+=( --include='*.sh' --include='*.bash' )
@@ -187,11 +192,11 @@ import_func() {
 
             elif [[ ${#src_fns[@]} -eq 0 ]]
             then
-                err_msg 1 "no source found for '$func_nm'"
+                err_msg 63 "no source found for '$func_nm'"
                 return
 
             else
-                err_msg 1 \
+                err_msg 64 \
                     "multiple source files found for '$func_nm'" \
                     "command line was '${grep_cmd[*]} -e $grep_ptn $libdir'"
                 return
@@ -202,4 +207,4 @@ import_func() {
 
 # when sourcing this file, import supporting functions
 import_func err_msg docsh \
-    || return 62
+    || return
