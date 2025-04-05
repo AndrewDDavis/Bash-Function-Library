@@ -1,4 +1,4 @@
-function rg-zpg {
+rg-zpg() {
 
     : "search with ripgrep, open in pager"
 

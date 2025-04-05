@@ -1,4 +1,9 @@
-fd-tree() {
+# alias for discoverability
+# alias tree-fd='fd-tree'
+
+import_func fd-wrapper
+
+fd-tree_old() {
 
     : "Match files with fd, display as tree
 
@@ -8,14 +13,29 @@ fd-tree() {
         filenames. The list displayed in a tree-like format by filtering it using the
         \`tree\` command and a \`sed\` filter.
 
-        Refer to my fd-wrapper function for relevant options and usage details.
+        This function calls the fd-wrapper function, if present. Refer to those docs
+        for relevant options and usage details. Otherwise, calls fd with the
+        --no-ignore-vcs flag.
 	"
 
 	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }
 
+    # prefer fd-wrapper function, otherwise fd or fdfind
+    local fd_cmd
+    if [[ $( type -t fd-wrapper ) == function ]]
+    then
+        fd_cmd=( fd-wrapper )
+    else
+        fd_cmd=( "$( builtin type -P fd )" ) \
+            || fd_cmd=( "$( builtin type -P fdfind )" ) \
+                || return 9
+
+        fd_cmd+=( --no-ignore-vcs )
+    fi
+
     # show hidden files
-    # - used to use -F to show callification suffixes like ls -F, but I prefer colour
+    # - used to use -F to show classification suffixes like ls -F, but I prefer colour
     local tree_args=( '-a' )
 
     # use colour, even though the output is going to sed
@@ -43,7 +63,9 @@ fd-tree() {
         /^.[  ][  ]./ { s/^....//; b; }
     '
 
-    fd "$@" \
+    "$fd_cmd" "$@" \
         | command tree "${tree_args[@]}" --fromfile . \
         | command sed -E "$tree_filt"
+
+    # PIPESTATUS? (TODO)
 }
