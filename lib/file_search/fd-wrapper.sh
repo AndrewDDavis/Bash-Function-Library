@@ -22,7 +22,7 @@ fd-wrapper() {
       --tree
       : This option shows the matched files in a tree view. This is done by passing the
         fd output as a null-delimited list to the tree-fromfiles function, which relies
-        on the tree command.
+        on the tree command. The --noreport tree option is also recognized.
 
     Pattern matching occurs according to the following behaviour:
 
@@ -139,15 +139,17 @@ fd-wrapper() {
     # parse args
     # - NB, array_strrepl returns T/F for match, then deletes the element when
     #   called with no replacement string.
-    local _tree
+    local _tree _norpt
     array_strrepl fd_args '--tree' \
         && _tree=1
 
+    array_strrepl fd_args '--noreport' \
+        && _norpt=1
 
     if [[ -v _tree ]]
     then
         # pass file list to tree
-        tree-fromfiles < <( "${fd_cmd[@]}" --print0 "${fd_args[@]}" )
+        tree-fromfiles ${_norpt:+"--noreport"} < <( "${fd_cmd[@]}" --print0 "${fd_args[@]}" )
 
     else
         # typical fd command

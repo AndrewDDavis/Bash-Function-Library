@@ -1,11 +1,13 @@
 # TODO:
 # - replace sed script with simple shell find/replace
+# - make a proper tree-find/find-tree that passes the output of find -print0 to this function,
+#   mapping newlines to an escape sequence
 
 tree-fromfiles() {
 
     : "Print tree view of files passed on STDIN
 
-        Usage: tree-fromfiles < <( find -type f -print0 )
+        Usage: tree-fromfiles [tree-options] < <( find -type f -print0 )
 
         This function accepts a null-delimited file list, and prints the corresponding
         file tree using 'tree -aC --filesfirst'. It also improves the output somewhat:
@@ -44,6 +46,10 @@ tree-fromfiles() {
         && (( ${_term_nclrs:-2} >= 8 )) \
         && tree_cmd+=( -C )
 
+    # other CLI options for tree (e.g. --noreport)
+    tree_cmd+=( "$@" )
+    shift $#
+
     tree_out=$( "${tree_cmd[@]}" --fromfile <( printf '%s\n' "${file_list[@]}" ) ) \
         || return
 
@@ -59,11 +65,14 @@ tree-fromfiles() {
     # [[ ${file_list[*]:(-1)} =~ ^([0-9]+)\ (.*)$ ]]
 
 
-    ## split off tree's report (last line) and edit it to decrement no. of dirs
-    [[ $tree_out =~ ^(.+)$'\n'([0-9]+)\ ([^$'\n']+)$ ]]
+    if ! array_match tree_cmd '--noreport'
+    then
+        ## split off tree's report (last line) and edit it to decrement no. of dirs
+        [[ $tree_out =~ ^(.+)$'\n'([0-9]+)\ ([^$'\n']+)$ ]]
 
-    tree_out=${BASH_REMATCH[1]}
-    tree_rpt="$(( BASH_REMATCH[2] - 1 )) ${BASH_REMATCH[3]}"
+        tree_out=${BASH_REMATCH[1]}
+        tree_rpt="$(( BASH_REMATCH[2] - 1 )) ${BASH_REMATCH[3]}"
+    fi
 
 
     ## sed script to trim the cruft of the --fromfile output
@@ -85,5 +94,6 @@ tree-fromfiles() {
     command sed -E "$tree_filt" < <( printf '%s\n' "$tree_out" ) \
         || return
 
-    printf '%s\n' "$tree_rpt"
+    [[ -v tree_rpt ]] &&
+        printf '%s\n' "$tree_rpt"
 }
