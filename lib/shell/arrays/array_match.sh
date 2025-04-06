@@ -1,3 +1,6 @@
+# TODO:
+# - use match-sh (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external command call
+
 array_match () {
 
     # function docs
@@ -8,8 +11,7 @@ array_match () {
         Usage: array_match [options ...] <array-name> <pattern>
 
         The 'array-name' argument is the name of an existing array variable; don't pass
-        the whole expanded array. If the variable pointed to by 'array-name' is a scalar
-        string rather than an array, the shell will treat it as an array of length 1.
+        the whole expanded array.
 
         By default, matching uses Posix ERE regular expression syntax to match an entire
         array element, rather than a substring.
@@ -26,7 +28,8 @@ array_match () {
         -v : invert the logic: test for elements that do not match the pattern
 
         The return status is 0 (true) for a match, 1 (false) for no match, or > 1 if an
-        error occurs.
+        error occurs. An empty array always returns 1. It is an error if the named
+        variable is unset, or is a scalar variable rather than an array.
 
         Examples
 
@@ -101,9 +104,18 @@ array_match () {
     local ptn=$2        || return
     shift 2
 
-    # check valid name
-    [[ -v arrnm[@] ]] ||
-        { err_msg 3 "not a valid name: '${!arrnm}'"; return; }
+
+    # check valid name and non-empty array
+    # - NB, [[ -v arrnm[*] ]] returns false for empty array (referenced or not), or unset var
+    # - n=0 for empty array, returns false for scalar variable, or unset var
+    n=${#arrnm[*]} \
+        || { err_msg 3 "not an array: '${!arrnm}'"; return; }
+
+    if (( n == 0 ))
+    then
+        # empty array, no matches
+        return 1
+    fi
 
     # Both matching styles below use grep
     #
