@@ -1,19 +1,16 @@
+# alias for discoverability
+alias mk444='touch-444'
+
 touch-444() {
 
-    : "Make a file world-readable after creation with touch
+    : "Create a file and give it world-readable permissions
 
-        Usage: touch-444 [-f] [tch-opt ...] <file-name ...>
+        Usage: touch-444 [-f] <file-name ...>
 
         Options
 
-          -f : force action, even if the file exists
-
-        All other options and arguments are passed to touch.
+          -f : perform chmod, even if the file exists
     "
-
-    local tch_cmd
-    tch_cmd=( "$( builtin type -P touch )" ) \
-        || return 9
 
     # option parsing
     local _f
@@ -31,33 +28,23 @@ touch-444() {
     shift $(( OPTIND-1 ))
 
 
-
-        elif [[ $1 != --*  && $1 == -*@(d|r|t) ]]
-        then
-            # touch options that take an arg
-
-            tch_opts+=( "$1" "$2" )
-            shift 2
-
-        else
-            tch_opts+=( "$1" )
-            shift
-        fi
-    done
-
-
     # main loop
     local fn
 
     for fn in "$@"
     do
-        [[ -e "$fn"  && -n ${_f-} ]] ||
-            { err_msg 6 "file exists: $fn"; return; }
+        if [[ -e "$fn"  && -z ${_f-} ]]
+        then
+            err_msg 6 "file exists: $fn"
+            return
 
-        (
-            set -x
-            touch "${tch_opts[@]}" "$fn" \
-                && chmod o+r "$fn"
-        )
+        elif [[ ! -L "$fn"  && ! -e "$fn" ]]
+        then
+            # create file
+            : > "$fn"
+        fi
+
+        chmod a+r "$fn" \
+            || return
     done
 }
