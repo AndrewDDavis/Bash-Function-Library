@@ -1,15 +1,14 @@
 duh() {
 
-    : "Print sorted disk usage of files in a directory tree
+    : "Print sorted disk usage of a directory tree
 
-    Usage: duh-sort [du-options] [path-root]
+    Usage: duh [du-options] [path-root]
 
-    This runs 'du -hcD' to print file sizes using human-readable prefix units, and a
-    grand-total of disk usage. If the path-root is omitted, the current directory is
-    used.
+    This function prints the disk usage of directories under the specified tree, by
+    running the 'du -hcSD' command (option details below). If the path-root argument
+    is omitted, the current directory is used. The results are ordered using 'sort -h'.
 
-    By default, only the sizes of the root directory and its subdirectories are
-    printed. Use '-a' or a glob to print file sizes as well.
+    To print file sizes as well as directory usage, use '-a' or a glob pattern.
 
     Notable du options:
 
@@ -20,10 +19,13 @@ duh() {
       : produce a grand total
 
       -D (--dereference-args)
-      : Dereference only symlinks that are listed on the command line
+      : dereference only symlinks that are listed on the command line
 
       -h (--human-readable)
       : print sizes in human readable format (e.g., 1K 234M 2G)
+
+      -L (--dereference)
+      : dereference all symbolic links
 
       -s (--summarize)
       : display only a total for each argument, not for the files it contains
@@ -41,6 +43,6 @@ duh() {
 	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }
 
-    command du -hc "$@" \
+    command du -hcSD "$@" \
         | command sort -h
 }
