@@ -9,9 +9,12 @@ Sourcing the files and running them as functions offers a few benefits:
 
   - Shell functions can fully integrate into an interactive session, including during
     shell initialization. This allows them to access, change, or set shell variables,
-    as in the string and array functions. In contrast, a shell script runs in a child
-    shell, which only allows access to exported variables, and they can't directly set
-    variables in the parent shell.
+    as in the string and array functions. Functions can also act on currently defined
+    key-bindings, aliases, and the working directory.
+
+    In contrast, a shell script runs in a child shell. This only allows access to
+    exported variables, and they can't directly set variables or otherwise modify the
+    environment in the parent shell.
 
   - For simple tasks, shell functions run more quickly than scripts or external
     programs, since no new process is required.
@@ -64,7 +67,7 @@ prompt, colours, etc.:
 
   - `term_detect`
     : Sets the TERM_PROGRAM environment variable, after attempting to detect the
-      current terminal emulator. Also sets the _term_nclrs variable, which some other
+      current terminal emulator. Also sets the TERM_NCLRS variable, which some other
       functions look for to determine the number of colours supported by the terminal.
 
 ## Prompt Functions

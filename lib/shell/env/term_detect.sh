@@ -25,7 +25,7 @@ term_detect() {
         Terminal, VS-code, etc), and the current session is not running under SSH.
 
         It also tests whether stdout is a tty and tries to detect the number of
-        colours supported by the terminal, and sets the _term_nclrs variable.
+        colours supported by the terminal, and sets the TERM_NCLRS variable.
         "
 
         docsh -TD
@@ -60,8 +60,8 @@ term_detect() {
     # - macOS Terminal.app and ChromeOS Terminal both return 256.
     if [[ -t 1 ]]
     then
-        declare -gi _term_nclrs
-        _term_nclrs=$( command tput colors || echo 2 )
+        declare -gi TERM_NCLRS
+        TERM_NCLRS=$( command tput colors || echo 2 )
     fi
 
     # However, terminals such as ChromeOS Terminal actually support 16M colours, even though

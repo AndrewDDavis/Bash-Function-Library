@@ -32,7 +32,7 @@
 export LESS="-iJMR --buffers=1024 --jump-target=.2 --tabs=4 --shift=4"
 
 # Colours
-if (( ${_term_nclrs:-2} >= 8 ))
+if (( ${TERM_NCLRS:-2} >= 8 ))
 then
     # - colour specs must be terminated with '$' in the LESS variable
     # LESS="$LESS --use-color --color=Pwk\$ --color=Ewy\$"

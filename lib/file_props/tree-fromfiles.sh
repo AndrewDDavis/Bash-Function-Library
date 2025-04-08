@@ -43,7 +43,7 @@ tree-fromfiles() {
     # - use colour, even though the output is going to sed
     # - used to use -F to show classification suffixes like ls -F, but I prefer colour
     [[ -t 1 ]] \
-        && (( ${_term_nclrs:-2} >= 8 )) \
+        && (( ${TERM_NCLRS:-2} >= 8 )) \
         && tree_cmd+=( -C )
 
     # other CLI options for tree (e.g. --noreport)

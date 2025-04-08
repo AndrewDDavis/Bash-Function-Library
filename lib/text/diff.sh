@@ -1,7 +1,7 @@
 # diff
 
 ### Colourized output
-if  (( ${_term_nclrs:-2} >= 8 )) \
+if  (( ${TERM_NCLRS:-2} >= 8 )) \
         && diff --color /dev/null /dev/null &>/dev/null
 then
     alias diff="diff --color=auto"

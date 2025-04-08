@@ -96,17 +96,17 @@ csi_strvars() {
 
 
     # Get terminal colour capability, unless defined in enclosing shell
-    [[ -v _term_nclrs ]] || {
+    [[ -v TERM_NCLRS ]] || {
 
         # use tput or safe-ish default
-        declare -i _term_nclrs
-        _term_nclrs=$( command tput colors ) \
-            || _term_nclrs=8
+        declare -i TERM_NCLRS
+        TERM_NCLRS=$( command tput colors ) \
+            || TERM_NCLRS=8
     }
 
 
     # Define standard FG + BG colours from the 8-colour palette (+ default)
-    if (( _term_nclrs >= 8 ))
+    if (( TERM_NCLRS >= 8 ))
     then
         _csi_str "$@" _cfg_r '31'  # red FG
         _csi_str "$@" _cfg_g '32'  # green FG
@@ -132,7 +132,7 @@ csi_strvars() {
 
     # If supported, define colours using the 256-colour palette instead
     # - would like to use '38:5:x' instead, but not supported in ChromeOS terminal
-    if (( _term_nclrs >= 256 ))
+    if (( TERM_NCLRS >= 256 ))
     then
         _csi_str "$@" _cfg_r '38;5;124'
         _csi_str "$@" _cfg_g '38;5;28'

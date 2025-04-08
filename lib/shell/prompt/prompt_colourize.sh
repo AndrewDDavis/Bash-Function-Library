@@ -42,8 +42,8 @@ prompt_colourize() {
     local -i nclrs=8
     local c_style=user
 
-    [[ -v _term_nclrs ]] &&
-        nclrs=$_term_nclrs
+    [[ -v TERM_NCLRS ]] &&
+        nclrs=$TERM_NCLRS
 
     local flag OPTARG OPTIND=1
     while getopts ":u0n:" flag
