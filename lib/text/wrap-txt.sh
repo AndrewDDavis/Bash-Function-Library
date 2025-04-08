@@ -1,3 +1,10 @@
+# TODO
+# - turn this into a script that can be called, rather than a function
+# - respect markdown syntax, esp. lists
+# - get inspiration from the VS-Code plugin that hard-wraps text
+# - look at the textfilter command of the micro docs
+# - need to define paragraph boundaries?
+
 wrap-txt() {
 
     : "Wrap text
