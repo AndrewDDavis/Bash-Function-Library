@@ -1,6 +1,6 @@
 func-where() {
 
-    : "Show file path containing a function definition
+    : "Show file path of a function definition
 
         Usage: func-where [-s] <func-name> ...
 
@@ -8,8 +8,8 @@ func-where() {
         function. It temporarily enables the extdebug option, then runs 'declare -F'
         to get the information.
 
-        If the -s option is passed, the file path is sourced, to reread the function
-        definition.
+        If the -s option is passed, the function is re-imported by sourcing the
+        relevant file path instead of printing it.
     "
 
     # defaults and options
@@ -26,6 +26,23 @@ func-where() {
         esac
     done
     shift $(( OPTIND-1 ))
+
+    # clean-up trap
+    trap '
+        unset -f _func_not_found
+        trap - return
+    ' RETURN
+
+    _func_not_found() {
+
+        # not a function; check for alias
+        if dec_out=$( alias "$func_nm" 2>/dev/null )
+        then
+            err_msg w "not a function, but found alias: ${dec_out#*=}"
+        else
+            err_msg w "function not found: '$func_nm'"
+        fi
+    }
 
     # record state of extdebug, and enable it
     local _ed_state
@@ -51,7 +68,7 @@ func-where() {
     for func_nm in "$@"
     do
         dec_out=$( declare -F "$func_nm" ) \
-            || { err_msg w "function not found: '$func_nm'"; continue; }
+            || { _func_not_found; continue; }
 
         [[ $dec_out =~ $regex_ptn ]]
         src_fn=${BASH_REMATCH[3]}
