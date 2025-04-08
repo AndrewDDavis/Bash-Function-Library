@@ -1,56 +1,59 @@
 # TODO:
 # - incorporate the functions from ~/Sync/Code/Backup/borg_go/bin/bgo_functions.sh
+# - see and cf. log func
 
 err_msg() {
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print simple messages to stderr and set a return status.
+        : "Print messages to stderr and set a return status
 
-        Usage
+        Usage: err_msg <rs> [\"message body\" ...]
 
-          err_msg <rs> [\"message body\" ...]
+        The value of 'rs' should be one of:
 
-        The value of 'rs' may be an integer to set a return code, 'w' for a warning, or
-        'i' for info. In the case of 'w' or 'i', the return code is 0.
+          - An integer to set the return status code for err_msg. Values > 0 will print
+            an error message, 0 triggers a warning.
+          - 'w' to print a warning (return status is 0).
+          - 'i' to print an info message (return status is 0).
+          - 'd' to print a debug message (return status is 0).
 
-        The message body consists of 1 or more strings to output on stderr with
+        The message body consists of 1 or more strings to output on STDERR with
         explanatory info for the user.
 
-        This function issues non-zero exit code if requested, but won't necessarily
-        cause the calling function to return. If that is desired, these solutions work:
+        This function issues a non-zero return status code if requested, but that won't
+        necessarily cause the calling function to return. To do that, you can:
 
-        - Use a return call in the calling function, e.g.:
-          err_msg 2 'lorem ipsum' || return \$?
+          - Use 'return' in the calling function (this preserves the value), e.g.:
 
-        - Set an error trap in the calling function, e.g.:
-          trap 'trap-err $?
-                return' ERR
+            err_msg 2 'lorem ipsum'; return
 
-        Examples:
+          - Set an error trap in the calling function, e.g.:
 
-        1) err_msg 1 \"valueError: foo should not be 0\" || return \$?
-        2) err_msg w \"file missing, that's not great but OK\" || return \$?
+            trap '
+                trap-err $?
+                return
+            ' ERR
+
+        Examples
+
+            err_msg 1 \"valueError: foo should not be 0\"; return
+
+            err_msg w \"file missing, that's not great but OK\"
         "
         docsh -TD
         return
     }
 
-    # TODO:
-    # - options -p for custom printf format string
-    # - options -n and -m for prepend and postpend newlines
-    # - see and cf. log func
-
     # return status (exit code)
     local rs=$1
     shift
-
 
     # define severity level
     local severity=ERROR
 
     case $rs in
-        ( w )
+        ( w | 0 )
             severity=WARNING
             rs=0
         ;;
@@ -58,43 +61,66 @@ err_msg() {
             severity=INFO
             rs=0
         ;;
+        ( d )
+            severity=DEBUG
+            rs=0
+        ;;
     esac
 
-    # Use generic message body if none supplied
+    # Use generic message if none was supplied
     [[ $# -eq 0 ]] &&
         set -- "return status was $rs"
 
 
     ### Define context of err_msg call
+    local -A caller
+    caller=( [name]= [srcnm]= [srcln]= )
 
-    local call_nm call_srcfn call_srcln
+    # - calling function names (if any)
+    [[ -v 'FUNCNAME[1]' ]] && {
 
-    # - calling function name (if any)
-    call_nm=${FUNCNAME[1]-}
+        caller[name]=${FUNCNAME[1]}'()'
 
-    # - caller source file (or 'main', or 'source')
-    call_srcnm=$( basename "${BASH_SOURCE[1]-}" )
+        [[ -v 'FUNCNAME[2]' ]] && {
+
+            local i
+            for (( i=2; i<${#FUNCNAME[*]}; i++ ))
+            do
+                caller[name]+=", ${FUNCNAME[i]}()"
+            done
+        }
+    }
+
+    # - caller source file (or 'main', or 'source', maybe 'environment')
+    caller[srcnm]=$( basename "${BASH_SOURCE[1]-}" )
 
     # - calling line in source file (or line of interactive shell)
     # - refers to a condensed form of the calling function, as seen by 'type'
-    call_srcln=${BASH_LINENO[0]-}
+    caller[srcln]=${BASH_LINENO[0]-}
 
     # create message string(s) to report context
     local context report=()
 
-    if [[ -z $call_nm  &&  -z $call_srcnm ]]
+    if [[ -z ${caller[name]}  && -z ${caller[srcnm]} ]]
     then
-        context="(main?, l. $call_srcln)"
+        context="(unknown source, l. ${caller[srcln]})"
 
-    elif [[ -n $call_nm  &&  $rs -eq 0 ]]
+    elif [[ -z ${caller[name]}  && -n ${caller[srcnm]} ]]
     then
-        context="${call_nm}()"
+        # e.g. from a sourced file, not a function
+        context="${caller[srcnm]}, l. ${caller[srcln]}'"
+
+    elif [[ $rs -eq 0 ]]
+    then
+        # e.g. warning from a function
+        context=${caller[name]}
 
     else
-        context="${call_nm}() in '$call_srcnm'"
+        context="${caller[name]} in '${caller[srcnm]}'"
     fi
 
-    [[ $rs -gt 0 ]] && context="code $rs from $context"
+    [[ $rs -gt 0 ]] &&
+        context="code $rs from $context"
 
     report=( "[$severity] ${context}" )
 
@@ -114,16 +140,13 @@ err_msg() {
 
     # Bold errors and warnings
     [[ $severity == @(ERROR|WARNING) ]] &&
-        report[0]=${report[0]/#\[${severity}\]/[${_cbo-}${severity}${_crb-}]}
-        # severity=${_cbo-}${severity}${_crb-}
+        report[0]=${report[0]/#"[${severity}]"/"[${_cbo-}${severity}${_crb-}]"}
 
-    # Bold function, underline file
-    #context=${context/$call_nm/${_cbo-}${call_nm}${_crb-}}
-    # context=${context/$call_srcnm/${_cul-}$call_srcnm${_cru-}}
-    report[0]=${report[0]/%${call_srcnm}\)/${_cul-}${call_srcnm}${_cru-})}
+    # Underline file (don't bold function, was too much)
+    report[0]=${report[0]/%"${caller[srcnm]}'"/"${_cul-}${caller[srcnm]}${_cru-}'"}
 
 
-    ## Print context and message body, with standardized intentation
+    ## Print context and message body, with standardized indentation
 
     if [[ -n $_ol ]]
     then
@@ -132,7 +155,6 @@ err_msg() {
 
     else
         # first line
-        # printf >&2 '[%s] (%s):\n' "$severity" "$context"
         report[0]="${report[0]}:"
 
         # body line(s) with consistent indentation
