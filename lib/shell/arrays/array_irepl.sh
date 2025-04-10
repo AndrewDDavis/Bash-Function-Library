@@ -1,18 +1,23 @@
+#deps
+import_func array_pop \
+    || return
+
 array_irepl() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Replace array element at index with one or more new elements
+        : "Replace indexed array element with one or more new elements
 
-        Usage: array_irepl <array-name> <index> [elem1 [elem2 ...]]
+        Usage: array_irepl <array-name> <index> [elem ...]
 
-        Adding more than one new element to a non-sparse, indexed array causes the
-        indices after the replaced element to be increased, as necessary. If no
-        replacement elements are provided, the indexed element is deleted, and the
-        following indices are decremented, as in array_pop().
+        Adding more than one new element to a non-sparse indexed array causes the
+        indices after the replaced element to be increased, as necessary. With a sparse
+        array, any gaps in the index after the replaced element may be filled with new
+        elements. If no replacement elements are provided, the indexed element is
+        deleted and the following indices are decremented using array_pop.
 
-        This function is not necessary for associative arrays: there is no implied order
-        of the keys, so just replace or add new elements using their keys.
+        This function is not useful for associative arrays, since there is no implied
+        order of the keys.
 
         Examples
 
@@ -24,12 +29,14 @@ array_irepl() {
     }
 
     # array name and index, then remaining args are new elements
-    local -n __iarr__=$1    || return
-    local k=$2          || return
+    local -n __iarr__=$1 \
+        || return
+    local -i k=$2 \
+        || return
     shift 2
 
     # check valid array and index
-    [[ -v __iarr__[@]  &&  ${__iarr__@a} == *a* ]] ||
+    [[ -v __iarr__[*]  && ${__iarr__@a} == *a* ]] ||
         { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
 
     is_int $k ||
@@ -44,10 +51,10 @@ array_irepl() {
     elif [[ $# -eq 1 ]]
     then
         # one new element: trivial replacement
-        __iarr__[$k]=$1
+        __iarr__[k]=$1
 
     else
-        # add elements to the array, taking into account sparseness
+        # add elements to the array, preserving the current sparseness
 
         # NB, for a non-sparse array, adding array elements will cause the last index to
         # increase by 1 less than the number of new elements. But a sparse array with
@@ -91,34 +98,37 @@ array_irepl() {
         # 1 2
         # 1 2 3 4
 
-        local i j=$k holes=1 i_last ign_holes=0 delta
+        local i j=$k i_last \
+            holes=1 ign_holes=0 delta
 
+        # check the array indices for gaps
         for i in "${!__iarr__[@]}"
         do
             # skip lower idcs, incl k
-            [[ $i -le $k ]] && continue
+            (( i <= k )) \
+                && continue
 
             # incr holes if there is a gap in the index
             (( holes += ( i - j - 1 ) ))
 
-            # store present index
             j=$i
         done
         i_last=$i
 
-        (( holes > $# )) &&
-            ign_holes=$(( holes - $# ))
+        # ign_holes: tracks holes in excess of num new elements
+        (( holes > $# )) \
+            && ign_holes=$(( holes - $# ))
 
-        # delta btw old and new idcs: req. holes - used holes
+        # delta: tracks increment on old idcs needed to make room (req. holes - used holes)
         delta=$(( $# - ( holes - ign_holes ) ))
 
-        # step through possible indices, in reverse order to avoid overwriting
+        # move elements out of the way, stepping through in reverse index order to avoid overwriting
         for (( i=i_last; i > k; i-- ))
         do
-            # delta can increase at gaps
-            [[ ! -v __iarr__[$i] ]] && {
+            [[ -v __iarr__[$i] ]] || {
 
-                if [[ $ign_holes -gt 0 ]]
+                # at a gap, burn 1 ign_hole or increment delta
+                if (( ign_holes > 0 ))
                 then
                     (( ign_holes-- ))
                 else
@@ -128,14 +138,14 @@ array_irepl() {
             }
 
             j=$(( i + delta ))
-            __iarr__[$j]=${__iarr__[$i]}
+            __iarr__[j]=${__iarr__[i]}
         done
 
         # then, write new elements to sequential indices from k
         for (( i=1; i <= $#; i++ ))
         do
             j=$(( k + i - 1 ))
-            __iarr__[$j]=${!i}
+            __iarr__[j]=${!i}
         done
     fi
 }
