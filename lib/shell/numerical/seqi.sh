@@ -27,7 +27,7 @@ seqi() {
     "
 
     # defaults and options
-    local _s='\n' _w
+    local _s=$'\n' _w
 
     local flag n OPTARG OPTIND=1
     while getopts ':s:wh' flag
