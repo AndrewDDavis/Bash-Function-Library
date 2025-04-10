@@ -48,6 +48,10 @@ array_shift() {
     (( $# == 0 )) \
         || { err_msg 4 "too many arguments"; return; }
 
+    # shift of 0 is a no-op
+    (( n > 0 )) \
+        || return 0
+
     # last array index
     local m
     m=$( argmax "${!__iarr__[@]}" )
