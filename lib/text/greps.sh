@@ -1,3 +1,10 @@
+#TODO
+# - make greps less reliant on an external grep call:
+#   e.g., for simple fixed string or ERE pattern matching,
+#   shell regex matching can be used, which is much faster,
+#   even with flags like -i; flags like -n, -I, etc. would
+#   be trickier, and could fall back to an external grep call
+
 # deps
 import_func alias-resolve array_strrepl \
     || return 63
