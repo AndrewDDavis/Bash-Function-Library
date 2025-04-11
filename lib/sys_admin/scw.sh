@@ -1,29 +1,45 @@
-# TODO:
-# is there a place for a compound command like this?
-#   while troubleshooting bind-mounts, used commands like:
-#
-#   ```sh
-#   systemctl --user --all |
-#       egrep --color=always 'mount|device|gvfs' |
-#       egrep -v '/(proc|run|sys|dev)/' |
-#       sed 's/                                    loaded/ loaded/' |
-#       less -ES --redraw-on-quit
-#   ```
+# deps
+import_func run_vrb array_strrepl array_pop \
+    || return
+
+# aliases
+scw-lsmounts() {
+
+    : "list interesting mounts and gvfs services, with headers and styling"
+
+    # use sed to trim the output after the first blank line
+    scw -u lsu-all --color 'gvfs-*' '*.mount' \
+        | grep -vE '/(proc|sys|dev)/' \
+        | sed '/^$/ q'
+}
+
+scw-lssocks() {
+
+    : "list sockets from both user and system contexts"
+
+    # user and system contexts give separate lists
+    scw -s list-sockets --all \
+        | sed '/^$/ q'
+    scw -u list-sockets --all \
+        | sed '/^$/ q'
+}
 
 scw() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Convenience wrapper for systemctl command lines
+        : "Run systemctl command lines
+
+        Usage: scw [context] [VAR=value] [command] [arguments ...]
 
         This function saves typing compared to the full systemctl command, including
         shorter aliases to command names, shorter option names for the Systemd context,
-        and automatic invocation of 'sudo' when necessary (i.e. when using the system
-        context as non-root user).
+        and automatic invocation of 'sudo' when necessary (i.e. for certain commands
+        with the system context, as a non-root user). It also adds the --color option,
+        which turns on stylized output from systemd, even if the output is piped to
+        another command.
 
-        Usage: scw [context] [command] [arguments ...]
-
-        Possible values for Systemd context argument:
+        Valid context arguments:
 
           -u | --user
           -s | --system (default)
@@ -32,8 +48,8 @@ scw() {
 
         The command may be one of systemctl's usual command names or the scw aliases
         shown below. Any further arguments are passed to systemctl after the command,
-        as usual. Running with no command invokes \`systemctl list-units\` and passes
-        the output to a pager (see SYSTEMD_LESS), as usual.
+        as usual. The default command is 'list-units', and the output is usually passed
+        to a pager (see SYSTEMD_LESS).
 
         For many commands, the arguments can include unit names, PIDs, paths, or
         patterns, which are assessed as shell glob expressions. Refer to \`man glob(7)\`
@@ -41,20 +57,21 @@ scw() {
         supported, but multiple glob patterns may be issued and the results will combine
         as with a logical OR.
 
+        For listing commands (ls, lsf, lst, and variants), scw will expand a pattern
+        given as a simple keyword into a wildcard expression of the form '*...*'.
+
         Notable systemctl commands and scw aliases:
 
-          ( list-unit-files | lsf | find ) [pattern]
+          ( list-unit-files | lsf | find ) [pattern ...]
           : List unit-files. If a pattern is provided, only unit files that match will
-            be listed. If the pattern is a simple keyword, scw will expand it into a
-            wildcard expression of the form '*...*'.
+            be listed.
 
-          ( list-units | ls | lsu | ls-all | lsu-all ) [pattern]
+          ( list-units | ls | lsu | ls-all | lsu-all ) [pattern ...]
           : List units matching a glob pattern. This is the default when systemctl is
             run without a command. The 'all' variants show units that are loaded but
-            inactive, in addition to the active ones. If the pattern is a simple
-            keyword, scw will expand it into a wildcard expression of the form '*...*'.
+            inactive, in addition to the active ones.
 
-          ( list-timers | lst ) [pattern]
+          ( list-timers | lst ) [pattern ...]
           : List timer units matching the pattern, and show useful details such as when
             they were last run and when they will fire next.
 
@@ -62,13 +79,13 @@ scw() {
           : List various unit types or states from those that are currently loaded in
             memory.
 
-          status [--full] [pattern]
+          status [--full] [pattern ...]
           : With no arguments, shows a tree-view of running services and subprocesses.
             With a pattern, shows unit state, unit file(s), and recent log. Use
             journalctl or jcw for more log output. --full prevents shortening of long
             lines in the output.
 
-          show [pattern]
+          show [pattern ...]
           : Show properties of units, jobs, or the manager itself. This is more
             machine-readable output of the configuration, whereas humans generally want
             'status' or 'cat'. Use --all to include properties that are not set.
@@ -162,123 +179,126 @@ scw() {
 
     trap '
         trap - ERR RETURN
-        unset -f _sc_call _is_keyword _expand_keyword
+        unset -f _expand_keyword
     ' RETURN
 
 
     ### Configure systemctl command call
+    local sc_cmdln
+    sc_cmdln=( "$( builtin type -P systemctl )" ) \
+        || err_msg 9 "systemctl not found"
 
-    # check for systemctl
-    [[ -n $( command -v systemctl ) ]] ||
-        err_msg 2 "systemctl not found"
-
-    # parse flag for systemd context
-    local ctx="--system"
-
-    case $1 in
-        ( -u | --user    ) ctx="--user";    shift ;;
-        ( -s | --system  ) ctx="--system";  shift ;;
-        ( -r | --runtime ) ctx="--runtime"; shift ;;
-        ( -g | --global  ) ctx="--global";  shift ;;
+    # systemd context
+    local scctx='system'
+    case ${1-} in
+        ( -u | --user    ) scctx=user;    shift ;;
+        ( -s | --system  ) scctx=system;  shift ;;
+        ( -r | --runtime ) scctx=runtime; shift ;;
+        ( -g | --global  ) scctx=global;  shift ;;
     esac
 
-    # systemctl command call
-    _sc_call() {
+    sc_cmdln+=( "--$scctx" )
 
-        local cmd_words=( systemctl )
+    # check args for --color
+    local scargs=( "$@" )
+    shift $#
 
-        [[ -z ${_use_sudo-} ]] ||
-            cmd_words=( sudo "${cmd_words[@]}" )
-
-        (
-            set -x
-            "${cmd_words[@]}" "$ctx" "$@"
-        )
-    }
-
-    _expand_keyword() {
-
-        # if last argument is a keyword, expand it into a wildcard pattern
-
-        # do nothing for empty arguments
-        [[ $# -eq 0  ||  -z $1 ]] && return
-
-        # check for a simple keyword. it should:
-        # - contain only letters, numbers, dashes, and dots
-        # - not be all digits
-        # - not generally begin with a dash, except for e.g. -.mount
-        local kw=${@: -1}
-
-        if [[   $kw == *[![:alpha:][:digit:].-]*  ||
-                $kw != *[![:digit:]]*  ||
-                $kw == -[!.]*  ]]
-        then
-            # not a keyword
-            _args+=( "$@" )
-
-        else
-            # keyword found
-            _args+=( "${@:1 : $(($#-1)) }" "*${kw}*" )
-        fi
-    }
-
-
-    ### Parse command
-    local _use_sudo cmd
-    cmd=$1
-    shift
-
-    # use sudo for system context with non-root user
-	if [[  $ctx == --system  &&
-           $( id -u ) -ne 0  &&
-           $cmd != @(list-*|ls*|find|status) ]]
-	then
-        _use_sudo=1
-
-	    # prompt for password immediately, if necessary
-	    sudo true
+    # - NB, this array_strrepl call removes the array element an decrements later ones
+    if array_strrepl scargs '--color'
+    then
+        sc_cmdln=( "SYSTEMD_COLORS=1" "${sc_cmdln[@]}" )
     fi
 
-    local _args=() rs cmd_regex
-    cmd_regex='^(list-.*|ls.?(-all)?|find)$'
+    # check for VAR=value arguments
+    local i
+    for i in "${!scargs[@]}"
+    do
+        if [[ ${scargs[i]} == [!-]*=* ]]
+        then
+            sc_cmdln=( "${scargs[i]}" "${sc_cmdln[@]}" )
+        else
+            break
+        fi
+    done
+    array_shift scargs $((i-1))
 
-    if [[ $cmd =~ $cmd_regex ]]
+    # systemd command
+    # - default is list-units
+    # - all valid commands are made up of alnum and '-'
+    local sccmd
+    if [[ ${#scargs[*]} -eq 0  || ${scargs[0]} == -*  || ${scargs[0]} == *[![:alnum:]-]* ]]
     then
-        # listing type command
-        # ( list-* | ls | ls? | ls-all | ls?-all | find )
+        sccmd=lsu
+    else
+        sccmd=${scargs[0]}
+        array_shift scargs
+    fi
 
-        [[ $cmd == *-all ]] &&
-            _args+=( --all )
+    # expand command alias
+    case $sccmd in
+        ( ls | lsu )         sc_cmdln+=( list-units ) ;;
+        ( ls-all | lsu-all ) sc_cmdln+=( list-units --all ) ;;
+        ( lsf | find )       sc_cmdln+=( list-unit-files ) ;;
+        ( lst )              sc_cmdln+=( list-timers ) ;;
+        ( * ) sc_cmdln+=( "$sccmd" ) ;;
+    esac
 
-        # expand simple keyword (into _args)
-        _expand_keyword "$@"
-        shift $#
+    # prepend sudo, if required
+    #  - NB, env vars should be set as sudo VAR=value command ...
+    #    e.g. for setting SYSTEMD_COLORS=1
+	if [[  $scctx == system
+	    && $( id -u ) -ne 0
+        && $sccmd != @(list-*|ls*|find|status)
+	]]
+	then
+        sc_cmdln=( sudo "${sc_cmdln[@]}" )
 
-        # expand command alias
-        case $cmd in
-            ( ls | lsu | ls-all | lsu-all )
-                cmd=list-units
-            ;;
-            ( lsf | find )
-                cmd=list-unit-files
-            ;;
-            ( lst )
-                cmd=list-timers
-            ;;
-        esac
+	    # prompt for password immediately, if necessary
+	    sudo true \
+	        || return
+    fi
 
-        # allow return status=1 for nothing found
-        _sc_call "$cmd" "${_args[@]}" || {
-            rs=$?
-            [[ $rs == 1 ]] \
-                && return 1 \
-                || ( exit $rs )
-        }
+
+    # pattern match for listing-type commands
+    # ( list-* | ls | ls? | ls-all | ls?-all | find )
+    local lscmd_ptn='^(list-.*|ls.?(-all)?|find)$'
+
+    if ! [[ $sccmd =~ $lscmd_ptn ]]
+    then
+        # not a listing-type command
+        "${sc_cmdln[@]}" "${scargs[@]}"
 
     else
-        # non listing command
+        # further arguments should be options and pattern(s)
+        local _arg
+        for _arg in "${scargs[@]}"
+        do
+            # expand simple keyword(s) with wildard chars
+            # a keyword should:
+            # - contain only letters, numbers, dashes, and dots
+            # - not be all digits
+            # - not generally begin with a dash, except for e.g. -.mount
+            if [[  $_arg =~ [^[:alpha:][:digit:].-]
+                || $_arg =~ ^[[:digit:]]+$
+                || ( $_arg == -*  && $_arg != -.mount )
+            ]]
+            then
+                # not a keyword
+                sc_cmdln+=( "$_arg" )
 
-        _sc_call "$cmd" "$@"
+            else
+                # keyword found
+                sc_cmdln+=( "*${_arg}*" )
+            fi
+        done
 
+        # return status=1 should not print error message (i.e. no matches)
+        local -i rs=0
+        run_vrb "${sc_cmdln[@]}" || {
+
+            rs=$?
+            (( rs < 2 )) && return $rs
+            ( exit $rs )
+        }
     fi
 }
