@@ -1,4 +1,4 @@
-rl_retype_word() {
+readln_retype_word() {
 
     : "While editing a line using Readline, re-type the previous word
 
