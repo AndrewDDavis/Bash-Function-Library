@@ -9,7 +9,11 @@ fi
 
 # completion: same as diff
 # found by doing diff -[Tab] in a terminal, then typing Ctrl-\ and running 'complete -p diff'
-complete -F _comp_complete_longopt diff-u diff-y diff-w diff-yw
+complete -F _comp_complete_longopt \
+    diff-u \
+    diff-y \
+    diff-w \
+    diff-yw
 
 diff-u() {
 
@@ -32,31 +36,31 @@ alias diff-g="git diff --minimal --no-index"
 # just report changed
 alias diff-qs="diff -qs"
 
-### Post-processing -u to highlight changes
-
-# - diffr colours the output of diff -u to highlight words; this is pretty good
-diff-hldiffr () {
-    diff -u "$@" |
-        diffr
-}
-
-# - the diff-highlight package shipped with git also tries to do a version of this, but
-#   isn't very good; see /usr/share/doc/git/contrib/diff-highlight/README
-#diff-hl () {
-#
-#    git diff --no-index --color "$@" |
-#        perl /usr/share/doc/git/contrib/diff-highlight/diff-highlight
-#}
-
 
 ### Word diff
 
-# word diff from git
-# - experiment with word-diff-regex
-alias diff-gw="git diff --minimal --no-index \
-                        --word-diff=plain --word-diff-regex='[^[:punct:][:space:]]+'"
+# git word-diff
+# - NB, plain mode uses color too
+# - NB, anything the in word-diff-regex is considered whitespace, and ignored(!) for
+#   the purposes of finding differences. So, probably better to stick with the default,
+#   rather than e.g.: --word-diff-regex='[^[:punct:][:space:]]+'
+alias diff-gw='git diff --no-index --minimal --word-diff'
 
-# - wdiff is old, doesn't produce colour by default
+# dwdiff
+# - dwdiff is better, allows punct as word boundary; still shares the annoyance of
+#   sometimes introducing a space into the output
+[[ -n $( command -v dwdiff ) ]] \
+    && alias diff-dw='dwdiff --color'
+
+# diffr
+# - processes the output of 'diff -u' to highlight words; this is pretty good
+diff-hldiffr () {
+    diff -u "$@" \
+        | diffr
+}
+
+# wdiff
+# - NB, this is old software, doesn't produce colour by default
 #   from an online hack to make wdiff output in colour:
 #   ```sh
 #   #!/bin/bash
@@ -65,22 +69,26 @@ alias diff-gw="git diff --minimal --no-index \
 #   exec cmp -s "$@"
 #   ```
 
-# - dwdiff is better, allows punct as word boundary; still shares the annoyance of
-#   sometimes introducing a space into the output
-[[ -n $( command -v dwdiff ) ]] &&
-    alias diff-dw="dwdiff --color"
+# diff-highlight
+# - this package, which ships with git, also tries to postprocess diff output to
+#   highlight words, but isn't very good; see /usr/share/doc/git/contrib/diff-highlight/README
+#diff-hl () {
+#
+#    git diff --no-index --color "$@" |
+#        perl /usr/share/doc/git/contrib/diff-highlight/diff-highlight
+#}
 
 
 ### Side-by-side diff
 
 # side-by-side diff with -y
 # -t : tabs -> spaces
-alias diff-y="diff -yts"
+alias diff-sbs="diff -yts"
 
-diff-yw() {
+diff-sbsw() {
     # side-by-side word diff
     # uses overall width of 120 columns
-    diff -yts --color=always -W 120 <(fold -s -w46 "$1") <(fold -s -w46 "$2")
+    diff -yts --color=always -W 120 <( fold -s -w46 "$1" ) <( fold -s -w46 "$2" )
 }
 
 
