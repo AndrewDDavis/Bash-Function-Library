@@ -94,6 +94,12 @@ prompt, colours, etc.:
   - `import_func` in `~/.bashrc`
   - use a symlink at `~/.bash_lib`, or set BASH_FUNCLIB
 
+## Completions
+
+Files in the `completions` dir provide command completion for these libray functions.
+They should be symlinked from the `~/.local/share/bash-completion/completions/` dir,
+or copied there.
+
 ## Notes
 
 - NB I tried to write a posix/dash compliant version of these, to be sourced from
