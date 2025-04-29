@@ -17,16 +17,31 @@ _scw_comp() {
     "_systemctl" "$@"
 
     # Augment COMPREPLY with new completions below
-    local cur prev
+    # - this is pretty basic, but workable for a wrapper function
+    local cur prev new_reply
     cur=$2
     prev=$3
-    # context words
-    if [[ ]]
 
-    # augmented command words
-    # local canditate_words="--foo"
-    # COMPREPLY+=( $( compgen -W "$canditate_words" -- "$cur" ) )
+    local ctx_words=( -u -s -r -g )
+    local cmd_words=( lsu lsu-all lsf find lst )
+
+    if [[ $COMP_CWORD == 1 ]]
+    then
+        # first arg after scw: context option or command (or alias)
+        mapfile -t new_reply < \
+            <( compgen -o nosort -W "${ctx_words[*]} ${cmd_words[*]}" -- "$cur" )
+
+        COMPREPLY=( "${new_reply[@]}" "${COMPREPLY[@]}" )
+
+    elif [[ $COMP_CWORD == 2  && $prev == -* ]]
+    then
+        # still need a command (or alias)
+        mapfile -t new_reply < \
+            <( compgen -o nosort -W "${cmd_words[*]}" -- "$cur" )
+
+        COMPREPLY=( "${new_reply[@]}" "${COMPREPLY[@]}" )
+    fi
 
     return 0
 }
-complete -F "_scw_comp" "scw"
+complete -o nosort -F "_scw_comp" "scw"
