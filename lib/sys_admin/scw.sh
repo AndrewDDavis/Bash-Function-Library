@@ -66,7 +66,7 @@ scw() {
           : List unit-files. If a pattern is provided, only unit files that match will
             be listed.
 
-          ( list-units | ls | lsu | ls-all | lsu-all ) [pattern ...]
+          ( list-units | lsu | lsu-all ) [pattern ...]
           : List units matching a glob pattern. This is the default when systemctl is
             run without a command. The 'all' variants show units that are loaded but
             inactive, in addition to the active ones.
@@ -203,7 +203,7 @@ scw() {
     local scargs=( "$@" )
     shift $#
 
-    # - NB, this array_strrepl call removes the array element an decrements later ones
+    # - NB, this array_strrepl call removes the array element and decrements later ones
     if array_strrepl scargs '--color'
     then
         sc_cmdln=( "SYSTEMD_COLORS=1" "${sc_cmdln[@]}" )
@@ -225,6 +225,8 @@ scw() {
     # systemd command
     # - default is list-units
     # - all valid commands are made up of alnum and '-'
+    # - TODO: just use the list of systemctl commands from completion:
+    #   add-requires add-wants bind cancel cat condreload condrestart condstop daemon-reexec daemon-reload default disable edit emergency enable exit force-reload freeze get-default halt help hibernate hybrid-sleep import-environment is-active is-enabled is-failed is-system-running isolate kexec kill link list-automounts list-dependencies list-jobs list-machines list-paths list-sockets list-timers list-unit-files list-units log-level log-target mask mount-image poweroff preset preset-all reboot reenable reload reload-or-restart rescue reset-failed restart revert service-log-level service-log-target service-watchdogs set-default set-environment set-property show show-environment soft-reboot start status stop suspend suspend-then-hibernate switch-root thaw try-reload-or-restart try-restart unmask unset-environment whoami
     local sccmd
     if [[ ${#scargs[*]} -eq 0  || ${scargs[0]} == -*  || ${scargs[0]} == *[![:alnum:]-]* ]]
     then
@@ -236,11 +238,21 @@ scw() {
 
     # expand command alias
     case $sccmd in
-        ( ls | lsu )         sc_cmdln+=( list-units ) ;;
-        ( ls-all | lsu-all ) sc_cmdln+=( list-units --all ) ;;
-        ( lsf | find )       sc_cmdln+=( list-unit-files ) ;;
-        ( lst )              sc_cmdln+=( list-timers ) ;;
-        ( * ) sc_cmdln+=( "$sccmd" ) ;;
+        ( ls | lsu )
+            sc_cmdln+=( list-units )
+        ;;
+        ( ls-all | lsa | lsu-all | lsua )
+            sc_cmdln+=( list-units --all )
+        ;;
+        ( lsf | lsuf | find )
+            sc_cmdln+=( list-unit-files )
+        ;;
+        ( lst )
+            sc_cmdln+=( list-timers )
+        ;;
+        ( * )
+            sc_cmdln+=( "$sccmd" )
+        ;;
     esac
 
     # prepend sudo, if required
