@@ -1,37 +1,44 @@
 _print_args() {
 
-    [[ ${1-} == @(-h|--help) ]] && {
-
-        : "Print arguments provided to the function.
+    : "Print arguments provided to the function.
 
         Usage: _print_args ...
 
         This function prints its options and positional parameters in a compact but
         readable format. It is intended for troubleshooting shell scripts during
-        development.
-        "
+        development. If PA_COMPACT is not null, a compact form is used.
+    "
 
-        docsh -TD
-        return
-    }
+    [[ ${1-} == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
-    # match array index to pos'n params
-    # shellcheck disable=SC2034
-    local args=( "${@:0}" )
-    unset 'args[0]'
-
-    if [[ $# -gt 0 ]]
+    if (( $# == 0 ))
     then
-        # filter the output of declare -p for readability
+        builtin printf >&2 '%s\n' "# (empty args list)"
+
+    elif [[ -v PA_COMPACT ]]
+    then
+        # match array index to pos'n params
+        # shellcheck disable=SC2034
+        local args=( "${@:0}" )
+        unset 'args[0]'
+
+        # filter declare -p output for readability
         local decp_filt='
-            s/declare -a args=(/args: /
+            s/declare -a args=(/  /
             s/)$//
         '
 
-        builtin declare -p args |
-            command sed "$decp_filt"
+        builtin declare -p args \
+            | command sed "$decp_filt"
 
     else
-        builtin printf >&2 '%s\n' "# (empty args list)"
+        local i
+        for (( i=1; i<=$#; i++ ))
+        do
+            builtin printf '%3s:%s\n' \
+                $i \
+                "${!i@Q}"
+        done
     fi
 }
