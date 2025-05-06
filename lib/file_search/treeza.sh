@@ -1,29 +1,47 @@
-# convenient aliases
-# - NB, eza prints human-readable sizes with -l
+# Convenient tree-view aliases
+# - NB, 'eza -l' prints human-readable sizes, like 'ls -lh'
 alias tt="treeza -L2"
-alias tta="tt -a"
+alias tta="tt --all"
 alias ttd="tt --only-dirs"
 alias ttl="tt -lo --no-permissions"
-alias ttad="tt -a --only-dirs"
+alias ttg="tt -l --git --no-filesize --no-user --no-time --no-permissions"
+alias ttad="tt --all --only-dirs"
 alias ttal="tt -alo --no-permissions"
+alias ttag="tt --all -l --git --no-filesize --no-user --no-time --no-permissions"
 
 treeza() {
 
-    : "Tree view of CWD using eza
+    : "Directory tree view
 
-        Runs eza --tree --group-directories-last, with a custom time-style and using
-        -I '**/.git' to ignore git directories.
+        Usage: treeza [eza-options] [path ...]
 
-        This source file also adds 'tt' aliases to treeza for convenience, which run
-        'treeza -L2' by default, or tta which adds the -a option, ttd which adds
-        --only-dirs, ttl which adds -lo --no-permissions, or combinations thereof.
+        This function runs 'eza --tree' with the following defaults:
+
+          - Files are listed before directories at each level.
+          - The time column uses a 'month-day hour:min' format for recent files,
+            and an ISO date format for other files.
+          - Git directories are ignored (-I '.git').
+
+        It is recommended to configure eza with a simple colour scheme, instead of
+        the chaotic and distracting one that eza outputs with its long view by
+        default. The theme file is located at '~/.config/eza/theme.yml'.
+
+        The source file for treeza also adds several aliases for convenient usage:
+
+          tt   : treeza -L2
+          tta  : tt --all
+          ttd  : tt --only-dirs
+          ttl  : tt -lo --no-permissions
+          ttg  : tt -l --git, with all other -l options disabled
+          ttad : combines tta and ttd
+          ttal : combines tta and ttl
+          ttag : combines tta and ttg
 
         Refer to the eza manpage for explanations of the options.
-
-        It is recommended to use a theme file that sets more plain colours to disable
-        the distracting christmas tree that eze outputs by default with -l. This file
-        is located at '~/.config/eza/theme.yml'.
     "
+
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     local eza_cmd
     eza_cmd=( "$( builtin type -P eza )" ) \
@@ -36,8 +54,10 @@ treeza() {
     # - multi-line string, non-recent files get ISO date, recent files get month-day hour:min
     eza_cmd+=( --time-style=$'+%Y-%m-%d\n%m-%d %H:%M' )
 
-    # ignore git dir (can't do just contents, nor add trailing slash, for now; may be a fix coming)
-    eza_cmd+=( -I '**/.git' )
+    # ignore git dir
+    # - NB, can't do just contents, nor add trailing slash, for now; may be a fix coming:
+    #   https://github.com/eza-community/eza/issues/1446
+    eza_cmd+=( -I '.git' )
 
     "${eza_cmd[@]}" "$@"
 }
