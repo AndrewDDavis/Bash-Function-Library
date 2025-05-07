@@ -110,12 +110,14 @@ compspec_reuse() {
 	    "$cmp_spec_func" "\$@"
 
 	    # Augment COMPREPLY with new completions below
-	    # E.g.:
-	    # local cur prev
+	    # - Recall you can use COMP_WORDS, COMP_CWORD, and
+	    #   posn'l args are 1=cmd, 2=cur_wd, 3=prev_wd.
+	    # local cur new_reply
+	    # local poss_words=( --foo )
 	    # cur=\$2
-	    # prev=\$3
-	    # local canditate_words="--foo"
-	    # COMPREPLY+=( \$( compgen -W "\$canditate_words" -- "\$cur" ) )
+	    # mapfile -t new_reply < \\
+	    #     <( compgen -W "\${poss_words[*]}" -- "\$cur" )
+	    # COMPREPLY+=( "\${new_reply[@]}" )
 
 	    return 0
 	}
