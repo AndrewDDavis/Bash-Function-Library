@@ -38,9 +38,9 @@ func-where() {
         # not a function; check for alias
         if dec_out=$( alias "$func_nm" 2>/dev/null )
         then
-            err_msg w "not a function, but found alias: ${dec_out#*=}"
+            err_msg 5 "not a function, but found alias: ${dec_out#*=}"
         else
-            err_msg w "function not found: '$func_nm'"
+            err_msg 6 "function not found: '$func_nm'"
         fi
     }
 
