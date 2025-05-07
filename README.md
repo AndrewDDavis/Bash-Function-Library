@@ -119,3 +119,9 @@ or copied there.
 ## Bourne Shell Functions
 
 Functions to support ~/.profile, and the top of ~/.bashrc.
+
+## bin dir
+
+this dir contains symlinks to scripts in the modules dir. 
+symlink the links in this dir from ~/.local/bin to add the scripts to your path.
+
