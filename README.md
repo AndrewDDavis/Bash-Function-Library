@@ -116,3 +116,6 @@ or copied there.
 
 - To see expanded aliases, use `type -a cmd-alias`, or hit Ctrl-Alt-e after typing the
   command, but before running it (repeatedly, for nested aliases).
+## Bourne Shell Functions
+
+Functions to support ~/.profile, and the top of ~/.bashrc.
