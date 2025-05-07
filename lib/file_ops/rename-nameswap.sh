@@ -1,31 +1,34 @@
+# deps
 import_func str_to_words \
     || return 63
 
 rename-nameswap() {
 
-    : "change filename so that \"the file name\" becomes \"name, the file\""
+    : "Rename file so that \"the file name\" becomes \"name, the file\""
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
-    local bn dn bn_words c obn ofn
+    local ofn obn odn \
+        obn_words c \
+        nbn nfn
 
-    for fn in "$@"
+    for ofn in "$@"
     do
-        bn=$( basename "$fn" )
-        dn=$( dirname "$fn" )
+        obn=$( basename "$ofn" )
+        odn=$( dirname "$ofn" )
 
         # place filename words in array
-        # IFS=$'\n' read -ra bn_words -d '' < <( compgen -W "$bn" )
-        str_to_words bn_words "$bn"
+        # IFS=$'\n' read -ra obn_words -d '' < <( compgen -W "$obn" )
+        str_to_words obn_words "$obn"
 
         # generate new basename
-        c=$(( ${#bn_words[@]} - 1 ))
-        obn="${bn_words[-1]}, ${bn_words[*]:0:$c}"
+        c=$(( ${#obn_words[@]} - 1 ))
+        nbn="${obn_words[-1]}, ${obn_words[*]:0:$c}"
 
-        ofn="$dn/$obn"
+        nfn="$odn/$nbn"
 
         # move file into place
-        command mv -vi "$fn" "$ofn"
+        /bin/mv -vi "$ofn" "$nfn"
     done
 }
