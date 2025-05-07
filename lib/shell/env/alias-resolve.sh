@@ -123,6 +123,6 @@ alias-resolve() {
 
     if [[ -v _pr ]]
     then
-        printf '%s: %s\n' "$name" "${al_words[*]}"
+        printf '%s:  %s\n' "$name" "${al_words[*]}"
     fi
 }
