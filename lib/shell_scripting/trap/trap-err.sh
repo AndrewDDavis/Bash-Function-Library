@@ -86,17 +86,25 @@ trap-err() {
     if [[ -n ${FUNCNAME[1]-} ]]
     then
         # source file, contracting HOME to ~
-        local _srcfn _callfn _call_ln
-        _srcfn=$(  sed "s:^$HOME:~:" <<< "${BASH_SOURCE[1]}" )
-        _callfn=$( sed "s:^$HOME:~:" <<< "${BASH_SOURCE[2]:-main}" )
+        local _srcfn _callfn
+        _srcfn=${BASH_SOURCE[1]/#"$HOME"/\~}
+        _callfn=${BASH_SOURCE[2]:-main}
+        _callfn=${_callfn/#"$HOME"/\~}
 
         # offending line
-        _call_ln=$( sed "${BASH_LINENO[0]}"'! d' "${BASH_SOURCE[1]}" )
+        # _call_ln=$( sed "${BASH_LINENO[0]}"'! d' "${BASH_SOURCE[1]}" )
+        local _src_lns i _call_ln
+        mapfile -t _src_lns < "${BASH_SOURCE[1]}"
+        i=$(( BASH_LINENO[0] - 1 ))
+        _call_ln=${_src_lns[i]}
 
         # determine whether the error was thrown by err_msg
-        # - checks for e.g. ' { err_msg ...' or ' [[ ... ]] && { err_msg ...', but also
-        #   should match in case statements, like ... ) err_msg ...
-        if grep -qE '(^|[[:blank:]]*\[\[.*\]\][[:blank:]]+&&|.*\))([[:blank:]{]+)?err_msg[[:blank:]]+' <<< "$_call_ln"
+        # - situations to support: ' { err_msg ...', ' [[ ... ]] && { err_msg ...',
+        #   'case ... ) err_msg ...', leading words could include &&, ||, {, or (.
+        # - all would require blanks around err_msg, except '(err_msg ...'
+        # - could also sanely support leading ||, &, &&, ;
+        local regptn='(^|[[:blank:]]|[(;&]|&&|\|\|)err_msg[[:blank:]]'
+        if [[ "$_call_ln" =~ $regptn ]]
         then
             # error already reported by err_msg
             return
