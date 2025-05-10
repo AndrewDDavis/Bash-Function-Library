@@ -52,12 +52,14 @@ str_to_words() {
 
           eval arr=( \"\$string\" )
 
-        A safer strategy is to use \`read\` or \`mapfile\` to avoid glob expansions, e.g.:
+        A safer strategy is to use \`read\` to avoid glob expansions and terminate with
+        a null to handle newlines, E.g.:
 
-          read -ra arr <<< \"\$string\"
+          read -ra arr -d '' < <( printf '%s\0' \"\$string\" )
 
-        However, this still does not respect quoting within the string when splitting
-        it into words, and gets tricky if newlines are involved.
+        This works safely in simple cases. However, it does not respect quoting within
+        the string when word-splitting, nor whitespace within the elements. For these
+        added features, str_to_words is useful.
         "
         docsh -TD
         return

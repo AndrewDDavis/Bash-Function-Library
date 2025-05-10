@@ -1,75 +1,78 @@
 std-args() {
 
-    : "Filter arguments, setting aside some special ones
+    : "Group arguments into arrays, setting aside some special ones
 
-    std-args A1 A2 S1 S2 [-s sf lf [-s ...]] [--] \"\$@\"
+        Usage: std-args A1 A2 S1 S2 [-s sf lf [-s ...]] [--] \"\$@\"
 
-    This function populates the arrays of option and positional arguments passed on the
-    command line (see below). It also creates an array called '_stdopts', and populates
-    it with all option flags and their arguments in a standardized form. In particular,
-    blobs of short-option flags are individually split, with any argument attached, and
-    long option flags are attached to their arguments using '='. The following examples
-    demonstrate the four possible option forms in '_stdopts': '-q', '--quiet',
-    '-epattern', and '--regex=pattern'.
+        This function populates the A1 and A2 arrays with the option and positional
+        arguments passed on the command line, based on the S1 and S2 strings. All four
+        positional arguments are required, but S1 and S2 may be empty:
 
-    This function is most useful for wrapper functions or scripts, in which you want to
-    pass the arguments through to another command in their original form, but capture
-    some arguments of special interest, e.g. the patterns to a \`grep\` call.
+          A1 : array for option flags and their arguments, in the form passed on the
+               command line
+          A2 : array to hold positional arguments, in their original order
+          S1 : string of short options that require an argument, e.g. 'abCD'
+          S2 : string of long options that require an argument, seperated by spaces,
+               e.g. 'file regexp max-count after-context'
 
-    Due to the nature of this function, it is recommended to issue the '--' argument
-    before the arguments to be parsed.
+        An array called '_stdopts' is also populated with all option flags and their
+        arguments in a standardized form. In particular, blobs of short-option flags are
+        individually split, with any argument attached, and long option flags are
+        attached to their arguments using '='. The following examples demonstrate the
+        four possible option forms in '_stdopts': '-q', '--quiet', '-epattern', and
+        '--regex=pattern'.
 
-    Positional arguments (all required, but S1 and S2 may be empty):
+        This function is most useful for wrapper functions or scripts, in which you want
+        to pass the arguments through to another command in their original form, but
+        take note of some arguments of special interest, e.g. the patterns to a
+        \`grep\` call.
 
-      A1 : array to store option flags and their arguments, in the form passed on the
-           command line
-      A2 : array to hold positional arguments, in their original order
-      S1 : string of short options that require an argument, e.g. 'abCD'
-      S2 : string of long options that require an argument, seperated by spaces,
-           e.g. 'file regexp max-count after-context'
+        Due to the nature of this function, it is recommended to issue the '--' argument
+        before passing the command-line arguments to be examined.
 
-    Options:
+        Options:
 
-      -s <sf> <lf>
-      : Identify an option of special interest. The two string arguments represent the
-        short- and long-form option flags. Both arguments are required, but one may be
-        empty.
+          -s <sf> <lf>
+          : Identify an option of special interest. The two string arguments represent
+            the short- and long-form option flags. Both arguments are required, but one
+            may be empty. This option may be used multiple times.
 
-        Two arrays will be created: 'spec_args' will hold the arguments to special
-        flags, and 'spec_idcs' will hold the indices. The format of 'spec_idcs' is
-        'i1,i2,i3,...', and the values correspond to the order of the -s flags used on
-        the command-line.
+            Two arrays will be created: 'spec_args' will hold the arguments to special
+            flags, and 'spec_idcs' will hold the indices. The format of 'spec_idcs' is
+            'i1,i2,i3,...', and the values correspond to the order of the -s flags used
+            on the command-line.
 
-        Special option flags should be included in the S1 and S2 strings passed on the
-        command-line as well. If flag-only options are of particular interest, it is
-        recommended to test the special '_stdopts' array.
+            Special option flags should also be included in the S1 and S2 strings passed
+            as positional arguments. If flag-only options are of particular interest, it
+            is recommended to test the special '_stdopts' array, e.g. with the
+            array_match function.
 
-    This function generally allows options to be written on the command line after
-    positional arguments. This follows the behaviour of GNU grep, in which 'grep -e P
-    file1 -i' matches lines with a lowercase or uppercase 'p' from a file called
-    'file1'. In this case, '-e', 'P', and '-i' would be added to the option array, and
-    'file1' to the positional argument array.
+        This function generally allows options to be written on the command line after
+        positional arguments. This follows the behaviour of e.g. rsync and GNU grep, in
+        which 'grep -e P file1 -i' matches lines with a lowercase or uppercase 'p' from
+        a file called 'file1'. In this case, '-e', 'P', and '-i' would be added to the
+        option array, and 'file1' to the positional argument array.
 
-    This function also honours the '--' argument to terminate option parsing, and adds
-    it to the positional argument array. E.g. in grep, 'grep -- file1 -e P' would print
-    'no such file' errors for '-e' and 'P'. Sensible ways to write the command include
-    'grep -e P -- file1' and 'grep -- P file1'. However, '--' may be placed anywhere, as
-    long as no options follow it. Thus, 'grep P -- file1' and 'grep P file1 --' work
-    in the same way.
+        This function also honours the '--' argument to terminate option parsing, and
+        adds it to the positional argument array. E.g. in grep, 'grep -- file1 -e P'
+        would print 'no such file' errors for '-e' and 'P'. Sensible ways to write the
+        command include 'grep -e P -- file1' and 'grep -- P file1'. However, '--' may
+        be placed anywhere, as long as no options follow it. Thus, 'grep P -- file1'
+        and 'grep P file1 --' work in the same way.
 
-    Example
+        Example
 
-    # parse grep options, as in _parse_grepopts()
-    local opt_arr posarg_arr spec_idcs spec_args _stdopts
+        # parse grep options, as in _parse_grepopts()
+        local so lo opt_arr posarg_arr spec_idcs spec_args _stdopts
 
-    so='efmABCdD'
-    lo='max-count label after-context ...'
+        so='efmABCdD'
+        lo='max-count label after-context ...'
 
-    std-args opt_arr posarg_arr \"\$so\" \"\$lo\" \
-        -s 'e' 'regexp'  -s 'f' 'file'  \"\$@\"
+        std-args opt_arr posarg_arr \"\$so\" \"\$lo\" \\
+            -s 'e' 'regexp'  -s 'f' 'file' -- \"\$@\"
 
-    # inspect results
-    declare -p opt_arr posarg_arr spec_idcs spec_args _stdopts
+        # inspect results
+        declare -p opt_arr posarg_arr spec_idcs spec_args _stdopts
     "
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
@@ -86,16 +89,15 @@ std-args() {
     local sfs=$1 lfs=$2
     shift 2
 
-    # special options and associated vars
-    # - NB, error on 'declare -n b[1]=a': reference variable cannot be an array
-    # - this limits the options to communicate the info back to the calling function
-    #   in a robust and simple way
-    # - options:
-    #   1. Output all flags as separate words, with their OPTARGS if applicable, and let
-    #      the calling function sort it out as it sees fit.
-    #   2. Add the relevent indices for the spec_args array to spec_idcs, following the
-    #      order of the -s options given on the CLI.
-    # - doing both: the non-local arrays spec_args and spec_idcs hold the arguments to
+    ## Special options and associated vars
+    # - NB, error on 'declare -n b[1]=a': reference variable cannot be an array.
+    # - This limits the options to communicate the info back to the calling function
+    #   in a robust and simple way:
+    #    1. Output all flags as separate words, with their OPTARGS if applicable, and let
+    #       the calling function sort it out as it sees fit.
+    #    2. Add the relevent indices for the spec_args array to spec_idcs, following the
+    #       order of the -s options given on the CLI.
+    # - Doing both: the non-local arrays spec_args and spec_idcs hold the arguments to
     #   special flags and their indices, while _stdopts holds all options and arguments
     #   in a standardized form.
     spec_args=()
@@ -105,11 +107,11 @@ std-args() {
     local sp_sfa sp_lfa
     while [[ ${1-} == -s ]]
     do
-        [[ -v 2  &&  -v 3 ]] ||
-            { err_msg 8 "sp_sf and sp_lf both required"; return; }
+        [[ -v 2  && -v 3 ]] ||
+            { err_msg 8 "missing argument to -s (sf and lf both required, but may be empty)"; return; }
 
-        [[ -n $2  ||  -n $3 ]] ||
-            { err_msg 9 "sp_sf and sp_lf both empty"; return; }
+        [[ -n $2  || -n $3 ]] ||
+            { err_msg 9 "need non-empty argument to -s (sf and lf may not both be empty)"; return; }
 
         sp_sfa+=( "$2" )
         sp_lfa+=( "$3" )
@@ -121,15 +123,14 @@ std-args() {
         shift
 
     # convert long flags that require an OPTARG to a pattern string, as in
-    # "foo|bar|baz", after allowing the shell to split words
-    # - ensure IFS is set to a reasonable value so word splitting will succeed
-    local lf_pat
+    # "foo|bar|baz", after word-splitting
+    local lf_pat lf_words
     if [[ -z $lfs ]]
     then
         lf_pat=''
     else
-        # shellcheck disable=SC2086
-        lf_pat=$( IFS=$' \t\n'; str_join_with '|' $lfs )
+        read -ra lf_words -d '' < <( printf '%s\0' "$lfs" )
+        lf_pat=$( str_join_with '|' "${lf_words[@]}" )
     fi
 
     # clear opt and posn arg arrays
@@ -137,7 +138,7 @@ std-args() {
     pargs=()
 
     # loop over arguments
-    # - test -v tests that $1 is set (may be empty)
+    # - NB, test -v tests that $1 is set (may be empty)
     local i
     while [[ -v 1 ]]
     do
@@ -301,3 +302,4 @@ std-args() {
         spec_idcs[i]=${spec_idcs[i]/#,/}
     done
 }
+
