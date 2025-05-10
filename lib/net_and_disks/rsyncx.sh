@@ -1,250 +1,246 @@
-rsyncx() (
+# deps
+import_func array_match std-args \
+    || return
 
-    [[ $# -eq 0 || $1 =~ ^(-h|--help)$ ]] && {
+alias rsync-local='rsyncx --local'
+alias rsync-remote='rsyncx --remote'
+alias rsync-check='rsyncx --diff'
 
-        : "Wrapper function for common rsync uses.
+# TODO:
+#
+# - incorporate mv functionality from the old rsyncx:
+#
+#   mv : simulate moving files
+#   - adds --remove-source-files, --progress to the gp options
+#   - rsync removes files, then find is used to delete empty directories
+#     after a successful transfer.
+#
+#   ( mv )
+#   rs_opts=( "$gp_args" --remove-source-files  \
+#             --info=remove --progress          \
+#             "${rs_opts[@]}" )
+#
+#   (
+#       [[ $_v -gt 0 ]] && set -x
+#       "$rsync_cmd" "${rs_opts[@]}" "$@"
+#
+#   ) || rs_ec=$?
+#
+#   # finish pruning empty dirs after mv
+#   if [[ $cmd == mv  &&  $rs_ec -eq 0 ]]
+#   then
+#       # there are as many src dirs as arguments, except the target
+#       c=$(( $# - 1 ))
+#       printf '\n%s\n' "Pruning empty dirs from ${*:1:$c}..."
+#
+#       for sfn in "${@:1:$c}"
+#       do
+#           [[ -d "$sfn" ]] && {
+#
+#               find "$sfn" -type d -empty -print -delete
+#           }
+#       done
+#
+#   elif [[ $rs_ec -ne 0 ]]
+#   then
+#       err_msg $rs_ec "rsync exited with code $rs_ec"
+#       return $rs_ec
+#   fi
 
-        Usage: rsyncx <cmd> [rsync-opts] SRC ... [DEST]
 
-        This function takes a command as its first argument, which sets rsync options
-        for various common situations. The rest of the arguments are passed on to
-        rsync.
 
-        If the file '~/.config/rsync/default.rules' exists, any filter rules it contains
-        are honoured by the rsync call of this function. This can be negated on the
-        command line by clearing the filter list using -f'!'.
+rsyncx() {
 
-        Rsyncx Commands
+    :  "Wrapper function for rsync with useful modes
 
-          gp : general purpose, sensible default for most file syncing situations
-               - uses '-vh -rlD -t -pg' (similar to -a below)
-                 -v : more verbose messages
-                 -h : human readable file sizes
-               - NB -s (protect-args) no longer necessary as of rsync 3.2.4
+        Usage: rsyncx [rsync-opts] SRC [... DEST]
 
-          nw : network transfer options
-               - adds -Pz to the gp options
-                 -P : --partial (retain parts on interruption) + --progress
-                 -z : compress in transit
-               - NB rsync has a good default list of compression exclusions
+        This wrapper function runs rsync with a set of options that are sensible in most
+        situations, and provides a few additional options for common situations.
+        Otherwise, this function passes all of its arguments unchanged to rsync. Note
+        that remote sources or destinations should take the form [user@]host:dir. That
+        is, they should include a colon. If DEST is omitted, the contents of SRC are
+        listed.
 
-          mv : simulate moving files
-               - adds --remove-source-files, --progress to the gp options
-               - rsync removes files, then find is used to delete empty directories
-                 after a successful transfer.
+        By default, rsyncx includes the flags turned on by -a (i.e. -rlptgoD), as well
+        as -AXU. These are a sensible starting point for almost any transfer. They can
+        be selectively negated, like all other options, by using e.g. --no-o. Note that
+        -o and -D only apply when running as super-user on the receiving end, or with
+        --super. The -N (--crtimes) option is not used, since it's not available on the
+        Debian compiled rsync.
 
-          bk : archive options, appropriate for full system backups
-               - uses -a (see below), --partial, -z, -vh
-               - uses --info=progress2,name0 for overall progress without a
-                 scrolling file list.
+        In addition, rsyncx makes the following flags available. When SRC and DEST are
+        both local, the --local flag is automatically applied. When one of SRC and DEST
+        is remote (detected by the required colon), the --remote flag is applied.
 
-          sf : safe options, make backups of changed and deleted files
-               - adds -b, --suffix=.rsx.bak to the gp args (cf. --backup-dir)
+          --local
+          : This adds -H to the defaults, to preserve hard-links.
 
-        See the rsync docs for full command usage. A few brief notes:
+          --remote
+          : Adds -z and --partial to the defaults. This compresses data in transit, and
+            preserves partially transferred files. NB, rsync has a good default list of
+            compression exclusions. The --info=progress2 option is also added to show
+            overall transfer progress.
 
-          - Wildcards in the arguments are handled by the shell, and this function should
-            give the same results as rsync.
+          --diff
+          : Check for differences among files, but don't make any transfers. In addition
+            to the defaults, this adds: -nci --delete. Refer to the notes on -i below:
+            any files that are only on DEST will be marked with *deleting, and any files
+            that are only on SRC will be marked with xx+++++++++.
 
-          - To transfer remote files, the form of SRC and DEST may be [user@]host:dir.
+          --rsbak
+          : Create backup files, using the options:
+            --backup --suffix='.rsbak'
+            Consider also the --backup-dir option.
 
-          - With both SRC and DEST local, rsync works as an improved copy command.
+          --mv
+          : ...
 
-          - Providing only SRC and and not DEST lists the contents of SRC.
+        Info Reporting Options
 
-          - When SRC is a directory, adding a trailing slash avoids creating the
-            directory on DEST, copying only the contents.
+        By default, rsync is quiet. To show some basic info including a listing of
+        changed files, -v can be used to turn on a sensible set of --info flags. Using
+        -vv shows very detailed information about the transfer and the application of
+        the filter rules.
 
-          - If any files already exist on DEST, they are updated by sending only the
-            differences in the data.
+        This function adds --info=del,stats to the command-line when -v is not used.
+        This prints file deletions and a short data transfer summary. -h is also added
+        for human readable data units.
 
-        Notable Rsync Options
+        Use -i to print a summary line for each changed file. Using -ii also prints a
+        line for unchanged files. Refer to the rsync manpage under --itemize-changes to
+        decode the summary line, and also consider the --log-file option. Briefly:
 
-          -a (--archive)
-          : Sensible starting point for many transfers, expanded to '-rlptgoD':
-              -r : recursive
-              -l : symlinks-as-symlinks (cf. -L)
-              -p : preserve permissions (cf. -E, --chmod)
-              -t : preserve mod-times
-              -g : preserve group
-              -o : preserve owner
-              -D : preserve device and special files (e.g. in /dev, sometimes ~/.config)
-            Note that -o and -D only apply when running as super-user on the
-            receiving end, or when using --super. These and any other option can be
-            negated selectively by using e.g. -a --no-o.
+          - If a file is to be removed, the summary line is * followed by the
+            word deleting. Otherwise, the first char is the update type. It may be < or
+            > for files sent and received, . for a file with unchanged content, or c for
+            a directory to be created.
 
-          -n (--dry-run)
-          : perform a trial run with no changes made (cf. --list-only)
+          - The second char is the file type, which may be f, d, L, D, or S.
 
-          -R (--relative)
-          : preserve full file path, including 'implied directories' in src path
+          - The remaining characters are + for a newly created file. Otherwise, any that
+            are not . indicate what will be updated, or why the file is being
+            transferred, e.g. c for checksum, s for size, t for time, etc.
 
-          --exclude=PATTERN, --include=PATTERN
-          : exclude (or don't) files matching PATTERN
+        Issue '--info=help' to print the rsync's info flag options that may be used. The
+        following options are recommended to achieve the noted effects:
 
-          -C (--cvs-exclude)
-          : exclude a broad range of files that you often don't want to transfer
-            between systems, such as '*.old', '*.bak', and '.git/'. Also exclude
-            files listed in ~/.cvsignore or the CVSIGNORE variable. Also a file is
-            ignored if it matches a pattern in a .cvsignore file in the same
-            directory.
+          --info=name0
+          : Suppress the file listing while using -v or -vv.
 
-          -u (--update)
-          : skip files that are newer at DEST (cf. --[ignore-]existing)
+          --info=name2 or -vv
+          : Print a line for each unchanged file.
 
-          -c (--checksum)
-          : skip based on checksum, not mod-time & size (cf. --ignore-times,
-            --size-only)
+          --info=skip or -vv
+          : Print a line for each skipped file when using -u (--update).
 
-          --delete, --delete-excluded
-          : delete extraneous files from dest dirs (delete-during is default), or
-            also delete excluded files from dest dirs
+          --stats or --info=stats2
+          : Print a detailed file transfer summary.
 
-          -x (--one-file-system)
-          : don't cross filesystem boundaries
+          --debug=filter or -vv
+          : Print the results of applied filter rules.
 
-          -A (--acls)
-          : preserve ACLs (implies --perms)
+        Filter Rules
 
-          -X (--xattrs)
-          : preserve extended attributes
+        Rsync builds an ordered list of filter rules as specified on the command-line
+        and found in relevant files. The default is for all files within the transfer
+        root to be included.
 
-          -U (--atimes)
-          : preserve access times (last opened)
+        This function honours the filter rules found in '~/.config/rsync/default.rules',
+        if that file exists. They are applied using the merge-files syntax for the
+        '--filter' option, and are intended to exclude machine-specific hidden files,
+        such as '.DS_Store' and lock files. To clear the filter list, use: -f'!' on the
+        command line.
 
-          -N (--crtimes)
-          : preserve create times (newness)
+        To exclude files for a single transfer, the --exclude=PATTERN option may be
+        used, which is equivalent to a filter rule of -f'- PATTERN'. The patterns
+        generally follow globbing rules as in other similar tools. Refer to the PATTERN
+        MATCHING RULES section of the rsync manpage for details and examples.
 
-          -H (--hard-links)
-          : preserve hard links
+        To include only certain files in a transfer, include rules are needed for the
+        file and any parent directories within the transfer root. Then a trailing
+        exclusion rule that matches all files would be specified, e.g.:
 
-          -k (--copy-dirlinks)
-          : transform symlink to dir into referent dir
+          -f'+ x/' -f'+ x/y/' -f'+ x/y/file.txt' -f'- *' x host:/tmp/
 
-          -K (--keep-dirlinks)
-          : treat symlinked dir on receiver as dir
+        Exclude rules both hide files on the sending side and protect files on the
+        receiving side. Similarly, include rules both show (or expose) files on the
+        sending side, and risk files on the receiving side.
 
-          --stats
-          : give some file-transfer stats
+        The option -F may be used apply per-directory filter rules found in files
+        named '.rsync-filter'. With -F, the .rsync-filter files may be found in parent
+        directories of the transfer root, as well as its subdirectories. Refer to the
+        MERGE-FILE FILTER RULES section of the rsync manpage.
+    "
 
-          -i (--itemize-changes)
-          : output a change-summary for all updates (consider --log-file)
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
-          -e (--rsh=COMMAND)
-          : specify command to use for remote shell (e.g. 'ssh -o port=...')
+    # rsync path
+    local rs_cmd
+    rs_cmd=( "$( builtin type -P rsync )" ) \
+        || return 5
 
-          --rsync-path=PROGRAM
-          : specify the path to the rsync command to run on remote machine
-        "
-        docsh -TD
-        return
-    }
+    # default filtering rules
+    [[ -r ~/.config/rsync/default.rules ]] \
+        && rs_cmd+=( -f ". ${HOME}/.config/rsync/default.rules" )
 
-    # default to printing rsync cmd
-    local _v=1
+    # Run std-args to parse rsync args (makes _stdopts)
+    # - specify short and long opts that require an arg
+    local opt_args pos_args
+    so='MBeT@f'
+    lo="address bwlimit config dparam port log-file log-file-format sockopts include-from \
+        files-from copy-as address port sockopts outbuf remote-option out-format log-file \
+        log-file-format password-file early-input bwlimit stop-after stop-at write-batch \
+        only-write-batch read-batch protocol iconv checksum-seed info debug stderr \
+        backup-dir suffix chmod checksum-choice block-size rsh rsync-path max-delete \
+        max-size min-size max-alloc partial-dir usermap groupmap chown timeout contimeout \
+        modify-window temp-dir compare-dest copy-dest link-dest compress-choice \
+        compress-level skip-compress filter exclude exclude-from include"
 
-    # cmd must come first
-    cmd=$1
-    shift
+    std-args opt_args pos_args "$so" "$lo" -- "$@" \
+        || return
 
-    # collect option args
-    # - collect until first non-option arg or --
-    rs_opts=()
+    # check for -v or -vv, otherwise print minimal info
+    array_match -- _stdopts '-v' \
+        || rs_cmd+=( --info='del,stats' )
 
-    while IFS='' read -rd '' arg
-    do
-        # break on non-option arg
-        [[ ${arg::1} != - ]] && break
-
-        # handle --, passing it on to rsync
-        [[ $arg == -- ]] && {
-            rs_opts+=( "--" )
-            shift
-            break
-        }
-
-        # sequester and remove opt args
-        rs_opts+=( "$arg" )
-        shift
-
-    done < <( printf '%s\0' "$@" )
-
-    # debug arg-parsing
-    #echo "cmd='$cmd'"
-    #echo "rs_opts:"
-    #printf ':: %s\n' "${rs_opts[@]}"
-    #echo "remaining args:"
-    #printf ':: %s\n' "$@"
-
-    # there must be at least one SRC arg
-    [[ ! $# -gt 0 ]] && {
-        err_msg 2 "at least 1 SRC arg required; got: $cmd ${rs_opts[*]}"
-        return 2
-    }
-
-    # finish setting up rs_opts for cmd
-    gp_args='-rlDptgvh'
-
-    case $cmd in
-        ( gp )
-            rs_opts=( "$gp_args" "${rs_opts[@]}" )
-        ;;
-        ( nw )
-            rs_opts=( "$gp_args" -Pz "${rs_opts[@]}" )
-        ;;
-        ( mv )
-            rs_opts=( "$gp_args" --remove-source-files  \
-                      --info=remove --progress          \
-                      "${rs_opts[@]}" )
-        ;;
-        ( bk )
-            rs_opts=( "$gp_args" -az --partial  \
-                      --info='progress2,name0' "${rs_opts[@]}" )
-        ;;
-        ( sf )
-            rs_opts=( "$gp_args" -b --suffix='.rsx.bak'  \
-                      "${rs_opts[@]}" )
-        ;;
-        ( * )
-            err_msg 2 "command not recognized: $cmd"
-            return
-        ;;
-    esac
-
-    # add default filter rules
-    [[ -r ~/.config/rsync/default.rules ]] &&
-        rs_opts+=( -f ". ${HOME}/.config/rsync/default.rules" )
-
-    # run rsync
-    local rsync_cmd rs_ec=0
-    rsync_cmd=$( builtin type -P rsync )
-
-    (
-        [[ $_v -gt 0 ]] && set -x
-        "$rsync_cmd" "${rs_opts[@]}" "$@"
-
-    ) || rs_ec=$?
-
-    # finish pruning empty dirs after mv
-    if [[ $cmd == mv  &&  $rs_ec -eq 0 ]]
+    # check for any remote src or dest
+    if array_match -s pos_args ':'
     then
-        # there are as many src dirs as arguments, except the target
-        c=$(( $# - 1 ))
-        printf '\n%s\n' "Pruning empty dirs from ${*:1:$c}..."
-
-        for sfn in "${@:1:$c}"
-        do
-            [[ -d "$sfn" ]] && {
-
-                find "$sfn" -type d -empty -print -delete
-            }
-        done
-
-    elif [[ $rs_ec -ne 0 ]]
-    then
-        err_msg $rs_ec "rsync exited with code $rs_ec"
-        return $rs_ec
+        # remote
+        array_match -- _stdopts '--remote' \
+            || set -- --remote "$@"
+    else
+        # local
+        array_match -- _stdopts '--local' \
+            || set -- --local "$@"
     fi
 
-    return 0
-)
+    set -x
+    # general purpose, sensible default for most file syncing situations
+    # - NB, -s (protect-args) no longer necessary as of rsync 3.2.4
+    # - my rsync on Debian testing doesn't have -N
+    rs_cmd+=( -h -rlDX -pAgo -tU )
+
+    # check for wrapper options
+    local w _mv rs_args=()
+    for w in "$@"
+    do
+        decp w
+        case $w in
+            ( --diff )   rs_args+=( -nci --delete ) ;;
+            ( --local )  rs_args+=( -H ) ;;
+            ( --remote ) rs_args+=( --partial -z --info=progress2 ) ;;
+            ( --rsbak )  rs_args+=( --backup --suffix='.rsbak' ) ;;
+            # ( --mv )  rs_args+=( --backup --suffix='.rsbak' ) ;;
+            ( * )
+                rs_args+=( "$w" )
+            ;;
+        esac
+        shift
+    done
+
+    "${rs_cmd[@]}" "${rs_args[@]}"
+    set +x
+}
