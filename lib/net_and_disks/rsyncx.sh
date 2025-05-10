@@ -6,49 +6,6 @@ alias rsync-local='rsyncx --local'
 alias rsync-remote='rsyncx --remote'
 alias rsync-check='rsyncx --diff'
 
-# TODO:
-#
-# - incorporate mv functionality from the old rsyncx:
-#
-#   mv : simulate moving files
-#   - adds --remove-source-files, --progress to the gp options
-#   - rsync removes files, then find is used to delete empty directories
-#     after a successful transfer.
-#
-#   ( mv )
-#   rs_opts=( "$gp_args" --remove-source-files  \
-#             --info=remove --progress          \
-#             "${rs_opts[@]}" )
-#
-#   (
-#       [[ $_v -gt 0 ]] && set -x
-#       "$rsync_cmd" "${rs_opts[@]}" "$@"
-#
-#   ) || rs_ec=$?
-#
-#   # finish pruning empty dirs after mv
-#   if [[ $cmd == mv  &&  $rs_ec -eq 0 ]]
-#   then
-#       # there are as many src dirs as arguments, except the target
-#       c=$(( $# - 1 ))
-#       printf '\n%s\n' "Pruning empty dirs from ${*:1:$c}..."
-#
-#       for sfn in "${@:1:$c}"
-#       do
-#           [[ -d "$sfn" ]] && {
-#
-#               find "$sfn" -type d -empty -print -delete
-#           }
-#       done
-#
-#   elif [[ $rs_ec -ne 0 ]]
-#   then
-#       err_msg $rs_ec "rsync exited with code $rs_ec"
-#       return $rs_ec
-#   fi
-
-
-
 rsyncx() {
 
     :  "Wrapper function for rsync with useful modes
@@ -89,12 +46,15 @@ rsyncx() {
             that are only on SRC will be marked with xx+++++++++.
 
           --rsbak
-          : Create backup files, using the options:
-            --backup --suffix='.rsbak'
-            Consider also the --backup-dir option.
+          : Create backup files, using the options: --backup --suffix='.rsbak'. Consider
+            also the --backup-dir option.
 
           --mv
-          : ...
+          : Simulate moving files. This adds --remove-source-files, and --info=remove to
+            print an info line for each removed file. After a successful transfer, the
+            source files are removed, but empty directories may remain. This can depend
+            on interactions with filters, etc, thus pruning empty directories is not
+            attempted. Suggested commands to prune the dirs are printed.
 
         Info Reporting Options
 
@@ -109,7 +69,7 @@ rsyncx() {
 
         Use -i to print a summary line for each changed file. Using -ii also prints a
         line for unchanged files. Refer to the rsync manpage under --itemize-changes to
-        decode the summary line, and also consider the --log-file option. Briefly:
+        decode the summary line. Briefly:
 
           - If a file is to be removed, the summary line is * followed by the
             word deleting. Otherwise, the first char is the update type. It may be < or
@@ -123,10 +83,12 @@ rsyncx() {
             transferred, e.g. c for checksum, s for size, t for time, etc.
 
         Issue '--info=help' to print the rsync's info flag options that may be used. The
-        following options are recommended to achieve the noted effects:
+        following options are recommended to achieve the noted effects. Note that
+        explicit --info settings always override the implied settings of e.g. -v or
+        --progress:
 
           --info=name0
-          : Suppress the file listing while using -v or -vv.
+          : Suppress the file listing when using -v or -vv.
 
           --info=name2 or -vv
           : Print a line for each unchanged file.
@@ -139,6 +101,10 @@ rsyncx() {
 
           --debug=filter or -vv
           : Print the results of applied filter rules.
+
+        Thus, adding -ni to your existing command line is an excellent way to get a
+        detailed picture of the changes that will occur, before affecting any files. If
+        using -nii with -u, rsyncx also adds --info=skip to get a complete picture.
 
         Filter Rules
 
@@ -205,35 +171,50 @@ rsyncx() {
     array_match -- _stdopts '-v' \
         || rs_cmd+=( --info='del,stats' )
 
-    # check for any remote src or dest
+    # check for -nii with -u
+    array_match -- opt_args '-nii' \
+        && array_match -- _stdopts '-u|--update' \
+        && rs_cmd+=( --info=skip )
+
+    # detect dry-run
+    local _dr
+    array_match -- _stdopts '-n|--dry-run|--diff' \
+        && _dr=1
+
+    # check especially for remote src (for --mv)
+    local _rem_src
     if array_match -s pos_args ':'
     then
-        # remote
+        # one side is remote
         array_match -- _stdopts '--remote' \
             || set -- --remote "$@"
+
+        # check if dest is remote, otherwise src must be
+        # - NB, only one side is allowed to be remote
+        [[ ${pos_args[*]:(-1)} == *:* ]] \
+            || _rem_src=1
+
     else
-        # local
+        # both sides local
         array_match -- _stdopts '--local' \
             || set -- --local "$@"
     fi
 
-    set -x
     # general purpose, sensible default for most file syncing situations
     # - NB, -s (protect-args) no longer necessary as of rsync 3.2.4
     # - my rsync on Debian testing doesn't have -N
     rs_cmd+=( -h -rlDX -pAgo -tU )
 
-    # check for wrapper options
+    # check for rsyncx options
     local w _mv rs_args=()
     for w in "$@"
     do
-        decp w
         case $w in
             ( --diff )   rs_args+=( -nci --delete ) ;;
             ( --local )  rs_args+=( -H ) ;;
             ( --remote ) rs_args+=( --partial -z --info=progress2 ) ;;
             ( --rsbak )  rs_args+=( --backup --suffix='.rsbak' ) ;;
-            # ( --mv )  rs_args+=( --backup --suffix='.rsbak' ) ;;
+            ( --mv )     rs_args+=( --remove-source-files --info=remove ); _mv=1 ;;
             ( * )
                 rs_args+=( "$w" )
             ;;
@@ -241,6 +222,20 @@ rsyncx() {
         shift
     done
 
-    "${rs_cmd[@]}" "${rs_args[@]}"
-    set +x
+    # run rsync
+    "${rs_cmd[@]}" "${rs_args[@]}" \
+        || { err_msg $? "rsync reported an error"; return; }
+
+
+    if [[ -v _mv  && ! -v _dr ]]
+    then
+        # suggest pruning empty dirs after mv
+        local l1="Suggested command to prune empty dirs:"
+        [[ -v _rem_src ]] \
+            && l1=${l1%:}" on remote host:"
+
+        local n=${#pos_args[@]}
+        printf >&2 '%s\n' '' "$l1" \
+            "  find ${pos_args[*]:0:n-1} -type d -empty -print -delete" ''
+    fi
 }
