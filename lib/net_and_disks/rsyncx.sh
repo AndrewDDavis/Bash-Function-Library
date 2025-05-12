@@ -14,21 +14,31 @@ rsyncx() {
 
         This wrapper function runs rsync with a set of options that are sensible in most
         situations, and provides a few additional options for common situations.
-        Otherwise, this function passes all of its arguments unchanged to rsync. Note
-        that remote sources or destinations should take the form [user@]host:dir. That
-        is, they should include a colon. If DEST is omitted, the contents of SRC are
-        listed.
+        Otherwise, this function passes all of its arguments unchanged to rsync. Rsync
+        requires that remote source or destination names include a colon, as in
+        [user@]host:dir. If DEST is omitted, the contents of SRC are listed.
 
-        By default, rsyncx includes the flags turned on by -a (i.e. -rlptgoD), as well
-        as -AXU. These are a sensible starting point for almost any transfer. They can
-        be selectively negated, like all other options, by using e.g. --no-o. Note that
-        -o and -D only apply when running as super-user on the receiving end, or with
-        --super. The -N (--crtimes) option is not used, since it's not available on the
-        Debian compiled rsync.
+        By default, rsyncx adds the flags -rlpt and -AXU to the command-line. These are
+        a sensible starting point for almost any transfer. However, they can be
+        selectively negated, like all other options, by using e.g. --no-t. The -N
+        (--crtimes) option is not issued, since it's not available with Debian-compiled
+        rsync at the time of writing.
 
-        In addition, rsyncx makes the following flags available. When SRC and DEST are
-        both local, the --local flag is automatically applied. When one of SRC and DEST
-        is remote (detected by the required colon), the --remote flag is applied.
+        Beyond -rlpt, the remaining flags turned on by 'rsync -a' are -goD. Rsyncx only
+        adds these to the command when all SRC and DEST are local. In practice, these
+        flags are ignored by rsync anyway (partially for -g) unless running as super-
+        user on the receiving end, or using --super.
+
+        While rsync only detects whether any SRC or DEST are remote by matching the
+        required colon in the name, rsyncx additionally detects locally-mounted remote
+        filesystems using SSHfs, rclone, or gvfs (e.g. GIO vfs mounts created by
+        Nautilus). This avoids permissions errors for such transfers, as rsync would
+        try and fail to apply -g.
+
+        In addition, rsyncx applies either the --local or --remote flag based on the
+        auto-detection of remote SRC and DEST, unless one is explicitly included on the
+        command-line. These are described below, along with the additional flags that
+        rsyncx makes available.
 
           --local
           : This adds -H to the defaults, to preserve hard-links.
@@ -38,6 +48,10 @@ rsyncx() {
             preserves partially transferred files. NB, rsync has a good default list of
             compression exclusions. The --info=progress2 option is also added to show
             overall transfer progress.
+
+            Although it is usually auto-detected, it can be useful to add this flag for
+            local directories that are actually remote filesystem mount, such as through
+            SSHfs. Although that should now be detected as well.
 
           --diff
           : Check for differences among files, but don't make any transfers. In addition
@@ -142,6 +156,12 @@ rsyncx() {
     [[ $# -eq 0  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }
 
+    # clean up
+    trap '
+        unset -f _chk_rem _get_fstype
+        trap - return
+    ' RETURN
+
     # rsync path
     local rs_cmd
     rs_cmd=( "$( builtin type -P rsync )" ) \
@@ -181,29 +201,113 @@ rsyncx() {
     array_match -- _stdopts '-n|--dry-run|--diff' \
         && _dr=1
 
-    # check especially for remote src (for --mv)
-    local _rem_src
-    if array_match -s pos_args ':'
+    # Detect local vs remote transfer, if not specified
+    local _rem
+    if array_match -- _stdopts '--remote'
     then
-        # one side is remote
-        array_match -- _stdopts '--remote' \
-            || set -- --remote "$@"
+        _rem=1
 
-        # check if dest is remote, otherwise src must be
-        # - NB, only one side is allowed to be remote
-        [[ ${pos_args[*]:(-1)} == *:* ]] \
-            || _rem_src=1
+    elif ! array_match -- _stdopts '--local'
+    then
+        # - the only pos_args are SRC(s) and DEST
+        local n s srcs dest
+        n=${#pos_args[@]}
 
-    else
-        # both sides local
-        array_match -- _stdopts '--local' \
-            || set -- --local "$@"
+        {
+            # - define df_cmd to check for remote mounted local fs, e.g. sshfs fuse mount:
+            #   findmnt -n -o FSTYPE -M /mnt/remote/andrew@squamish
+            #   ^^^ from util-linux package
+            #   df -h /mnt/remote/andrew@squamish/Media --output=fstype
+            #   ^^^ gnu coreutils df only, can be installed on macOS through homebrew
+            # - use df from GNU coreutils
+            local gnu_df
+            if [[ -n $( command -v gdf ) ]]
+            then
+                gnu_df=$( builtin type -P gdf )
+
+            elif [[ $( command df --version 2>/dev/null ) == *GNU\ coreutils* ]]
+            then
+                gnu_df=$( builtin type -P df )
+            fi
+
+            _get_fstype() {
+
+                if [[ -v gnu_df ]]
+                then
+                    "$gnu_df" -h "$1" --output=fstype | tail -n1
+                else
+                    # macOS: get mnt-pnt from df, then parse the output of mount
+                    # - e.g. /dev/disk2s2 ... 0% /Volumes/Files
+                    # - then do a regex match on /Volumes/Files (hfs, ...
+                    local mp rgx nl=$'\n'
+                    mp=$( command df "$1" | tail -n1 )
+                    mp=${mp## /}
+                    rgx="(^|${nl})[^${nl}]+ ${mp} \(([^,]+)"
+                    [[ $( command mount ) =~ $rgx ]] \
+                        || return
+                    printf '%s\n' "${BASH_REMATCH[2]}"
+                fi
+            }
+
+            _chk_rem() {
+                # check whether arg is remote or local
+                local fstype
+                if [[ $1 == *:* ]]
+                then
+                    return 0
+
+                elif fstype=$( _get_fstype "$1" )
+                then
+                    # e.g. fstype=fuse.sshfs or btrfs or hfs
+                    [[ $fstype == fuse.@(sshfs|rclone|gvfsd-fuse) ]] \
+                        && return 0
+                fi
+
+                # assume local if not returned yet
+                return 1
+            }
+        }
+
+        if (( n == 1 ))
+        then
+            # only source (listing)
+            srcs=( "${pos_args[0]}" )
+
+        else
+            # last arg is dest, even with --local-only
+            dest="${pos_args[-1]}"
+            srcs=( "${pos_args[@]:0:n-1}" )
+
+            _chk_rem "$dest" \
+                && _rem=1
+        fi
+
+        for s in "${srcs[@]}"
+        do
+            # - NB, rsync only allows one side to be remote, but I don't think this applies
+            #   to locally-mount remote filesystems
+            _chk_rem "$s" \
+                && { _rem=1; break; }
+        done
+
+        if [[ -v _rem ]]
+        then
+            set -- --remote "$@"
+        else
+            set -- --local "$@"
+        fi
     fi
 
     # general purpose, sensible default for most file syncing situations
-    # - NB, -s (protect-args) no longer necessary as of rsync 3.2.4
-    # - my rsync on Debian testing doesn't have -N
-    rs_cmd+=( -h -rlDX -pAgo -tU )
+    # - NB, -s (--protect-args) no longer necessary as of rsync 3.2.4
+    # - NB, rsync on Debian testing (trixie) doesn't have -N
+    rs_cmd+=( -h -rlX -pA -tU )
+
+    # don't add goD by default, especially for transfers that involve locally mounte remote files
+    # - doing so may cause rsync to return with a permission error, because it can't set the group,
+    #   even when running without sudo
+    [[ -v _rem ]] \
+        || rs_cmd+=( -goD )
 
     # check for rsyncx options
     local w _mv rs_args=()
@@ -230,12 +334,8 @@ rsyncx() {
     if [[ -v _mv  && ! -v _dr ]]
     then
         # suggest pruning empty dirs after mv
-        local l1="Suggested command to prune empty dirs:"
-        [[ -v _rem_src ]] \
-            && l1=${l1%:}" on remote host:"
-
-        local n=${#pos_args[@]}
-        printf >&2 '%s\n' '' "$l1" \
-            "  find ${pos_args[*]:0:n-1} -type d -empty -print -delete" ''
+        printf >&2 '%s\n' '' \
+            "Suggested command to prune empty dirs:" \
+            "  $( builtin type -P find ) SRC_ROOT -type d -empty -print -delete" ''
     fi
 }
