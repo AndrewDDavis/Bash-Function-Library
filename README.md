@@ -1,4 +1,4 @@
-# Bash Function Library ReadMe
+# Shell Script Library
 
 The `.sh` and `.bash` files in the `lib/` directory tree contain shell function and
 alias definitions. They are meant to be sourced during shell initialization or later
