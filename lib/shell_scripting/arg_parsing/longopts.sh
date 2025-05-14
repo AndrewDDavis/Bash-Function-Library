@@ -1,123 +1,141 @@
 # TODO:
 # - test optstring
 # - test sourcing instead of calling
-# - incorporate a check on OPTERR=1
 
-split_longopt() {
+# dependencies (implied)
+# import_func docsh err_msg \
+#     || return
+
+longopts() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Split --key=value command line arguments
+        : "Handle --long-opts and --key=value command line arguments
 
         Usage
 
-            split_longopt <variable-name>
-            split_longopt <optstring> <variable-name> [\"\$@\"]
+            longopts <var-name>
+            longopts <optstring> <var-name> [\"\$@\"]
 
-        This function is meant to be used within 'while getopts ...' argument parsing
-        loops. It splits '--key=value' arguments into a more convenient form, so that
-        both long and short options may be handled by the same case statement.
+        This function aids argument parsing of long options in shell scripts and
+        functions. By adding simple call to this function within a typical 'while
+        getopts ...' argument parsing loop, both long and short options can be handled
+        by the same case statement.
 
-        The variable-name argument is the name of a 'flag' variable, not its value.
-        Typically, this would be the same variable name as the one supplied to the
-        getopts command call (e.g. 'flag' or 'OPT').
+        The 'var-name' argument refers to the same flag variable as in the \`getopts\`
+        command call. Pass the name, e.g. 'flag' or 'OPT', not the value.
 
-        If the optstring argument is used, split_longopt will check that long option
-        flags are in the list. It will also check that required arguments were
-        provided. The optstring format is a space-separated list of words, which
-        represent the long option flags. If a word includes a trailing colon (':'),
-        that flag requires an argument. E.g., in the optstring 'abc def: ghi', the
-        '--def' flag would require an argument. If the positional arguments are
-        provided, and a required argument is missing, split_longopt will attempt to
-        fetch it from the CLI arguments.
+        The string '-:' must be added to the optstring of the \`getopts\` command call.
+        Retain any short option flags in the optstring, which are processed by getopts
+        in the usual way.
 
-        This function expects that '-:' appeared in the \`getopts\` optstring, so that
-        getopts parsed a long option by setting the flag variable to '-' and putting
-        the remainder of the flag string in OPTARG. If the value of the flag variable
-        is not '-', the function silently returns with status code 0 (true). An error
-        condition occurs if the flag variable is '-' but OPTARG is empty.
+        If the optstring argument is supplied to longopts, it will be used to check
+        the option flag that was received. It checks that the optstring list includes
+        the flag, and that required arguments were provided. If the positional
+        arguments are supplied to longopts, or BASH_ARGV is set, they will be used
+        to obtain a missing argument.
 
-        When OPTARG resulted from an argument of the form '--key=value', this function
-        sets the flag variable to 'key' and OPTARG to 'value'. For an argument like
-        '--long' the flag variable becomes 'long', and OPTARG is unset.
+        The optstring format is a space-separated list of long option flags. Flags that
+        require an argument should be annotated with a trailing colon (':'), just as
+        with the getopts optstring. E.g., the optstring 'abc def: ghi' indicates that
+        the --def flag requires an argument, but neither --abc nor --ghi do.
 
-        As an alternative to this function, consider using 'getopts_long'.
+        Notes
+
+          - Recall that getopts assigns the current option flag to the var-name
+            variable, and assigns its argument to the OPTARG variable, if applicable.
+
+          - The '-:' string causes getopts to process long options by setting the flag
+            variable to '-' and putting the remainder of the flag string in OPTARG. It
+            is an error if the flag variable is '-', but OPTARG is empty.
+
+            If var-name is not '-' when longopts is called, it silently returns
+            with status code 0 (true). This allows argument parsing for short options
+            to proceed as usual, typically with a case statement.
+
+          - When the command-line argument was of the form '--key=value', longopts
+            sets the flag variable to 'key' and OPTARG to 'value'. For an argument like
+            '--long', the flag variable becomes 'long', and OPTARG is unset.
+
+          - The error reporting also mimics getopts, and silent error reporting is
+            indicated by starting the optstring with ':', or setting OPTERR=0.
 
         Example
 
-        # Allow a '--aaa' flag as a synonym for '-a', and similarly '--bbb=arg'
-        # for '-b arg'.
+          # Allow a '--aaa' flag as a synonym for '-a', and similarly '--bbb=arg'
+          # for '-b arg'.
 
-        local flag OPTARG OPTIND=1
-        while getopts 'ab:-:' flag
-        do
-            # handle long options
-            split_longopt flag
+          local flag OPTARG OPTIND=1
+          while getopts 'ab:-:' flag    # <- -: added to optstring
+          do
+              # handle long options
+              longopts flag        # <- call longopts before the case statement
 
-            case \$flag in
-                ( a | aaa )
-                    _a=1
-                ;;
-                ( b | bbb )
-                    _b=\${OPTARG:?}
-                    # ^^^ displays error msg and return if OPTARG is Null or Unset
-                ;;
-                ( * )
-                    err_msg 3 \"unexpected: '\$flag', '\${OPTARG-}'\"
-                    return
-                ;;
-            esac
-        done
+              case \$flag in
+                  ( a | aaa ) _a=1  ;;
+                  ( b | bbb ) _b=\$OPTARG  ;;
+                  ( * ) err_msg 3 \"unexpected: '\$flag', '\${OPTARG-}'\"; return  ;;
+              esac
+          done
         "
         docsh -TD
         return
     }
 
-    # parse optstring as an array, if provided
+    # convert optstring to array, if provided
+    # - also check for silent error reporting
     # - e.g. optstr=([0]="abc" [1]="def:" [2]="ghi")
-    local optstr_arr _silerr
+    local optstr_arr=() _silerr
 
-    (( $# > 1 )) && {
+    [[ ${OPTERR-} == 0 ]] \
+        && _silerr=1
 
-        # silent error reporting
-        [[ ${1:0:1} != ':' ]] ||
-            _silerr=1
+    if (( $# > 1 ))
+    then
+        # check for silent error reporting
+        [[ ${1:0:1} == ':' ]] \
+            && _silerr=1
 
-        # split on spaces
-        read -ra optstr_arr <<< "${1#:}"
+        # split on spaces, newlines, tabs
+        read -ra optstr_arr -d '' < \
+            <( printf '%s\0' "${1#:}" )
         shift
-    }
+    fi
 
-    # safer variable name avoids collision btw nameref and actual variable
-    local -n __flagvar_ref__=$1
+    # - safer variable name to avoid collision with actual variable
+    local -n __sl_Flag__=$1
     shift
 
-    [[ $__flagvar_ref__ == '-' ]] ||
-        return 0
+    [[ $__sl_Flag__ == '-' ]] \
+        || return 0
 
-    [[ -n ${OPTARG-} ]] ||
-        { err_msg 4 "empty OPTARG"; return; }
+    [[ -n ${OPTARG-} ]] \
+        || { err_msg 4 "empty OPTARG"; return; }
 
-    # recreate FLAG and OPTARG from 'key=val' or 'long'
+
+    # set FLAG and OPTARG as getopts does for short options
     if [[ $OPTARG == *=* ]]
     then
-        # - avoid external calls to 'cut' by using shell string subst
-        __flagvar_ref__=${OPTARG%%=*}
+        # was a --key=val argument
+        # - shell subs avoid external calls to 'cut'
+        __sl_Flag__=${OPTARG%%=*}
         OPTARG=${OPTARG#*=}
 
     else
-        __flagvar_ref__=$OPTARG
+        # was a simple --flag argument
+        __sl_Flag__=$OPTARG
         unset OPTARG
     fi
+
 
     if [[ -v optstr_arr[*] ]]
     then
         # optstring provided: check for expected flags and required args
-        local os_flag matched=0
+        local opt_flag matched=0
 
-        for os_flag in "${optstr_arr[@]}"
+        for opt_flag in "${optstr_arr[@]}"
         do
-            if [[ ${os_flag%:} == "$__flagvar_ref__" ]]
+            if [[ ${opt_flag%:} == "$__sl_Flag__" ]]
             then
                 matched=1
                 break
@@ -126,69 +144,66 @@ split_longopt() {
 
         if (( matched == 0 ))
         then
-            # unexpected flag
+            # unrecognized flag
             # - mimic getopts err reporting
             if [[ -v _silerr ]]
             then
-                OPTARG=$__flagvar_ref__
-                __flagvar_ref__='?'
+                OPTARG=$__sl_Flag__
+                __sl_Flag__='?'
 
             else
-                printf >&2 '%s\n' "split_longopt: illegal option -- $__flagvar_ref__"
-                __flagvar_ref__='?'
+                printf >&2 '%s\n' "longopts: illegal option -- $__sl_Flag__"
+                __sl_Flag__='?'
                 unset OPTARG
             fi
 
-        else
-            if [[   ${os_flag:(-1)} == ':' \
-                    && ! -v OPTARG ]]
+        elif [[ $opt_flag == *: \
+            && ! -v OPTARG ]]
+        then
+            # arg req'd but not defined by --key=value style arg
+            if (( $# ))
             then
-                # arg req'd and not yet defined
+                # get OPTARG from command-line args
+                # - this works because getopts would have advanced OPTIND
                 if [[ -v $OPTIND ]]
                 then
-                    # get opt-arg from CLI
-                    # - only works if user provided "$@" argument
                     OPTARG=${!OPTIND}
                     (( OPTIND++ ))
+                fi
+
+            else
+                # if 'shopt -s extdebug' was on when the calling script was initiated,
+                # then BASH_ARGV may have the OPTARG
+                if [[ -v BASH_ARGV[*] ]]
+                then
+                    local -i a b n i
+                    a=${BASH_ARGC[0]}    # e.g. 2 args for this func
+                    b=${BASH_ARGC[1]}    # e.g. 4 args for the calling func
+                    n=${#BASH_ARGV[@]}   # e.g. 6
+
+                    # for the above e.g., arg 3 of the calling func is available at BASH_ARGV[2]
+                    # 0 1 2 3 4 5
+                    if (( b >= OPTIND ))
+                    then
+                        i=$(( n - 1 - a - (b - OPTIND) ))
+                        OPTARG=${BASH_ARGV[i]}
+                        (( OPTIND++ ))
+                    fi
+                fi
+            fi
+
+            # if OPTARG wasn't found above, mimic getopts err reporting
+            if [[ ! -v OPTARG ]]
+            then
+                if [[ -v _silerr ]]
+                then
+                    OPTARG=$__sl_Flag__
+                    __sl_Flag__=':'
 
                 else
-                    # - otherwise, 'shopt -s extdebug' would have needed to be on in
-                    #   when the calling script was initiated; then BASH_ARGV would
-                    #   have what we need here
-
-                    if [[ -v BASH_ARGV[*] ]]
-                    then
-                        local -i a b n i
-                        a=${BASH_ARGC[0]}    # e.g. 2 args for this func
-                        b=${BASH_ARGC[1]}    # e.g. 4 args for the calling func
-                        n=${#BASH_ARGV[@]}   # e.g. 6
-
-                        # for the above e.g., arg 3 of the calling func is available at BASH_ARGV[2]
-                        # 0 1 2 3 4 5
-
-                        if (( b >= OPTIND ))
-                        then
-                            i=$(( n - 1 - a - (b - OPTIND) ))
-                            OPTARG=${BASH_ARGV[i]}
-                            (( OPTIND++ ))
-                        fi
-                    fi
-
-                    if [[ ! -v OPTARG ]]
-                    then
-                        # printf >&2 '%s\n' "split_longopt: not enough BASH_ARGV for argument to '$__flagvar_ref__'"
-
-                        if [[ -v _silerr ]]
-                        then
-                            OPTARG=$__flagvar_ref__
-                            __flagvar_ref__=':'
-
-                        else
-                            printf >&2 '%s\n' "split_longopt: option requires an argument -- $__flagvar_ref__"
-                            __flagvar_ref__='?'
-                            unset OPTARG
-                        fi
-                    fi
+                    printf >&2 '%s\n' "longopts: option requires an argument -- $__sl_Flag__"
+                    __sl_Flag__='?'
+                    unset OPTARG
                 fi
             fi
         fi
