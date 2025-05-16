@@ -91,6 +91,9 @@ prompt, colours, etc.:
 
 ## Installation
 
+1. Download or clone the repo onto your system. E.g. into a subdirectory of `/usr/local/opt`, or `~/Projects/`. To get the full benefit of all the scripts, download all of the submodules too. Either use `git clone --recursive https://github.com/AndrewDDavis/Shell-Script-Library` at the time of cloning, or later use `git submodule update --init --recursive` from the repo directory.
+
+
   - `import_func` in `~/.bashrc`
   - use a symlink at `~/.bash_lib`, or set BASH_FUNCLIB
 
