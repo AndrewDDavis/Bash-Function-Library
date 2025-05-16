@@ -113,7 +113,7 @@ longopts() {
         || { err_msg 4 "empty OPTARG"; return; }
 
 
-    # set FLAG and OPTARG as getopts does for short options
+    # mimic the way getopts sets FLAG and OPTARG for short options
     if [[ $OPTARG == *=* ]]
     then
         # was a --key=val argument
@@ -125,13 +125,14 @@ longopts() {
         # was a simple --flag argument
         __sl_Flag__=$OPTARG
         unset OPTARG
+        declare OPTARG
     fi
 
 
     if [[ -v optstr_arr[*] ]]
     then
         # optstring provided: check for expected flags and required args
-        local opt_flag matched=0
+        local opt_flag matched
 
         for opt_flag in "${optstr_arr[@]}"
         do
@@ -142,7 +143,7 @@ longopts() {
             fi
         done
 
-        if (( matched == 0 ))
+        if [[ ! -v matched ]]
         then
             # unrecognized flag
             # - mimic getopts err reporting
