@@ -34,6 +34,24 @@ import_func() {
             function with the same name is already defined. This option forces such
             functions to be reimported by sourcing the relevant file.
 
+          -l
+          : Import from local directory. Instead of using ~/.bash_lib or BASH_FUNCLIB,
+            this searches within the directory tree of the source file of the calling
+            function or script, after resolving any symlinks.
+
+            Very useful for larger projects that have their own repository e.g. under
+            modules/, with supporting functions spread over multiple files. It also
+            keeps the supporting functions out of the main interactive namespace. This
+            works as expected across various namespace scopes, e.g. for functions
+            previously imported into the interactive namespace, for sourced scripts, and
+            for the separate namespaces of executed scripts and subshells.
+
+            Note that import_func will not import the source file of the calling
+            function or script, to prevent an endless loop from occurring.
+
+          -v
+          : Print verbose messages during the function operation.
+
         The function normally returns 0 (true), but returns 62 if it cannot find the
         funclib directory, 63 if it cannot find a source file for a function named
         on the command line, or 64 if it finds multiple source files. It also returns
@@ -70,44 +88,70 @@ import_func() {
     ' RETURN
 
     # options
-    local _force _all
+    local  _all _force _local _verb=1
     local _flag OPTARG OPTIND=1
-    while getopts ':af' _flag
+    while getopts ':aflv' _flag
     do
         case $_flag in
             ( a ) _all=1 ;;
             ( f ) _force=1 ;;
+            ( l ) _local=1 ;;
+            ( v ) (( _verb++ )) ;;
             ( \? ) err_msg 3 "Unrecognized option: '-$OPTARG'"; return ;;
             ( : )  err_msg 4 "Missing argument for -$OPTARG"; return ;;
         esac
     done
     shift $(( OPTIND-1 ))
 
-    # check for expected library path
-    local libdir="$HOME"/.bash_lib
+    # define search root for source files
+    local src_path libdir="$HOME"/.bash_lib
 
-    [[ -n ${BASH_FUNCLIB-} ]] &&
-        libdir=$BASH_FUNCLIB
+    if [[ -v _local ]]
+    then
+        # use local dir as library path
+        src_path=$( physpath "${BASH_SOURCE[1]}" ) \
+            || return
+        libdir=$( dirname -- "$src_path" )
 
-    [[ -d $libdir ]] ||
-        { err_msg 62 "libdir not found: '$libdir'"; return; }
+    else
+        # check env var
+        [[ -n ${BASH_FUNCLIB-} ]] \
+            && libdir=$BASH_FUNCLIB
+    fi
 
+    [[ -d $libdir ]] \
+        || { err_msg 62 "libdir not found: '$libdir'"; return; }
+
+    (( _verb > 1 )) \
+        && err_msg i "libdir: '$libdir'"
 
     _xfn() {
 
         # add find args to exclude filename, possibly adding suffixes
+        [[ $1 == -o ]] \
+            && { find_cmd+=( -o ); shift; }
+
+        # filename or path
+        local fd_arg
+        if [[ ${1%/} == */* ]]
+        then
+            fd_arg='-path'
+        else
+            fd_arg='-name'
+        fi
+
         if [[ $1 == */ ]]
         then
             # directory
-            find_cmd+=( -name "${1%/}" )
+            find_cmd+=( "$fd_arg" "${1%/}" )
 
         elif [[ $1 == *@(.sh|.bash) ]]
         then
             # already has extension
-            find_cmd+=( -name "$1" )
+            find_cmd+=( "$fd_arg" "$1" )
 
         else
-            find_cmd+=( -name "${1}.sh" -o -name "${1}.bash" )
+            find_cmd+=( "$fd_arg" "${1}.sh" -o "$fd_arg" "${1}.bash" )
         fi
     }
 
@@ -122,6 +166,14 @@ import_func() {
         find_cmd=( "$( builtin type -P find )" -L "$libdir" ) \
             || { err_msg 9 "no executable found for find"; return; }
 
+        # exclude the the source files of all calling functions, to prevent circularity
+        for fn in "${BASH_SOURCE[@]:1}"
+        do
+            src_path=$( physpath "$fn" ) \
+                || return
+            set -- "$@" "$src_path"
+        done
+
         if [[ $# -gt 0 ]]
         then
             # - build file exclusion list using the construct:
@@ -132,8 +184,7 @@ import_func() {
 
             for fn in "${@:2}"
             do
-                find_cmd+=( -o )
-                _xfn "$fn"
+                _xfn -o "$fn"
             done
 
             find_cmd+=( ')' -prune -o )
@@ -142,10 +193,15 @@ import_func() {
         # - NB, type f matches symlinked files, since we're using -L
         find_cmd+=( -type f \( -name '*.sh' -o -name '*.bash' \) -print0 )
 
+        (( _verb > 2 )) \
+            && err_msg i "find_cmd: '${find_cmd[*]}'"
 
         # Run find and import the selected files
         while IFS='' read -rd '' fn <&3
         do
+            (( _verb > 1 )) \
+                && err_msg i "sourcing '$fn'"
+
             # shellcheck source=/dev/null
             source "$fn"
 
@@ -183,12 +239,22 @@ import_func() {
             # match pattern for function definition in source file
             grep_ptn="^(${func_nm}[[:blank:]]*\(\)|function[[:blank:]]+${func_nm})"
 
+            (( _verb > 2 )) \
+                && err_msg i "grep_cmd: '${grep_cmd[*]} -e $grep_ptn $libdir'"
+
             mapfile -t src_fns < <( "${grep_cmd[@]}" -e "$grep_ptn" "$libdir" )
 
             if [[ ${#src_fns[@]} -eq 1 ]]
             then
+                # in local mode, exclude the caller's source file, to prevent an endless loop
+                [[ -v _local  && ${src_fns[0]} == "$src_path" ]] \
+                    && continue
+
+                (( _verb > 1 )) \
+                    && err_msg i "sourcing '${src_fns[0]}'"
+
                 # shellcheck source=/dev/null
-                source "${src_fns[@]}"
+                source "${src_fns[0]}"
 
             elif [[ ${#src_fns[@]} -eq 0 ]]
             then
@@ -205,6 +271,8 @@ import_func() {
     fi
 }
 
-# when sourcing this file, import supporting functions
-import_func err_msg docsh \
+# Import supporting functions when sourcing this file
+# - we don't use a _deps array for this, since there can be a namespace collision when
+#   the this file is sourced, and _deps is defined in the caller
+import_func err_msg docsh physpath \
     || return
