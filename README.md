@@ -1,6 +1,6 @@
-# Shell Script Library
+# Bash Library
 
-The `.sh` and `.bash` files in the `lib/` directory tree contain shell function and
+The `.sh` and `.bash` files in the `bash_lib/` directory tree contain shell function and
 alias definitions. They are meant to be sourced during shell initialization or later
 during an interactive session. The files do not have exutable permissions set, because
 they are *not* meant to be executed.
@@ -122,6 +122,6 @@ Functions to support ~/.profile, and the top of ~/.bashrc.
 
 ## bin dir
 
-this dir contains symlinks to scripts in the modules dir. 
+this dir contains symlinks to scripts in the modules dir.
 symlink the links in this dir from ~/.local/bin to add the scripts to your path.
 
