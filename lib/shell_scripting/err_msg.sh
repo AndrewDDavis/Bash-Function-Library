@@ -142,14 +142,14 @@ err_msg() {
 
             caller[name]=${FUNCNAME[1]}'()'
 
-            [[ -v 'FUNCNAME[2]' ]] && {
-
+            if [[ -v 'FUNCNAME[2]'  && $severity == @(ERROR|WARNING) ]]
+            then
                 local i
                 for (( i=2; i<${#FUNCNAME[*]}; i++ ))
                 do
-                    caller[name]+=", ${FUNCNAME[i]}()"
+                    caller[name]+=", ${FUNCNAME[i]}"
                 done
-            }
+            fi
         }
 
         # - caller source file (can also be 'main', 'source', or 'environment')
