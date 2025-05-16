@@ -1,7 +1,3 @@
-# TODO:
-# - test optstring
-# - test sourcing instead of calling
-
 # dependencies (implied)
 # import_func docsh err_msg \
 #     || return
@@ -60,31 +56,32 @@ longopts() {
           - The error reporting also mimics getopts, and silent error reporting is
             indicated by starting the optstring with ':', or setting OPTERR=0.
 
-        Example
+        Examples
 
-          # Allow a '--aaa' flag as a synonym for '-a', and similarly '--bbb=arg'
-          # for '-b arg'.
+         1. Allow the flag '--aaa' as a synonym for '-a', and '--bbb=arg' for '-b arg'.
+            NB, '--bbb arg' will also work, as long as you use the full form of the
+            longopts call, including the optstring and the positional parameters.
 
-          local flag OPTARG OPTIND=1
-          while getopts ':ab:-:' flag       # <- add '-:' to optstring
-          do
-              longopts flag                 # <- call longopts before the case statement
-              # or
-              longopts ':aaa bbb:' flag \"\$@\"
+            local flag OPTARG OPTIND=1
+            while getopts ':ab:-:' flag       # <- add '-:' to optstring
+            do
+                longopts flag                 # <- call longopts before the case statement
+                # or
+                longopts ':aaa bbb:' flag \"\$@\"
 
-              case \$flag in
-                  ( a | aaa ) _a=1  ;;          # <- long flags added to cases
-                  ( b | bbb ) _b=\$OPTARG  ;;
+                case \$flag in
+                    ( a | aaa ) _a=1  ;;          # <- long flags added to cases
+                    ( b | bbb ) _b=\$OPTARG  ;;
 
-                  ( : )  err_msg 2 \"missing argument for -\$OPTARG\"; return ;;
-                  ( \\? ) err_msg 3 \"unknown option: '-\$OPTARG'\"; return ;;
+                    ( : )  err_msg 2 \"missing argument for -\$OPTARG\"; return ;;
+                    ( \\? ) err_msg 3 \"unknown option: '-\$OPTARG'\"; return ;;
 
-                  # ^^^ above is adequate if optstring was provided to longopts
-                  # vvv below is needed if only using 'longopts flag'
+                    # ^^^ above is adequate if optstring arg was provided to longopts
+                    # vvv below is needed if not
 
-                  ( * ) err_msg 4 \"unexpected op: '\$flag', '\${OPTARG-}'\"; return  ;;
-              esac
-          done
+                    ( * ) err_msg 4 \"unexpected op: '\$flag', '\${OPTARG-}'\"; return  ;;
+                esac
+            done
         "
         docsh -TD
         return
@@ -133,7 +130,7 @@ longopts() {
         # was a simple --flag argument
         __sl_Flag__=$OPTARG
         unset OPTARG
-        declare OPTARG
+        declare -g OPTARG
     fi
 
 
