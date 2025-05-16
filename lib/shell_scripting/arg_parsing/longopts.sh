@@ -66,15 +66,23 @@ longopts() {
           # for '-b arg'.
 
           local flag OPTARG OPTIND=1
-          while getopts 'ab:-:' flag    # <- -: added to optstring
+          while getopts ':ab:-:' flag       # <- add '-:' to optstring
           do
-              # handle long options
-              longopts flag        # <- call longopts before the case statement
+              longopts flag                 # <- call longopts before the case statement
+              # or
+              longopts ':aaa bbb:' flag \"\$@\"
 
               case \$flag in
-                  ( a | aaa ) _a=1  ;;
+                  ( a | aaa ) _a=1  ;;          # <- long flags added to cases
                   ( b | bbb ) _b=\$OPTARG  ;;
-                  ( * ) err_msg 3 \"unexpected: '\$flag', '\${OPTARG-}'\"; return  ;;
+
+                  ( : )  err_msg 2 \"missing argument for -\$OPTARG\"; return ;;
+                  ( \\? ) err_msg 3 \"unknown option: '-\$OPTARG'\"; return ;;
+
+                  # ^^^ above is adequate if optstring was provided to longopts
+                  # vvv below is needed if only using 'longopts flag'
+
+                  ( * ) err_msg 4 \"unexpected op: '\$flag', '\${OPTARG-}'\"; return  ;;
               esac
           done
         "
