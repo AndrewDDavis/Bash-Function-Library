@@ -9,7 +9,7 @@ rename-titlecase() {
         Usage: rename-titlecase {file-name} ...
 
           - Operates only on file basenames, not the whole path.
-          - Ignores some small words, e.g. a, an, the, and, at, with.
+          - Ignores some small words, e.g.: 'a', 'an', 'the', 'and', 'at', 'with'.
     "
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
