@@ -1,6 +1,8 @@
 # alias fd to the wrapper function
 alias fd='fd-wrapper'
-alias fda='fd-wrapper -HI'  # like ls -a
+alias fda='fd-wrapper -H'  # like ls -a
+alias fdl='fd-wrapper -l'  # like ls -lh
+alias fdu='fd-wrapper -HI' # unrestricted search
 
 # fd-tree command
 alias fd-tree='fd-wrapper --tree'
@@ -120,16 +122,25 @@ fd-wrapper() {
             -X du -hsc | sort -h
     "
 
-    # bare fd command with 0 args is allowed
-    [[ ${1-} == @(-h|--help) ]] &&
-        { docsh -TD; return; }
-
+    # fd or fdfind command path and default args
     local fd_cmd
     fd_cmd=( "$( builtin type -P fd )" ) \
         || fd_cmd=( "$( builtin type -P fdfind )" ) \
             || return 9
 
     fd_cmd+=( --no-ignore-vcs )
+
+    # bare fd command with no pattern is valid
+    if (( $# == 0 ))
+    then
+        "${fd_cmd[@]}"
+        return
+
+    elif [[ ${1-} == @(-h|--help) ]]
+    then
+        docsh -TD
+        return
+    fi
 
     # args to array
     local fd_args
