@@ -1,91 +1,82 @@
-__version__="\
-basename function v0.1 (Feb 2025)
-by Andrew Davis
-"
-
 basename() {
 
-    : "Strip leading directories and suffix from file paths
+    if [[ $# -eq 0  || $1 == @(-h|--help) ]]
+    then
+        : "Strip leading directories and suffix from file paths
 
-    Usage
+        Usage
 
-        basename [options] <path> [ suffix | path ... ]
+            basename [options] <path> [ suffix | path ... ]
 
-    This shell function implementation of the basename command prints each path after
-    removing any leading directory components and any trailing slashes. If a suffix is
-    specified, it is also removed. The suffix is interpreted as a fixed string. The
-    reference implementation of this command is GNU basename.
+        This shell function implementation of the basename command prints each path after
+        removing any leading directory components and any trailing slashes. If a suffix is
+        specified, it is also removed. The suffix is interpreted as a fixed string. The
+        reference implementation of this command is GNU basename.
 
-    The first positional argument is always interpreted as a path. By default, the next
-    positional argument is interpreted as a suffix, but this behaviour is modified by
-    -a and -s. It is an error to pass more than 2 positional arguements without using
-    -a or -s.
+        The first positional argument is always interpreted as a path. By default, the next
+        positional argument is interpreted as a suffix, but this behaviour is modified by
+        -a and -s. It is an error to pass more than 2 positional arguements without using
+        -a or -s.
 
-    Options
+        Options
 
-      -a (--multiple)
-      : allow multiple positional arguments, and treat them as paths
+          -a (--multiple)
+          : allow multiple positional arguments, and treat them as paths
 
-      -s (--suffix) <suffix>
-      : specify a trailing suffix to remove, and enable -a
+          -s (--suffix) <suffix>
+          : specify a trailing suffix to remove, and enable -a
 
-      -z (--zero)
-      : end each output line with NUL, not newline
+          -z (--zero)
+          : end each output line with NUL, not newline
 
-      -h (--help)
-      : display this help and return
+          -h (--help)
+          : display this help and return
 
-      --version
-      : output version information and return
+          --version
+          : output version information and return
 
-    Examples
+        Examples
 
-      basename /usr/bin/sort
-      # sort
+          basename /usr/bin/sort
+          # sort
 
-      basename include/stdio.h .h
-      # stdio
+          basename include/stdio.h .h
+          # stdio
 
-      basename -s .h include/stdio.h
-      # stdio
+          basename -s .h include/stdio.h
+          # stdio
 
-      basename -a any/str1 any/str2
-      # str1
-      # str2
-    "
-
-    [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
-        { docsh -TD; return; }
-
-	# long options can be handled better when getopts_long is ready
-	local i
-	for (( i=1; i<=$#; i++ ))
-	do
-    	case ${!i} in
-    	    ( -- ) break ;;
-    	    ( --version ) printf '%s\n' "$__version__"; return ;;
-    	    ( --zero | --suffix | --multiple )
-    	        err_msg 3 "long opts not implemented"
-    	        return
-    	    ;;
-        esac
-	done
+          basename -a any/str1 any/str2
+          # str1
+          # str2
+        "
+        docsh -TD
+        return
+    elif [[ $1 == --version ]]
+    then
+        # TODO: handle version through docsh
+        __version__="\
+            basename function v0.1 (Feb 2025)
+            by Andrew Davis
+        "
+        printf '%s\n' "$__version__"
+        return
+    fi
 
     # defaults
     local _ot='\n' _a _s
 
     local flag OPTARG OPTIND=1
-    while getopts ':as:z' flag
+    while getopts ':as:z-:' flag
     do
+        longopts ':zero suffix multiple' flag
+
         case $flag in
-			( a | multiple )
-			    _a=1 ;;
-			( s | suffix )
-			    _s=$OPTARG ;;
-			( z | zero )
-			    _ot='\0' ;;
-            ( \? ) err_msg 2 "unknown option: '-$OPTARG'"; return ;;
-            ( : )  err_msg 2 "missing argument for -$OPTARG"; return ;;
+            ( a | multiple ) _a=1 ;;
+            ( s | suffix )   _s=$OPTARG ;;
+            ( z | zero )     _ot='\0' ;;
+            ( : )  err_msg 2 "missing argument for $OPTARG"; return ;;
+            ( \? ) err_msg 3 "unknown option: '$OPTARG'"; return ;;
         esac
     done
     shift $(( OPTIND-1 ))
@@ -138,9 +129,9 @@ basename() {
         fi
 
         # strip trailing suffix
-        # - match GNU basename behaviour, don't produce empty bn
-        [[ -n ${_s-}  && $bn == *?"$_s" ]] &&
-            bn=${bn%"${_s}"}
+        # - mimic GNU basename behaviour, don't produce empty bn
+        [[ -n ${_s-}  && $bn == *?"$_s" ]] \
+            && bn=${bn%"${_s}"}
 
         printf '%s'"$_ot" "$bn"
     done
