@@ -1,3 +1,7 @@
+# dependencies
+import_func is_set_array \
+    || return
+
 array_strrepl() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
@@ -16,18 +20,20 @@ array_strrepl() {
     }
 
     # array name and pattern, then remaining args are new elements
-    local -n __earr__=$1    || return
-    local s=$2          || return
+    local -n __asr_arrnm__=$1   || return
+    local s=$2                  || return
     shift 2
 
-    # check valid array
-    [[ -v __earr__[@]  &&  ${__earr__@a} == *[aA]* ]] ||
-        { err_msg 3 "not an array: '${!__earr__}'"; return; }
+    # Require non-empty array
+    # - refer to arrayvar_tests.sh for details on testing variable properties
+    #   (it's actually pretty complicated)
+    is_set_array __asr_arrnm__ \
+        || { err_msg 3 "non-empty array required, got '${!__asr_arrnm__}'"; return; }
 
 
     # rely on other array functions where possible
     local k rs
-    k=$( array_match -nF -- "${!__earr__}" "$s" ) || {
+    k=$( array_match -nF -- "${!__asr_arrnm__}" "$s" ) || {
         # allow status = 1 for no match
         rs=$?
         [[ $rs == 1 ]] && return 1
@@ -36,16 +42,16 @@ array_strrepl() {
     }
 
 
-    if [[ ${__earr__@a} == *A* ]]
+    if [[ ${__asr_arrnm__@a} == *A* ]]
     then
         # associative array
         if [[ $# -eq 0 ]]
         then
-            unset __earr__["$k"]
+            unset __asr_arrnm__["$k"]
 
         elif [[ $# -eq 1 ]]
         then
-            __earr__["$k"]=$1
+            __asr_arrnm__["$k"]=$1
 
         else
             err_msg 5 "associative arrays can only take one element"
@@ -53,6 +59,6 @@ array_strrepl() {
         fi
     else
         # pass the original array name, to save a layer of abstraction
-        array_irepl "${!__earr__}" "$k" "$@"
+        array_irepl "${!__asr_arrnm__}" "$k" "$@"
     fi
 }

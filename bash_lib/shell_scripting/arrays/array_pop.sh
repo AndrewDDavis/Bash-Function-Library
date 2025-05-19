@@ -1,5 +1,5 @@
-# deps
-import_func array_sort argmax \
+# dependencies
+import_func is_set_array is_idx_array array_sort argmax \
     || return
 
 array_pop() {
@@ -34,17 +34,18 @@ array_pop() {
         { docsh -TD; return; }
 
     # nameref to array
-    local -n __iarr__=$1 \
+    local -n __ap_arrnm__=$1 \
         || return
     shift
 
-    # check valid array
-    [[ -v __iarr__[*]  && ${__iarr__@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
+    # Require non-empty array
+    is_set_array __ap_arrnm__  && is_idx_array __ap_arrnm__ \
+        || { err_msg 3 "non-empty indexed array required, got '${!__ap_arrnm__}'"; return; }
+
 
     # last array index
     local m
-    m=$( argmax "${!__iarr__[@]}" )
+    m=$( argmax "${!__ap_arrnm__[@]}" )
 
     # default index to remove is 0
     (( $# == 0 )) \
@@ -57,11 +58,11 @@ array_pop() {
         is_int ${!i} ||
             { err_msg 4 "not a valid index: '${!i}'"; return; }
 
-        if [[ -v __iarr__[${!i}] ]]
+        if [[ -v __ap_arrnm__[${!i}] ]]
         then
             idcs+=( "${!i}" )
         else
-            err_msg w "${!__iarr__} has no element at ${!i}"
+            err_msg w "${!__ap_arrnm__} has no element at ${!i}"
         fi
     done
     shift $#
@@ -76,14 +77,14 @@ array_pop() {
     then
         # Unset idx and decrement later values
         local j=${idcs[0]}
-        unset '__iarr__[j]'
+        unset '__ap_arrnm__[j]'
 
         for (( i=j+1; i<=m; i++ ))
         do
-            if [[ -v __iarr__[i] ]]
+            if [[ -v __ap_arrnm__[i] ]]
             then
-                __iarr__[i-1]=${__iarr__[i]}
-                unset '__iarr__[i]'
+                __ap_arrnm__[i-1]=${__ap_arrnm__[i]}
+                unset '__ap_arrnm__[i]'
             fi
         done
     else
@@ -108,14 +109,14 @@ array_pop() {
         #   have been removed so far
         # - j tracks the index of the next element to be removed
         local j=${idcs[0]} k=1
-        unset '__iarr__[j]'
+        unset '__ap_arrnm__[j]'
         j=${idcs[1]}
 
         for (( i=(idcs[0]+1); i<=m; i++ ))
         do
             if (( i == j ))
             then
-                unset '__iarr__[i]'
+                unset '__ap_arrnm__[i]'
                 (( ++k ))
                 if [[ -v idcs[k] ]]
                 then
@@ -124,11 +125,11 @@ array_pop() {
                     j=0
                 fi
 
-            elif [[ -v __iarr__[i] ]]
+            elif [[ -v __ap_arrnm__[i] ]]
             then
                 # decrement index of later elements
-                __iarr__[i-k]=${__iarr__[i]}
-                unset '__iarr__[i]'
+                __ap_arrnm__[i-k]=${__ap_arrnm__[i]}
+                unset '__ap_arrnm__[i]'
             fi
         done
     fi

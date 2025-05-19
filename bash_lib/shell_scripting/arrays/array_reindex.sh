@@ -1,3 +1,7 @@
+# dependencies
+import_func is_set_array is_idx_array \
+    || return
+
 array_reindex() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
@@ -34,16 +38,16 @@ array_reindex() {
 
 
     # args
-    local -n __iarr__=$1    || return
+    local -n __ari_arrnm__=$1    || return
     shift
 
-    # check valid array
-    [[ -v __iarr__[@]  &&  ${__iarr__@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
+    # Require non-empty index array
+    is_set_array __ari_arrnm__  && is_idx_array __ari_arrnm__ \
+        || { err_msg 3 "non-empty array required, got '${!__ari_arrnm__}'"; return; }
 
 
     # step through the array, keeping track of any gaps
-    for i in "${!__iarr__[@]}"
+    for i in "${!__ari_arrnm__[@]}"
     do
         # ignore earlier values and don't increment c when '-c' was used
         (( i < c )) && continue
@@ -52,8 +56,8 @@ array_reindex() {
 
             # if i > c, there is a gap in the index
             # - move the content
-            __iarr__[c]=${__iarr__[i]}
-            unset '__iarr__[i]'
+            __ari_arrnm__[c]=${__ari_arrnm__[i]}
+            unset '__ari_arrnm__[i]'
         }
 
         (( ++c ))

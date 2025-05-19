@@ -1,3 +1,7 @@
+# dependencies
+import_func is_set_array is_idx_array \
+    || return
+
 array_sort() {
 
     : "Sort array elements
@@ -24,13 +28,14 @@ array_sort() {
         { docsh -TD; return; }
 
     # nameref to array
-    local -n __iarr__=$1 \
+    local -n __as_arrnm__=$1 \
         || return
     shift
 
-    # check valid array
-    [[ -v __iarr__[*]  && ${__iarr__@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
+    # Require non-empty indexed array
+    is_set_array __as_arrnm__  && is_idx_array __as_arrnm__ \
+        || { err_msg 3 "non-empty array required, got '${!__as_arrnm__}'"; return; }
+
 
     # sort command with options
     local sort_cmd
@@ -45,6 +50,6 @@ array_sort() {
         || return
 
     # note the array is expanded on the command line, so mapfile is happy to overwrite it
-    mapfile -d '' __iarr__ \
-        < <( "${sort_cmd[@]}" <( printf '%s\0' "${__iarr__[@]}" ) )
+    mapfile -d '' __as_arrnm__ \
+        < <( "${sort_cmd[@]}" <( printf '%s\0' "${__as_arrnm__[@]}" ) )
 }

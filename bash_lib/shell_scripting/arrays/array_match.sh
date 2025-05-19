@@ -1,6 +1,10 @@
 # TODO:
 # - use match-sh (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external command call
 
+# dependencies
+import_func is_set_array \
+    || return
+
 array_match () {
 
     # function docs
@@ -109,22 +113,19 @@ array_match () {
         || return 2
 
     # - array nameref and pattern (or string)
-    local -n __arrnm=$1     || return
-    local ptn=$2            || return
+    local -n __am_arrnm__=$1    || return
+    local ptn=$2                || return
     shift 2
 
-    # check for valid, non-empty array
-    # - NB, this returns n=0 for empty array, or false for scalar variable or unset var
-    # - OTOH, [[ -v __arrnm[*] ]] returns false for empty array (referenced or not), or unset var
-    n=${#__arrnm[*]} \
-        || { err_msg 3 "not an array: '${!__arrnm}'"; return; }
-
-    (( n == 0 )) \
-        && return 1
+    # Require non-empty array
+    # - refer to arrayvar_tests.sh for details on testing variable properties
+    #   (it's actually pretty complicated)
+    is_set_array __am_arrnm__ \
+        || { err_msg 3 "non-empty array required, got '${!__am_arrnm__}'"; return; }
 
 
     # Both matching styles below use grep
-    # - NB, I originally tried a form using Bash '[[': [[ "${__arrnm[@]}" =~ $ptn ]].
+    # - NB, I originally tried a form using Bash '[[': [[ "${__am_arrnm__[@]}" =~ $ptn ]].
     #   This was very concise, but not totally precise: an expression combining two
     #   adjascent array values with a space between matches, even though it should not.
     local grep_cmd grep_out
@@ -155,12 +156,12 @@ array_match () {
     # - this locks in an order for associative arrays
     # - the index of this array matches the line numbers output by grep
     # - they values are the indices of the input array
-    local i keys=( '' "${!__arrnm[@]}" )
+    local i keys=( '' "${!__am_arrnm__[@]}" )
 
     # now we can run with -n, and later convert the line number to the array index
     mapfile -d '' grep_out < \
         <( "${grep_cmd[@]}" < \
-            <( for i in "${keys[@]:1}"; do printf '%s\0' "${__arrnm[i]}"; done ) )
+            <( for i in "${keys[@]:1}"; do printf '%s\0' "${__am_arrnm__[i]}"; done ) )
 
     # grep return status
     # - NB, $! expands to PID of most recent background job

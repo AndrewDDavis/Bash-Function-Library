@@ -1,6 +1,6 @@
-# deps
+# dependencies
 import_func array_reindex \
-    || return 63
+    || return
 
 # alias for discoverability
 alias glob-to-array='array_from_glob'
@@ -61,12 +61,12 @@ array_from_glob() {
     mapfile -t __res_arr__ < <( compgen -G "$pattern" )
 
     # any results?
-    [[ -v __res_arr__[*] ]] ||
-        return
+    [[ -v __res_arr__[*] ]] \
+        || return
 
     # check that all results start with ptn_init
     local reidx
-    # ( set -x
+
     for i in "${!__res_arr__[@]}"
     do
         if [[ ${__res_arr__[i]} == $ptn_init* ]]
@@ -82,7 +82,6 @@ array_from_glob() {
             reidx=1
         fi
     done
-    # )
 
     # ensure a contiguous index
     if [[ -v reidx ]]

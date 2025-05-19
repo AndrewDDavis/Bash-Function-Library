@@ -1,5 +1,5 @@
-# deps
-import_func seqi array_pop \
+# dependencies
+import_func is_set_array is_idx_array seqi array_pop \
     || return
 
 array_shift() {
@@ -32,13 +32,13 @@ array_shift() {
         { docsh -TD; return; }
 
     # nameref to array
-    local -n __iarr__=$1 \
-        || return
+    local -n __ash_arrnm__=$1  || return
     shift
 
-    # check valid array
-    [[ -v __iarr__[*]  && ${__iarr__@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
+    # Require non-empty indexed array
+    is_set_array __ash_arrnm__  && is_idx_array __ash_arrnm__ \
+        || { err_msg 3 "non-empty array required, got '${!__ash_arrnm__}'"; return; }
+
 
     # number of elems to remove
     local n=1
@@ -54,7 +54,7 @@ array_shift() {
 
     # last array index
     local m
-    m=$( argmax "${!__iarr__[@]}" )
+    m=$( argmax "${!__ash_arrnm__[@]}" )
 
     (( (n-1) <= m )) \
         || { err_msg 5 "number ($n) too large for max array index ($m)"; return; }
@@ -66,12 +66,12 @@ array_shift() {
     do
         if (( i < n ))
         then
-            if [[ -v __iarr__[i] ]]
+            if [[ -v __ash_arrnm__[i] ]]
             then
-                unset '__iarr__[i]'
+                unset '__ash_arrnm__[i]'
                 (( ++k ))
             else
-                err_msg w "${!__iarr__}[$i] does not exist"
+                err_msg w "${!__ash_arrnm__}[$i] does not exist"
             fi
 
         elif (( k == 0 ))
@@ -79,11 +79,11 @@ array_shift() {
             # no elements were removed
             break
 
-        elif [[ -v __iarr__[i] ]]
+        elif [[ -v __ash_arrnm__[i] ]]
         then
             # decrement index of later elements
-            __iarr__[i-k]=${__iarr__[i]}
-            unset '__iarr__[i]'
+            __ash_arrnm__[i-k]=${__ash_arrnm__[i]}
+            unset '__ash_arrnm__[i]'
         fi
     done
 }

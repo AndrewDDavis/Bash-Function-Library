@@ -1,5 +1,5 @@
-#deps
-import_func array_pop \
+# dependencies
+import_func is_set_array is_idx_array array_pop \
     || return
 
 array_irepl() {
@@ -29,29 +29,29 @@ array_irepl() {
     }
 
     # array name and index, then remaining args are new elements
-    local -n __iarr__=$1 \
-        || return
-    local -i k=$2 \
-        || return
+    local -n __air_arrnm__=$1   || return
+    local -i k=$2               || return
     shift 2
 
-    # check valid array and index
-    [[ -v __iarr__[*]  && ${__iarr__@a} == *a* ]] ||
-        { err_msg 3 "not an indexed array: '${!__iarr__}'"; return; }
+    # Require non-empty array
+    # - refer to arrayvar_tests.sh for details on testing variable properties
+    #   (it's actually pretty complicated)
+    is_set_array __air_arrnm__  && is_idx_array __air_arrnm__ \
+        || { err_msg 3 "non-empty indexed array required, got '${!__air_arrnm__}'"; return; }
 
-    is_int $k ||
-        { err_msg 4 "not an integer index: '$k'"; return; }
+    is_int $k \
+        || { err_msg 4 "not an integer index: '$k'"; return; }
 
 
     if [[ $# -eq 0 ]]
     then
         # no new elements: delete the element and adjust the index
-        array_pop "${!__iarr__}" $k
+        array_pop "${!__air_arrnm__}" $k
 
     elif [[ $# -eq 1 ]]
     then
         # one new element: trivial replacement
-        __iarr__[k]=$1
+        __air_arrnm__[k]=$1
 
     else
         # add elements to the array, preserving the current sparseness
@@ -102,7 +102,7 @@ array_irepl() {
             holes=1 ign_holes=0 delta
 
         # check the array indices for gaps
-        for i in "${!__iarr__[@]}"
+        for i in "${!__air_arrnm__[@]}"
         do
             # skip lower idcs, incl k
             (( i <= k )) \
@@ -125,7 +125,7 @@ array_irepl() {
         # move elements out of the way, stepping through in reverse index order to avoid overwriting
         for (( i=i_last; i > k; i-- ))
         do
-            [[ -v __iarr__[$i] ]] || {
+            [[ -v __air_arrnm__[$i] ]] || {
 
                 # at a gap, burn 1 ign_hole or increment delta
                 if (( ign_holes > 0 ))
@@ -138,14 +138,14 @@ array_irepl() {
             }
 
             j=$(( i + delta ))
-            __iarr__[j]=${__iarr__[i]}
+            __air_arrnm__[j]=${__air_arrnm__[i]}
         done
 
         # then, write new elements to sequential indices from k
         for (( i=1; i <= $#; i++ ))
         do
             j=$(( k + i - 1 ))
-            __iarr__[j]=${!i}
+            __air_arrnm__[j]=${!i}
         done
     fi
 }

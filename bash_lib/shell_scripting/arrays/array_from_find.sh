@@ -67,9 +67,6 @@ array_from_find() {
     array_match find_cmd '-print0|-printf' ||
         find_cmd+=( -print0 )
 
-    # debug
-    # printf '%s\n' "${find_cmd[@]}"
-
     __res_arr__=()
     {
         mapfile -d '' __res_arr__ < \
@@ -78,8 +75,8 @@ array_from_find() {
         || return
 
     # return status
-    [[ -v __res_arr__[*] ]] ||
-        return
+    [[ -v __res_arr__[*] ]]
+    return
 
     # older Bash loop code:
     # local fn
