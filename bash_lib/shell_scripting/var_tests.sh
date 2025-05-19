@@ -14,24 +14,32 @@
 # - When a variable is a nameref, ${abc[*]@A} prints the attributes of the underlying
 #   variable, whereas 'declare -p abc' prints the nameref declaration. To print the
 #   attributes of the underlying variable using declare, use 'declare -p "${!abc}"'.
+#
+#   NB, running 1000 iterations of 'declare -p i' and 'echo ${i@A}' both take ~ 10 ms.
 
-is_unset_var() {
+is_mt_var() {
 
     : "Return true for a scalar or array variable that has been declared, but without
-    any value set, not even NUL, nor an empty array"
+        any value set, not even NUL.
 
-    local d=$( declare -p "$1" )
+        These could be declared using e.g.:
+          declare -i i  # integer variable
+          local abc     # in a function
+          abc=()        # empty array
+    "
 
-    [[ $d == 'declare '*  && $d != *=* ]]
+    [[ $( declare -p "${1:?variable name required}" 2>/dev/null ) == 'declare -'*  \
+        && ! -v "$1" ]]
+
+    # local d=$( declare -p "$1" 2>/dev/null )
+    # [[ $d == 'declare '*  && $d != *=* ]]
 }
 
 is_set_var() {
 
     : "Return true for a scalar or array variable with any value set, including NUL"
 
-    local -n __avt_arrnm__=${1:?variable name required}
-
-    [[ -v __avt_arrnm__[*] ]]
+    [[ -v ${1:?variable name required}[*] ]]
 
     # could also use:
     #   ( set +u; (( ${#arr[*]} > 0 )) )

@@ -119,6 +119,20 @@ is_array() {
     #   [[ ${arr[*]@A} =~ $rgx ]]
 }
 
+is_mt_array() {
+
+    : "Return true for an empty array variable (no elements, not even a NUL)
+
+        These could be defined using, e.g.:
+          arr=()
+        or
+          declare -a arr
+    "
+
+    [[ $( declare -p "${1:?variable name required}" 2>/dev/null ) \
+        == 'declare -'*([! ])[aA]*([! ])" ${1}"?('=()') ]]
+}
+
 is_set_array() {
 
     : "Return true for an array variable with any value set, including NUL"
@@ -142,20 +156,6 @@ is_nn_array() {
         test "$e" && break
     done \
         && [[ ${__avt_arrnm__@a} == *[aA]* ]]
-}
-
-is_mt_array() {
-
-    : "Return true for an empty array variable (no elements, not even a NUL)"
-
-    local -n __avt_arrnm__=${1:?variable name required}
-
-    # NB, this matches arrays defined using:
-    #   arr=()
-    # but not arrays defined using:
-    # declare -a arr
-
-    [[ ${__avt_arrnm__[*]@A} == 'declare -'*([! ])[aA]*([! ])" ${__avt_arrnm__}=()" ]]
 }
 
 is_idx_array() {
