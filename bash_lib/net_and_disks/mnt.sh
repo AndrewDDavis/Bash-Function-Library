@@ -397,11 +397,14 @@ mnt() {
             unset "mopts[0]"
         moptstr+=$( printf '%s' "${mopts[@]/#/,}" )
 
-        (   set -x
+        if ( set -x
             "$mcmd" -o "$moptstr" "$rem_uri" "$loc_mntpt"
-        ) \
-            && "${cmd_pths[sed]}" >&2 "s:$HOME:~:" \
+        )
+        then
+            "${cmd_pths[sed]}" >&2 "s:$HOME:~:" \
                 <<< "Mounted ${dest_tag} at '${loc_mntpt}'."
+            cd "$loc_mntpt"
+        fi
 
     elif [[ $mcmd == */gocryptfs ]]
     then
