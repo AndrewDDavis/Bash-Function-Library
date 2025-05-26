@@ -49,9 +49,13 @@ rsyncx() {
             compression exclusions. The --info=progress2 option is also added to show
             overall transfer progress.
 
-            Although it is usually auto-detected, it can be useful to add this flag for
-            local directories that are actually remote filesystem mount, such as through
-            SSHfs. Although that should now be detected as well.
+          --remote-mount
+          : Some of the --remote options can also be useful when transferring to or from
+            local directories that are actually a remote filesystem mount, such as
+            through SSHfs. This flag sets the --partial and --info=progress2 flags, and
+            prevents -goD from being added, to avoid permissions errors. When neither
+            of the --local or --remote flags are used, rsyncx will attempt to detect
+            a remote mount and set --remote-mount automatically.
 
           --diff
           : Check for differences among files, but don't make any transfers. In addition
@@ -109,6 +113,9 @@ rsyncx() {
 
           --info=skip or -vv
           : Print a line for each skipped file when using -u (--update).
+
+          --info=progress2
+          : Show overall transfer progress (added with --remote)
 
           --stats or --info=stats2
           : Print a detailed file transfer summary.
@@ -205,7 +212,11 @@ rsyncx() {
     local _rem
     if array_match -- _stdopts '--remote'
     then
-        _rem=1
+        _rem=":"
+
+    elif array_match -- _stdopts '--remote-mount'
+    then
+        _rem="mount"
 
     elif ! array_match -- _stdopts '--local'
     then
@@ -254,13 +265,14 @@ rsyncx() {
                 local fstype
                 if [[ $1 == *:* ]]
                 then
+                    printf '%s\n' ":"
                     return 0
 
                 elif fstype=$( _get_fstype "$1" )
                 then
                     # e.g. fstype=fuse.sshfs or btrfs or hfs
                     [[ $fstype == fuse.@(sshfs|rclone|gvfsd-fuse) ]] \
-                        && return 0
+                        && { printf '%s\n' "$fstype"; return 0; }
                 fi
 
                 # assume local if not returned yet
@@ -278,24 +290,28 @@ rsyncx() {
             dest="${pos_args[-1]}"
             srcs=( "${pos_args[@]:0:n-1}" )
 
-            _chk_rem "$dest" \
-                && _rem=1
+            _rem=$( _chk_rem "$dest" )
         fi
 
-        for s in "${srcs[@]}"
-        do
-            # - NB, rsync only allows one side to be remote, but I don't think this applies
-            #   to locally-mount remote filesystems
-            _chk_rem "$s" \
-                && { _rem=1; break; }
-        done
+        if [[ ${_rem-} != ":" ]]
+        then
+            # NB, rsync only allows one side to be remote, but I don't think that
+            # applies to locally-mounted remote filesystems
+            for s in "${srcs[@]}"
+            do
+                s=$( _chk_rem "$s" ) \
+                    && { _rem=$s; break; }
+            done
+        fi
 
-        if [[ -v _rem ]]
+        if [[ ${_rem-} == ":" ]]
         then
             set -- --remote "$@"
-        else
-            set -- --local "$@"
+        elif [[ -n ${_rem-} ]]
+        then
+            set -- --remote-mount "$@"
         fi
+        # not setting --local here, since we're not 100% sure
     fi
 
     # general purpose, sensible default for most file syncing situations
@@ -303,10 +319,11 @@ rsyncx() {
     # - NB, rsync on Debian testing (trixie) doesn't have -N
     rs_cmd+=( -h -rlX -pA -tU )
 
-    # don't add goD by default, especially for transfers that involve locally mounte remote files
-    # - doing so may cause rsync to return with a permission error, because it can't set the group,
-    #   even when running without sudo
-    [[ -v _rem ]] \
+    # don't add goD by default
+    # - especially for transfers that involve locally mounted remote files. Doing so may
+    #   cause rsync to return with a permission error, because it can't set the group,
+    #   even when running without sudo.
+    [[ -n ${_rem-} ]] \
         || rs_cmd+=( -goD )
 
     # check for rsyncx options
@@ -317,6 +334,7 @@ rsyncx() {
             ( --diff )   rs_args+=( -nci --delete ) ;;
             ( --local )  rs_args+=( -H ) ;;
             ( --remote ) rs_args+=( --partial -z --info=progress2 ) ;;
+            ( --remote-mount ) rs_args+=( --partial --info=progress2 ) ;;
             ( --rsbak )  rs_args+=( --backup --suffix='.rsbak' ) ;;
             ( --mv )     rs_args+=( --remove-source-files --info=remove ); _mv=1 ;;
             ( * )
@@ -328,7 +346,7 @@ rsyncx() {
 
     # run rsync
     "${rs_cmd[@]}" "${rs_args[@]}" \
-        || { err_msg $? "rsync reported an error"; return; }
+        || { err_msg $? "rsync error, command was:" "${rs_cmd[*]} ${rs_args[*]}"; return; }
 
 
     if [[ -v _mv  && ! -v _dr ]]
