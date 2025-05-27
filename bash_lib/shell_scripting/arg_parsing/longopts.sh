@@ -1,4 +1,6 @@
 # dependencies (implied)
+# - NB, longopts should never be used in these funcs,
+#   or there would be a never-ending loop
 # import_func docsh err_msg \
 #     || return
 
@@ -87,36 +89,24 @@ longopts() {
         return
     }
 
-    # convert optstring to array, if provided
-    # - also check for silent error reporting
-    # - e.g. optstr=([0]="abc" [1]="def:" [2]="ghi")
-    local optstr_arr=() _silerr
+    # top priority is to read the FLAG var, and return quickly if not a long opt
+    local optstr
+    (( $# > 1 )) \
+        && { optstr=$1; shift; }
 
-    [[ ${OPTERR-} == 0 ]] \
-        && _silerr=1
-
-    if (( $# > 1 ))
-    then
-        # check for silent error reporting
-        [[ ${1:0:1} == ':' ]] \
-            && _silerr=1
-
-        # split on spaces, newlines, tabs
-        read -ra optstr_arr -d '' < \
-            <( printf '%s\0' "${1#:}" )
-        shift
-    fi
-
-    # - safer variable name to avoid collision with actual variable
+    # - using safe var-name to avoid name collision
     local -n __sl_Flag__=$1
     shift
 
-    [[ $__sl_Flag__ == '-' ]] \
-        || return 0
+    if [[ $__sl_Flag__ != '-' ]]
+    then
+        return 0
 
-    [[ -n ${OPTARG-} ]] \
-        || { err_msg 4 "empty OPTARG"; return; }
-
+    elif [[ -z ${OPTARG-} ]]
+    then
+        err_msg 4 "empty OPTARG"
+        return
+    fi
 
     # mimic the way getopts sets FLAG and OPTARG for short options
     if [[ $OPTARG == *=* ]]
@@ -133,19 +123,33 @@ longopts() {
         declare -g OPTARG
     fi
 
-
-    if [[ -v optstr_arr[*] ]]
+    if [[ -v optstr ]]
     then
-        # optstring provided: check for expected flags and required args
-        local opt_flag matched
+        # optstring provided: validate flags and required args
 
+        # check for silent error reporting
+        local _silerr
+        [[ ${OPTERR-} == 0 ]] \
+            && _silerr=1
+
+        [[ $optstr == :* ]] && {
+            _silerr=1
+            optstr=${optstr:1}
+        }
+
+        # convert optstring to array
+        # - e.g. optstr=([0]="abc" [1]="def:" [2]="ghi")
+        # - split on spaces, newlines, tabs
+        local optstr_arr=()
+        read -ra optstr_arr -d '' < \
+            <( printf '%s\0' "$optstr" )
+
+        # match flag against optstring
+        local opt_flag matched
         for opt_flag in "${optstr_arr[@]}"
         do
-            if [[ ${opt_flag%:} == "$__sl_Flag__" ]]
-            then
-                matched=1
-                break
-            fi
+            [[ ${opt_flag%:} == "$__sl_Flag__" ]] \
+                && { matched=1; break; }
         done
 
         if [[ ! -v matched ]]
