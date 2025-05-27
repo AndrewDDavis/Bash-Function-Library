@@ -1,8 +1,9 @@
 # TODO:
-# - use match-sh (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external command call
+# - try to use match-sh (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external
+#   command call
 
 # dependencies
-import_func is_set_array \
+import_func is_array \
     || return
 
 array_match () {
@@ -39,8 +40,9 @@ array_match () {
         -a : with -n or -p, print all elements or keys, not just the first
 
         The return status is 0 (true) for a match, 1 (false) for no match, or > 1 if an
-        error occurs. An empty array always returns 1. It is an error if the named
-        variable is unset, or is a scalar variable rather than an array.
+        error occurs. An empty array always returns 1, but array elements consisting of
+        the null string may be matched as usual. It is an error if the named variable
+        is not set, or is a scalar variable rather than an array.
 
         Examples
 
@@ -117,77 +119,89 @@ array_match () {
     local ptn=$2                || return
     shift 2
 
-    # Require non-empty array
-    # - refer to arrayvar_tests.sh for details on testing variable properties
-    #   (it's actually pretty complicated)
-    is_set_array __am_arrnm__ \
-        || { err_msg 3 "non-empty array required, got '${!__am_arrnm__}'"; return; }
+    # Require array variable
+    # - refer to arrayvar_tests.sh for variable testing details (it can get complicated)
+    is_array __am_arrnm__ \
+        || { err_msg 3 "array variable required, got '${!__am_arrnm__}'"; return; }
 
+    # empty array returns 1 (no match), and count of 0
+    local grep_out=()
+    if [[ -v __am_arrnm__[*] ]]
+    then
+        # Both matching styles below use grep
+        # - NB, I originally tried a form using Bash '[[': [[ "${__am_arrnm__[@]}" =~ $ptn ]].
+        #   This was very concise, but not totally precise: an expression combining two
+        #   adjascent array values with a space between matches, even though it should not.
+        local grep_cmd
+        grep_cmd=( "$( builtin type -P grep )" ) \
+            || return
 
-    # Both matching styles below use grep
-    # - NB, I originally tried a form using Bash '[[': [[ "${__am_arrnm__[@]}" =~ $ptn ]].
-    #   This was very concise, but not totally precise: an expression combining two
-    #   adjascent array values with a space between matches, even though it should not.
-    local grep_cmd grep_out
-    grep_cmd=( "$( builtin type -P grep )" ) \
-        || return
+        # grep returns with status 0 for a match, 1 for no match
+        # local -i grep_rs=0
 
-    # grep returns with status 0 for a match, 1 for no match
-    # local -i grep_rs=0
+        # relevant grep options:
+        #   -E : pattern is an ERE
+        #   -F : pattern is a fixed string
+        #   -i : case-insensitive
+        #   -m <n> : stop after finding <n> matches
+        #   -n : prefix each output line with the 1-based line number (e.g. '53:...')
+        #   -q : quiet (also quits immediately on match, which helps efficiency)
+        #   -v : invert match logic
+        #   -x : match whole lines
+        #   -z : null-terminated lines
+        grep_cmd+=( -nz "-${re_type}${_i-}${_v-}${_x-}" -e "$ptn" )
 
-    # relevant grep options:
-    #   -E : pattern is an ERE
-    #   -F : pattern is a fixed string
-    #   -i : case-insensitive
-    #   -m <n> : stop after finding <n> matches
-    #   -n : prefix each output line with the 1-based line number (e.g. '53:...')
-    #   -q : quiet (also quits immediately on match, which helps efficiency)
-    #   -v : invert match logic
-    #   -x : match whole lines
-    #   -z : null-terminated lines
-    grep_cmd+=( -nz "-${re_type}${_i-}${_v-}${_x-}" -e "$ptn" )
+        # if not all or count, then only 1 and done
+        [[ -v _a  || -v _c ]] \
+            || grep_cmd+=( -m1 )
 
-    # if not all or count, then only 1 and done
-    [[ -v _a  || -v _c ]] \
-        || grep_cmd+=( -m1 )
+        # create array of keys
+        # - needed for sparse or associative array
+        # - this locks in an order for associative arrays
+        # - the index of this array matches the line numbers output by grep
+        # - they values are the indices of the input array
+        local i keys=( '' "${!__am_arrnm__[@]}" )
 
-    # create array of keys
-    # - needed for sparse or associative array
-    # - this locks in an order for associative arrays
-    # - the index of this array matches the line numbers output by grep
-    # - they values are the indices of the input array
-    local i keys=( '' "${!__am_arrnm__[@]}" )
+        # now we can run with -n, and later convert the line number to the array index
+        mapfile -d '' grep_out < \
+            <( "${grep_cmd[@]}" < \
+                <( for i in "${keys[@]:1}"; do printf '%s\0' "${__am_arrnm__[i]}"; done ) )
 
-    # now we can run with -n, and later convert the line number to the array index
-    mapfile -d '' grep_out < \
-        <( "${grep_cmd[@]}" < \
-            <( for i in "${keys[@]:1}"; do printf '%s\0' "${__am_arrnm__[i]}"; done ) )
+        # grep return status
+        # - NB, $! expands to PID of most recent background job
+        # - grep returns with status 0 for a match, 1 for no match, 2 for error
+        wait $! || {
+            (( $? < 2 )) \
+                || { err_msg 2 "grep error"; return; }
+        }
+    fi
 
-    # grep return status
-    # - NB, $! expands to PID of most recent background job
-    # - grep returns with status 0 for a match, 1 for no match
-    wait $! \
-        || return
-
-    # now grep_out has e.g., grep_out=([0]="1:abc" [1]="4:bbb")
-    # - it will only have one entry, unless -a or -c were used
-
-    # key for which info to print
-    local k=${_n:-0}${_p:-0}
+    # match count
+    local c=${#grep_out[@]}
 
     if [[ -v _c ]]
     then
-        # match count
-        printf '%s\n' "${#grep_out[@]}"
-        return
+        # print match count
+        # - return 1 if c == 0
+        printf '%s\n' "$c"
+        (( c )); return
 
-    elif [[ $k == 00 ]]
+    elif (( c == 0 ))
     then
-        # not printing, just use return status
-        true
+        return 1
 
     else
-        # convert line numbers to array index
+        # If we got this far, grep_out has some value e.g.:
+        #   grep_out=([0]="1:abc" [1]="4:bbb")
+        # It will only have one entry, unless -a was used.
+
+        # set key for which info to print
+        local k=${_n:-0}${_p:-0}
+
+        [[ $k == 00 ]] \
+            && return
+
+        # print result, converting line numbers to array index
         local s
         for s in "${grep_out[@]}"
         do
