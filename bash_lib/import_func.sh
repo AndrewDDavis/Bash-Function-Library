@@ -1,3 +1,7 @@
+# Ensure Bash > v4.0 (from Feb 2009), so mapfile is available
+(( ${BASH_VERSINFO[0]-0} > 4 )) \
+    || printf >&2 '%s\n' "Error (import_func.sh): Bash v4.0 or higher required"
+
 import_func() {
 
     # function docs (relies on docsh imported below)
@@ -81,14 +85,276 @@ import_func() {
         return
     }
 
-    # clean-up routine
-    trap '
-        unset -f _xfn
-        trap - return
-    ' RETURN
+    # Set a variable so child import_func calls don't run the cleanup routine
+    # - NB, care is taken around later 'source' calls, which shouldn't see the trap.
+    #   The return trap is reset before calling source, and restored after the call.
+    # - Recall that child function calls don't inherit a return trap, except for
+    #   "trap -- '' RETURN". As long as IMPORT_FUNC_LVL is set, child import_func calls
+    #   won't call the cleanup routine in their trap.
+    if [[ -v IMPORT_FUNC_LVL ]]
+    then
+        # parent import_func already running
+        # - manage the LVL variable to improve reporting through _verb_msg
+        (( IMPORT_FUNC_LVL++ ))
+        trap '(( IMPORT_FUNC_LVL-- )); trap - return;' RETURN
+
+        # functions should also be set, or something fishy is going on
+        builtin declare -F _def_libdir >/dev/null \
+            || err_msg w "IMPORT_FUNC_LVL=$IMPORT_FUNC_LVL, but _def_libdir not set"
+
+    else
+        # no parent import_func running
+        local IMPORT_FUNC_LVL=1
+        trap '_impf_cleanup $? && { trap - return; }' RETURN
+
+        _impf_cleanup() {
+
+            # TODO:
+            # - can we just set a standard _clean_funcs array, and clean up those? then we can just
+            #   add functions to the array as we go, instead of manually managing the list
+
+            # Namespace clean-up routine
+            # - unset local functions and reset the return trap.
+            # - commonly, the files sourced below also contain calls to import_func. The
+            #   logic of the IMPORT_FUNC_LVL variable above is meant to ensure that this
+            #   cleanup function isn't called when child import_func calls return.
+            # - NB, use 'declare -tf _impf_cleanup' if you want to be able to reset the return
+            #   trap from inside the cleanup function; otherwise, use 'trap - return' in the
+            #   'body' of the trap call.
+
+            _verb_msg 2 "_impf_cleanup triggered with LVL=$IMPORT_FUNC_LVL"
+
+            (( _impf_verb > 2 )) && {
+                _verb_msg 3 "  code $1, ln ${BASH_LINENO[0]} of $( basename "${BASH_SOURCE[1]}" ):"
+                _verb_msg 3 "  $( sed -nE "${BASH_LINENO[0]} { s/^[[:blank:]]+//; p; }" < "${BASH_SOURCE[1]}" )"
+                _verb_msg 3 "  $( declare -p FUNCNAME BASH_COMMAND )"
+            }
+
+            unset -f _impf_cleanup _verb_msg _def_libdir \
+                _def_find_cmd _def_grep_cmd _def_grep_cmdln \
+                _match_src_fns _src_fn
+            unset -v IMPORT_FUNC_LVL
+            return 0
+        }
+
+        # subfunctions to be unset on return
+        # - NB, although care has been taken to save loading time of these functions in
+        #   child calls, reading function definitions takes very little time in Bash. It
+        #   actually takes <10 us for a resonably short function, or ~ 1 us longer than
+        #   a no-op. It somehow seems to take less time than a no-op with a string
+        #   argument of the same function definition.
+        _verb_msg() {
+
+            # Print a message if _verb setting is high enough
+            # Usage: _verb_msg <level> "message body"
+            # - e.g. pass level=0 or 1 to usually print, 2 to print with -v, 3 with -vv, etc.
+            # NB:
+            # - _impf_verb=1 by default
+            # - could also use 'err_msg i ...' here
+            # ensure return status is 0
+            (( _impf_verb < $1 )) || {
+
+                local i=1 func=${FUNCNAME[1]-}
+                while [[ $func == _* ]]
+                do
+                    # underscore functions are probably not the context we want
+                    (( ++i ))
+                    if [[ -n ${FUNCNAME[i]-} ]]
+                    then
+                        func=${FUNCNAME[i]}
+                    else
+                        break
+                    fi
+                done
+
+                # report LVL for import_func calls
+                [[ $func == import_func ]] \
+                    && func+=" (LVL=${IMPORT_FUNC_LVL})"
+
+                printf >&2 '%s\n' "${func}: $2"
+            }
+        }
+
+        _def_libdir() {
+
+            # define search root for source files
+            local caller_srcfn
+            if [[ -v _local ]]
+            then
+                # use source-file dir as library path
+
+                # TODO:
+                # - will this fail if FUNCNAME[1] == source? Could this happen?
+
+                caller_srcfn=$( physpath "${BASH_SOURCE[1]}" ) \
+                    || { err_msg 9 "physpath error on BASH_SOURCE[1]: '${BASH_SOURCE[1]}'"; return; }
+
+                libdir=$( dirname -- "$caller_srcfn" )
+
+                # exclude the caller's source file, to prevent an endless loop
+                x_paths+=( "$caller_srcfn" )
+
+            else
+                # check env var
+                [[ -z ${BASH_FUNCLIB-} ]] \
+                    || libdir=$BASH_FUNCLIB
+            fi
+
+            [[ -d $libdir ]] \
+                || { err_msg 62 "libdir not found: '$libdir'"; return; }
+
+            _verb_msg 2 "libdir: '$libdir'"
+        }
+
+        _def_find_cmd() {
+
+            # - use find to match filenames in libdir
+            find_cmd=( "$( builtin type -P find )" -L "$libdir" ) \
+                || { err_msg 9 "no executable found for find"; return; }
+
+            # - build file exclusion list using the construct:
+            #   find ... \( -name .fdignore -o -name 'a file' \) -prune -o ... -print0
+            if (( ${#fns[@]} > 0 ))
+            then
+                find_cmd+=( '(' )
+
+                local i=0 fn np_arg
+                for fn in "${fns[@]}"
+                do
+                    # add find args to exclude filename, possibly adding suffixes
+
+                    (( i > 0 )) && find_cmd+=( '-o' )
+
+                    # filename or path
+                    np_arg='-name'
+                    [[ ${fn%/} == */* ]] \
+                        && np_arg='-path'
+
+                    if [[ $fn == */ ]]
+                    then
+                        # directory
+                        find_cmd+=( "$np_arg" "${fn%/}" )
+
+                    elif [[ $fn == *@(.sh|.bash) ]]
+                    then
+                        # already has extension
+                        find_cmd+=( "$np_arg" "$fn" )
+
+                    else
+                        find_cmd+=( "$np_arg" "${fn}.sh" -o "$np_arg" "${fn}.bash" )
+                    fi
+
+                    (( ++i ))
+                done
+
+                find_cmd+=( ')' -prune -o )
+            fi
+
+            # - NB, type f matches symlinked files, since we're using -L
+            find_cmd+=( -type f \( -name '*.sh' -o -name '*.bash' \) -print0 )
+
+            _verb_msg 3 "find_cmd: '${find_cmd[*]}'"
+        }
+
+        _def_grep_cmd() {
+
+            # grep path and opts
+            # - recursive ERE, limit to text-format files, follow symlinks
+            # - used to have -l, but need context to make assoc. array
+            grep_cmd=( "$( builtin type -P grep )" -EIR ) \
+                || { err_msg 9 "no executable found for grep"; return; }
+
+            # limit to filenames with suffixes: .sh or .bash
+            grep_cmd+=( --include='*.sh' --include='*.bash' )
+        }
+
+        _def_grep_cmdln() {
+
+            # TODO:
+            # - add exclde args for x_paths
+
+            # build pattern and define whole grep command-line
+            local func_alts grep_ptn
+
+            # array to string: (func1|func2|func3)
+            func_alts=\($( IFS='|'; printf '%s\n' "${fns[*]}"; )\)
+
+            # match pattern for function definitions in source files
+            grep_ptn="^(${func_alts}[[:blank:]]*\(\)|function[[:blank:]]+${func_alts})"
+
+            # old ptn, within func_nm loop:
+            # grep_ptn="^(${func_nm}[[:blank:]]*\(\)|function[[:blank:]]+${func_nm})"
+
+            grep_cmdln=( "${grep_cmd[@]}" -e "$grep_ptn" "$libdir" )
+            _verb_msg 3 "grep command-line: ${grep_cmdln[*]@Q}"
+        }
+
+        _match_src_fns() {
+
+            # match source filenames using grep_cmd, and parse the result
+            local grep_out
+            mapfile -t grep_out < <( "${grep_cmdln[@]}" )
+
+            # now grep_out is an indexed array of lines comprising filenames and matched lines
+            # - like: /home/andrew/.bash_lib/shell_scripting/err_msg.sh:err_msg() {
+            (( ${#grep_out[@]} == "${#fns[@]}" )) \
+                || { err_msg 63 "number of grep_out should match fns:" "$( declare -p grep_out fns )"; return; }
+
+            # make an assoc. array of functions to source files
+            local ln rgx fn func
+            for ln in "${grep_out[@]}"
+            do
+                # ensure 1 and only 1 colon in each result
+                [[ $ln == *:*  && $ln != *:*:* ]] \
+                    || { err_msg 9 "unexpected grep_out: '$ln'"; return; }
+
+                # - NB, per Bash manpage, a function name can be any unquoted shell word
+                #   that does not contain $.
+                rgx='^(.*):(([^[:blank:]$]+)[[:blank:]]*\(\)|function[[:blank:]]+([^[:blank:]$]+))'
+                [[ $ln =~ $rgx ]] \
+                    || { err_msg 9 "regex did not match ln: '$ln'"; return; }
+
+                fn=${BASH_REMATCH[1]}
+                func=${BASH_REMATCH[3]}
+                [[ -n $func ]] \
+                    || func=${BASH_REMATCH[4]}
+
+                src_fns[$func]=$fn
+            done
+
+            _verb_msg 2 "matched source files: '$( declare -p src_fns )'"
+        }
+
+        _src_fn() {
+
+            # store and mask the return trap, if set, so it doesn't fire on returning
+            # from source call
+            # - NB, now that I've put this logic inside a function, that should really
+            #   solve the original issue; since I'm not setting the trace attribute of
+            #   this function, it should not see the return trap, unless the user set -T.
+            local _rt=$( trap -p return )
+
+            [[ -z ${_rt-} ]] \
+                || trap - return
+
+            _verb_msg 2 "sourcing '$1'"
+
+            # shellcheck source=/dev/null
+            source "$1"
+
+            # restore trap
+            [[ ${_rt-} == trap\ * ]] \
+                && eval "$_rt"
+        }
+    fi
+
+    # retain verbosity of parent call, if set
+    [[ -v _impf_verb ]] \
+        && local -I _impf_verb \
+        || local _impf_verb=1
 
     # options
-    local  _all _force _local _verb=1
+    local  _all _force _local
     local _flag OPTARG OPTIND=1
     while getopts ':aflv' _flag
     do
@@ -96,183 +362,132 @@ import_func() {
             ( a ) _all=1 ;;
             ( f ) _force=1 ;;
             ( l ) _local=1 ;;
-            ( v ) (( _verb++ )) ;;
-            ( \? ) err_msg 3 "Unrecognized option: '-$OPTARG'"; return ;;
-            ( : )  err_msg 4 "Missing argument for -$OPTARG"; return ;;
+            ( v ) (( _impf_verb++ )) ;;
+            ( : )  err_msg 2 "missing argument for option $OPTARG"; return ;;
+            ( \? ) err_msg 3 "unrecognized option: '-$OPTARG'"; return ;;
         esac
     done
     shift $(( OPTIND-1 ))
 
-    # define search root for source files
-    local src_path libdir="$HOME"/.bash_lib
+    # positional args are function or file names
+    local i fn fns=( "$@" )
+    shift $#
 
-    if [[ -v _local ]]
+    if [[ ! -v _all  && ! -v _force ]]
     then
-        # use local dir as library path
-        src_path=$( physpath "${BASH_SOURCE[1]}" ) \
-            || return
-        libdir=$( dirname -- "$src_path" )
+        # filter out known function names to prevent re-importing
+        # - do this up front to return as quickly as possible if there's nothing to do
+        # - NB, running this loop for a few fns takes only ~ 30 us (*micro-seconds*), but
+        #   can save time down the line.
+        for i in "${!fns[@]}"
+        do
+            builtin declare -F "${fns[i]}" >/dev/null \
+                && { _verb_msg 2 "ignoring known: '${fns[i]}'"; unset 'fns[i]'; }
+        done
 
-    else
-        # check env var
-        [[ -n ${BASH_FUNCLIB-} ]] \
-            && libdir=$BASH_FUNCLIB
+    elif [[ -v _all ]]
+    then
+        # exclude source files of all calling functions, to prevent circularity
+        for fn in "${BASH_SOURCE[@]:1}"
+        do
+            fn=$( physpath "$fn" ) \
+                || return
+
+            array_match fns "$fn" \
+                || fns+=( "$fn" )
+        done
     fi
 
-    [[ -d $libdir ]] \
-        || { err_msg 62 "libdir not found: '$libdir'"; return; }
+    [[ ${#fns[@]} -eq 0  && ! -v _all ]] \
+        && return
 
-    (( _verb > 1 )) \
-        && err_msg i "libdir: '$libdir'"
 
-    _xfn() {
-
-        # add find args to exclude filename, possibly adding suffixes
-        [[ $1 == -o ]] \
-            && { find_cmd+=( -o ); shift; }
-
-        # filename or path
-        local fd_arg
-        if [[ ${1%/} == */* ]]
-        then
-            fd_arg='-path'
-        else
-            fd_arg='-name'
-        fi
-
-        if [[ $1 == */ ]]
-        then
-            # directory
-            find_cmd+=( "$fd_arg" "${1%/}" )
-
-        elif [[ $1 == *@(.sh|.bash) ]]
-        then
-            # already has extension
-            find_cmd+=( "$fd_arg" "$1" )
-
-        else
-            find_cmd+=( "$fd_arg" "${1}.sh" -o "$fd_arg" "${1}.bash" )
-        fi
+    # curtail endless loop of function calls
+    # - this can occur if a function is called from one of its dependencies
+    # - analagous situation:
+    #   foo() { (( i++ )); bar; }
+    #   bar() { (( i > 100 )) && { array_match -c FUNCNAME foo; return; }; foo; }
+    #   i=0; foo
+    # - this simple strategy was adopted rather than, e.g. trying to count the number
+    #   of occurrences of import_func in the FUNCNAME stack
+    (( ${#FUNCNAME[@]} < 200 )) || {
+        printf >&2 '%s\n' "Error (import_func): possible function call loop" \
+            "    $( declare -p FUNCNAME )"
+        return 81
     }
 
 
+    # define libdir and excluded paths for local call
+    local x_paths=() libdir="$HOME"/.bash_lib
+    _def_libdir || return
+
     if [[ -v _all ]]
     then
-        # import all files except those specified
-
-        # - build a find command line to match filenames in the lib dir
-        local find_cmd fn
-
-        find_cmd=( "$( builtin type -P find )" -L "$libdir" ) \
-            || { err_msg 9 "no executable found for find"; return; }
-
-        # exclude the the source files of all calling functions, to prevent circularity
-        for fn in "${BASH_SOURCE[@]:1}"
-        do
-            src_path=$( physpath "$fn" ) \
-                || return
-            set -- "$@" "$src_path"
-        done
-
-        if [[ $# -gt 0 ]]
-        then
-            # - build file exclusion list using the construct:
-            #   find ... \( -name .fdignore -o -name 'a file' \) -prune -o ... -print0
-            find_cmd+=( '(' )
-
-            _xfn "$1"
-
-            for fn in "${@:2}"
-            do
-                _xfn -o "$fn"
-            done
-
-            find_cmd+=( ')' -prune -o )
-        fi
-
-        # - NB, type f matches symlinked files, since we're using -L
-        find_cmd+=( -type f \( -name '*.sh' -o -name '*.bash' \) -print0 )
-
-        (( _verb > 2 )) \
-            && err_msg i "find_cmd: '${find_cmd[*]}'"
+        # import all files from libdir (with exceptions)
+        local find_cmd
+        _def_find_cmd || return
 
         # Run find and import the selected files
         while IFS='' read -rd '' fn <&3
         do
-            (( _verb > 1 )) \
-                && err_msg i "sourcing '$fn'"
+            _src_fn "$fn"
 
-            # shellcheck source=/dev/null
-            source "$fn"
-
-        done 3< <( "${find_cmd[@]}" )
-
-        # NB, an alternative, with globstar set and filenames without newlines, would be
-        # to use e.g.:
-        #   for fn in .bash_lib/shell/**/*.sh; do source "$fn"; done
+        done 3< <( "${find_cmd[@]}" )  # print0 at end?
 
     else
-        # import specified function(s)
-        [[ $# -gt 0 ]] ||
-            { err_msg 5 "function name required"; return; }
+        # find and import specified function(s)
 
-        # grep path and opts (recursive ERE, follow symlinks, limit to text-format files)
-        local grep_cmd grep_ptn
+        # Strategy: the pattern is produced from all the function names, so grep only
+        #   has to run once. If we get 1 source file for each function name, we will
+        #   import them all, assuming there's 1 for each. Then at the end, check to
+        #   make sure all requested functions are defined.
 
-        grep_cmd=( "$( builtin type -P grep )" -EIRl ) \
-            || { err_msg 9 "no executable found for grep"; return; }
+        # match source filenames using grep
+        [[ -v grep_cmd ]] \
+            || {
+            local grep_cmd
+            _def_grep_cmd || return
+        }
 
-        # limit to .sh and .bash filenames
-        grep_cmd+=( --include='*.sh' --include='*.bash' )
+        local grep_cmdln
+        _def_grep_cmdln || return
 
-        local func_nm src_fns
+        local -A src_fns=()
+        _match_src_fns || return
 
-        for func_nm in "$@"
+        local func
+        for func in "${!src_fns[@]}"
         do
-            if  [[ $( builtin type -at "$func_nm" ) == *function*
-                && ! -v _force ]]
-            then
-                # skip existing function
-                continue
-            fi
+            # skip if func was imported already, e.g. as a dependency
+            [[ ! -v _force ]] \
+                && builtin declare -F "$func" >/dev/null \
+                && continue
 
-            # match pattern for function definition in source file
-            grep_ptn="^(${func_nm}[[:blank:]]*\(\)|function[[:blank:]]+${func_nm})"
+            # skip exclusions from -l
+            [[ -v x_paths[*] ]] \
+                && array_match x_paths "${src_fns[$func]}" \
+                && continue
 
-            (( _verb > 2 )) \
-                && err_msg i "grep_cmd: '${grep_cmd[*]} -e $grep_ptn $libdir'"
-
-            mapfile -t src_fns < <( "${grep_cmd[@]}" -e "$grep_ptn" "$libdir" )
-
-            if [[ ${#src_fns[@]} -eq 1 ]]
-            then
-                # in local mode, exclude the caller's source file, to prevent an endless loop
-                [[ -v _local  && ${src_fns[0]} == "$src_path" ]] \
-                    && continue
-
-                (( _verb > 1 )) \
-                    && err_msg i "sourcing '${src_fns[0]}'"
-
-                # shellcheck source=/dev/null
-                source "${src_fns[0]}"
-
-            elif [[ ${#src_fns[@]} -eq 0 ]]
-            then
-                err_msg 63 "no source found for '$func_nm'"
-                return
-
-            else
-                err_msg 64 \
-                    "multiple source files found for '$func_nm'" \
-                    "command line was '${grep_cmd[*]} -e $grep_ptn $libdir'"
-                return
-            fi
+            # import
+            _src_fn "${src_fns[$func]}"
         done
     fi
+    return 0
 }
 
 # Import supporting functions when sourcing this file
-# - we don't use a _deps array for this, since there can be a namespace collision when
+# - We don't use a _deps array for this, since there can be a namespace collision when
 #   the this file is sourced, and _deps is defined in the caller
-import_func err_msg docsh physpath \
+# - NB, since these functions are used within import_func(), they should not call
+#   import_func -l when they are executed. This could set up an endless loop!
+#   OTOH, calling import_func in the base of their source files is fine.
+#   Of course, these functions are some of the most important ones to the system, so
+#   their stability is paramount, and this call will only fail on very serious problems,
+#   such as missing libdir or grep command.
+import_func -f err_msg docsh physpath array_match \
     || return
+
+# dirname too, but we can fall back on the binary
+import_func basename dirname
+
+# printf >&2 '%s\n' "DEBUG: returning from import_func.sh"
