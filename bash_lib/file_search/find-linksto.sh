@@ -26,16 +26,18 @@ find-linksto() {
     [[ $# -ne 2  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }
 
+    # args
     local pth_root ptn
     ptn=$1
     pth_root=$2
     shift $#
 
-    # more conventional: readlink (Linux-only) and grep
+    # More conventional method can use readlink (Linux-only) and grep
     # command find "$pth_root" -type l -printf '%p -> ' -exec readlink -f {} \; \
     #     | command grep -E "$ptn"
 
     # TODO:
+    #
     # - Find out why the below is so slow compared to the conventional method. It's not
     #   because of == vs =~, that makes very little difference.
     #
@@ -45,19 +47,27 @@ find-linksto() {
     #
     #   What's more, using the above pipe is 1/4 the time of the code below.
 
+    # use 'find -type l' to print both intact and broken symlinks
     local fnd_out=()
     array_from_find fnd_out "$pth_root" -type l \
         || return
 
-    [[ ${#fnd_out[*]} -gt 0 ]] \
+    (( ${#fnd_out[*]} > 0 )) \
         || { printf >&2 '%s\n' 'No matches.'; return; }
 
     local fn pp
     for fn in "${fnd_out[@]}"
     do
-        pp=$( physpath "$fn" )
+        if ! pp=$( physpath "$fn" 2>&1 )
+        then
+            # - physpath returns with code 1 on broken symlinks, and we can get the
+            #   symlink target from the error message
+            local rgx=" is a broken symlink to '(.*)'\$"
+            [[ $pp =~ $rgx ]]
+            pp="(broken) ${BASH_REMATCH[1]}"
+        fi
 
-        if [[ $pp =~ $ptn ]]
+        if [[ ${pp#'(broken) '} =~ $ptn ]]
         then
             printf '%s -> %s\n' "$fn" "$pp"
         fi
