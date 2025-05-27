@@ -35,8 +35,7 @@ import_func is_int \
     || return
 
 # suggestions
-import_func basename 2>/dev/null \
-    || true
+import_func basename
 
 err_msg() {
 
