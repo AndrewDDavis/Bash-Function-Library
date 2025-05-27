@@ -15,6 +15,10 @@
 #   'ugrep-files -tTi attachment' from '~/Documents/Health...' dir
 #   'ugrep-files -i truecrypt' from '~/Documents/Computing...' dir
 
+# dependencies
+import_func run_vrb \
+    || return
+
 alias grep-files='ugrep-files'
 alias egrep-files='ugrep-files'
 
@@ -26,13 +30,17 @@ ugrep-files() {
 
         Usage: ugrep-files [opts] <pattern> [path-root ...]
 
-        The pattern is interpreted as extended regex (ERE). If no path-roots are given,
+        This function recursively searches a directory tree for text files with content
+        matching the pattern. By default, symlinks in the tree are followed, and the
+        pattern is interpreted as extended regex (ERE). If no path-roots are given,
         the working directory is searched. This function calls \`ugrep\` with the
-        options '-RljIUY' and '--sort', described below. Since \`ugrep\` includes most
-        of the existing and planned functionality of the old \`grep-files\` function
-        that called GNU \`grep\`, this function is mostly a wrapper for \`ugrep\` that
-        passes all arguments through, excepting those listed below. The defaults can be negated by using the long
-        option form '--no-<option>', e.g. '--no-ignore-case'.
+        options '-RljIUY' and '--sort', described below.
+
+        Since \`ugrep\` includes most of the existing and planned functionality of the
+        old \`grep-files\` function that called GNU \`grep\`, this function is mostly a
+        wrapper for \`ugrep\` that passes all arguments through, excepting those listed
+        below. The defaults can be negated by using the long option form
+        '--no-<option>', e.g. '--no-ignore-case'.
 
           --no-l
           : this option negates -l, and is easier to use than '--no-files-with-matches',
@@ -155,59 +163,113 @@ ugrep-files() {
         trap - return
     ' RETURN
 
+    _def_ug_defaults() {
+
+        ug_cmd=( "$( builtin type -P ugrep )" ) \
+            || { err_msg 9 "ugrep not found on PATH"; return; }
+
+        # - NB, some of the code in _parse_ugf_opts relies on the order here
+        ug_cmd+=( '-RljIUY' '--sort' )
+    }
+
+    _parse_ugf_opts() {
+
+        # check for recognized ugf options, as opposed to those recognized by ugrep
+        while [[ -v 1 ]]
+        do
+            case $1 in
+                ( '--' )
+                    # end of options
+                    ugf_args+=( "$@" )
+                    return
+                ;;
+                ( --no-l )
+                    # work around bug "invalid option --no-files-with-matches"
+                    # - otherwise, we could do: ug_cmd+=( --no-files-with-matches --pretty )
+                    ug_cmd[1]=${ug_cmd[1]/l/}
+                    ugf_args+=( --heading -n )
+                ;;
+                ( --verbose )
+                    (( _verb++ ))
+                ;;
+                ( * )
+                    # options or args meant for ugrep
+                    if [[ $1 == -*i*  && $1 != -*-* ]]
+                    then
+                        # work around behaviour of -j overriding -i
+                        # - could also use --no-smart-case
+                        ug_cmd[1]=${ug_cmd[1]/j/}
+                    fi
+
+                    ugf_args+=( "$1" )
+                ;;
+            esac
+
+            shift
+        done
+
+        # # local i #a
+        # # for (( i=1; i<=$#; i++ ))
+        # # for i in "${!ugf_args[@]}"
+        # do
+        #     # a=${ugf_args[i]}
+        #     # [[ $a == '--' ]] && break
+        #     [[ ${!i} == '--' ]] && break
+
+        #     if [[ $a == "--no-l" ]]
+        #     then
+        #         # work around bug "invalid option --no-files-with-matches"
+        #         # - otherwise, we could do: ug_cmd+=( --no-files-with-matches --pretty )
+        #         ug_cmd[1]=${ug_cmd[1]/l/}
+        #         ug_cmd+=( --heading -n )
+        #         unset "ugf_args[i]"
+
+        #     elif [[ $a == "--verbose" ]]
+        #     then
+        #         (( _verb++ ))
+        #         unset "ugf_args[i]"
+
+        #     elif [[ $a =~ ^-[^-]*i[^-]* ]]
+        #     then
+        #         # work around behaviour of -j overriding -i
+        #         # - could also use --no-smart-case
+        #         ug_cmd[1]=${ug_cmd[1]/j/}
+        #         unset "ugf_args[i]"
+        #     fi
+        # done
+
+        # if i=$( array_match -n -- ugf_args '--no-l' )
+        # then
+        #     # work around bug "invalid option --no-files-with-matches"
+        #     # - otherwise, we could do: ug_cmd+=( --no-files-with-matches --pretty )
+        #     ug_cmd[1]=${ug_cmd[1]/l/}
+        #     ug_cmd+=( --heading -n )
+        #     unset "ugf_args[i]"
+        # fi
+
+        # if i=$( array_match -n -- ugf_args '--verbose' )
+        # then
+        #     (( _verb++ ))
+        #     unset "ugf_args[i]"
+        # fi
+
+        # if i=$( array_match -np -- ugf_args '^-[^-]*i[^-]*' )
+        # then
+        #     # work around behaviour of -j overriding -i
+        #     # - split key & value from i
+        #     array_irepl ugf_args "${i%%:*}" '--no-smart-case' "${i#*:}"
+        # fi
+    }
+
     # defaults and args
-    local _i _v=1
-    local ug_opts=( '-RljIUY' '--sort' )
-    local ug_args=( "$@" )
+    local ug_cmd
+    _def_ug_defaults || return
+
+    local _verb=1 ugf_args
+    _parse_ugf_opts "$@"
     shift $#
 
-    # check for recognized options
-    _i=$( array_match -n -- ug_args '--no-l' ) && {
-
-        #ug_opts+=( --no-files-with-matches --pretty )
-
-        # work around bug "invalid option --no-files-with-matches"
-        ug_opts+=( --heading -n )
-        ug_opts[0]=${ug_opts[0]/l/}
-
-        unset ug_args[$_i]
-    }
-
-    _i=$( array_match -n -- ug_args '--verbose' ) && {
-
-        (( _v++ ))
-        unset ug_args[$_i]
-    }
-
-    _i=$( array_match -np -- ug_args '^-[^-]*i[^-]*' ) && {
-
-        # work around behaviour of -j overriding -i
-        # - split key & value from _i
-        array_irepl ug_args "${_i%%:*}" '--no-smart-case' "${_i#*:}"
-    }
-
-    # local flag OPTARG OPTIND=1
-
-    # while getopts '' flag
-    # do
-    #     case $flag in
-    #         ( \? )
-    #             # other short option flags
-    #             ug_opts+=( -$OPTARG )
-    #         ;;
-    #         ( ':' )
-    #             err_msg 2 "-$OPTARG requires argument"
-    #             return
-    #         ;;
-    #     esac
-    # done
-    # shift $(( OPTIND - 1 ))
-
-
-    (
-        [[ $_v -gt 1 ]] && set -x
-        ugrep "${ug_opts[@]}" "${ug_args[@]}"
-    )
+    run_vrb "${ug_cmd[@]}" "${ugf_args[@]}"
 }
 
 
@@ -325,7 +387,7 @@ ugrep-files() {
 
 #     # defaults and args
 #     local and_pats=() grep_opts=( '-RlI' )
-#     local _t _v=1 _tree=''
+#     local _t _verb=1 _tree=''
 #     local flag OPTARG OPTIND=1
 
 #     while getopts ':a:JtT' flag
@@ -366,7 +428,7 @@ ugrep-files() {
 
 
 #     _run_grep() (
-#         [[ $_v -gt 0 ]] && set -x
+#         [[ $_verb -gt 0 ]] && set -x
 #         greps "${grep_opts[@]}" "$@"
 #     )
 
@@ -402,7 +464,7 @@ ugrep-files() {
 #         local -a _tree_args=()
 
 #         # test for colour support
-#         if (( ${_term_nclrs:-2} >= 8 ))
+#         if (( ${TERM_NCLRS:-2} >= 8 ))
 #         then
 #             _tree_args+=( "-C" )
 #         fi
