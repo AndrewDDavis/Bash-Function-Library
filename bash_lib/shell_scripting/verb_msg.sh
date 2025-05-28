@@ -1,3 +1,7 @@
+# dependencies
+import_func is_nn_array \
+    || return
+
 verb_msg() {
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] && {
@@ -9,7 +13,8 @@ verb_msg() {
             This function compares the value of a variable called '_verb' against the
             'level' argument passed on the command line. If _verb >= level, the message
             is printed to stderr. If more than one string is provided, all are printed,
-            separated by newlines.
+            separated by newlines. Leading null messages print an empty line, without
+            the usual leading context.
 
             If _verb is not set, or its value is not an integer, it is considered equal
             to 0. The recommended default is to set _verb=1 in the calling function.
@@ -34,21 +39,37 @@ verb_msg() {
         return
     }
 
-    # this construct efficiently ensures return status is 0
-    # - unset _verb is considered == 0
-    [[ ${_verb-} -lt $1 ]] || {
+    # - NB, unset _verb is considered == 0
+    [[ ${_verb-} -lt $1 ]] \
+        && return
 
-        local i=1 context=${FUNCNAME[1]-}
+    # remaining args are message strings
+    local msgs=( "${@:2}" )
+    shift $#
+
+    # print nothing on null input
+    is_nn_array msgs || return
+
+    # cleanup routine
+    trap '
+        unset -f _def_context
+        trap - return
+    ' RETURN
+
+    _def_context() {
+
+        # NB, within this function, FUNCNAME[2] is the caller
+        local i=3
         while [[ $context == _* ]]
         do
             # underscore functions are probably not the context we want
-            (( ++i ))
             if [[ -n ${FUNCNAME[i]-} ]]
             then
                 context=${FUNCNAME[i]}
             else
                 break
             fi
+            (( i++ ))
         done
 
         # report LVL for functions that track nested calls
@@ -57,30 +78,42 @@ verb_msg() {
         [[ -v $lvl ]] \
             && context+=" (LVL=${!lvl})"
 
-        # format and print first line
+        # finish context string
+        # - also define indent spaces for subsequent lines
         if [[ -z ${context-} ]]
         then
-            context="  "
+            context='  '
+            spcs='  '
         else
-            context+=": "
-        fi
-        printf >&2 '%s\n' "${context}$2"
-        shift 2
+            context+=': '
 
-        if (( $# > 0 ))
-        then
-            # format and print subsequent lines
-            local spcs=''
             for (( i=0; i<${#context}; i++ ))
             do
                 spcs+=' '
             done
-
-            while (( $# > 0 ))
-            do
-                printf >&2 '%s\n' "${spcs}$1"
-                shift
-            done
         fi
     }
+
+    # define leading context for message strings
+    local context=${FUNCNAME[1]-} spcs=''
+    _def_context
+
+    # print empty line for leading null msgs
+    local -i n=0
+    while [[ -z ${msgs[n]} ]]
+    do
+        printf >&2 '\n'
+        (( ++n ))
+    done
+
+    # format and print first content line
+    printf >&2 '%s\n' "${context}${msgs[n]}"
+    (( ++n ))
+
+    while [[ -n ${msgs[n]-} ]]
+    do
+        # format and print subsequent lines
+        printf >&2 '%s\n' "${spcs}${msgs[n]}"
+        (( ++n ))
+    done
 }
