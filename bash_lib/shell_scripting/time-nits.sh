@@ -1,5 +1,5 @@
 # dependencies
-import_func seqi \
+import_func seqi is_int \
 	|| return
 
 time-nits() {
@@ -15,7 +15,7 @@ time-nits() {
 	(( $# == 0 )) && set -- '-h'
 
 	# defaults and options
-	local _n=1000
+	local -i _n=1000
 
 	local flag OPTARG OPTIND=1
 	while getopts ':n:h' flag
@@ -29,14 +29,19 @@ time-nits() {
 	done
 	shift $(( OPTIND-1 ))
 
-	(( $# == 0 )) && return 2
+	(( $# > 0 )) || return 2
+	is_int -p $_n || return 3
 
-	local i is
-	mapfile -t is < <( seqi "$_n" )
+	# defining the array first does not run faster at the fast end, but can prevent
+	# random slow results when measuring very short times
+	# local i is
+	# mapfile -t is < <( seqi "$_n" )
+		# for i in "${is[@]}"
 
 	# NB, time writes to STDERR
+	local i
 	time {
-		for i in "${is[@]}"
+		for (( i=0; i<_n; i++ ))
 		do
 			"$@"
 		done
