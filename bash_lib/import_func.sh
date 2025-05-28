@@ -85,6 +85,11 @@ import_func() {
         return
     }
 
+    # running with functrace causes the cleanup trap to run on every function return
+    # TODO: make the cleanup function more discerning
+    [[ $( shopt -o functrace ) == *off ]] \
+        || { err_msg 48 "import_func should not be run with functrace enabled"; return; }
+
     # Set a variable so child import_func calls don't run the cleanup routine
     # - NB, care is taken around later 'source' calls, which shouldn't see the trap.
     #   The return trap is reset before calling source, and restored after the call.
@@ -98,6 +103,11 @@ import_func() {
         (( IMPORT_FUNC_LVL++ ))
         trap '(( IMPORT_FUNC_LVL-- )); trap - return;' RETURN
 
+        # retain verbosity of parent call
+        [[ -v _impf_verb ]] \
+            && local -I _impf_verb \
+            || err_msg w "IMPORT_FUNC_LVL=$IMPORT_FUNC_LVL, but _impf_verb not set"
+
         # functions should also be set, or something fishy is going on
         builtin declare -F _def_libdir >/dev/null \
             || err_msg w "IMPORT_FUNC_LVL=$IMPORT_FUNC_LVL, but _def_libdir not set"
@@ -105,6 +115,7 @@ import_func() {
     else
         # no parent import_func running
         local IMPORT_FUNC_LVL=1
+        local _impf_verb=1
         trap '_impf_cleanup $? && { trap - return; }' RETURN
 
         _impf_cleanup() {
@@ -126,15 +137,15 @@ import_func() {
 
             (( _impf_verb > 2 )) && {
                 _verb_msg 3 "  code $1, ln ${BASH_LINENO[0]} of $( basename "${BASH_SOURCE[1]}" ):"
-                _verb_msg 3 "  $( sed -nE "${BASH_LINENO[0]} { s/^[[:blank:]]+//; p; }" < "${BASH_SOURCE[1]}" )"
-                _verb_msg 3 "  $( declare -p FUNCNAME BASH_COMMAND )"
+                _verb_msg 3 "    $( sed -nE "${BASH_LINENO[0]} { s/^[[:blank:]]+//; p; }" < "${BASH_SOURCE[1]}" )"
+                local m decs
+                mapfile -t decs < <( declare -p FUNCNAME BASH_COMMAND )
+                for m in "${decs[@]}"; do _verb_msg 3 "  ${m#declare ?? }"; done
             }
 
             unset -f _impf_cleanup _verb_msg _def_libdir \
                 _def_find_cmd _def_grep_cmd _def_grep_cmdln \
                 _match_src_fns _src_fn
-            unset -v IMPORT_FUNC_LVL
-            return 0
         }
 
         # subfunctions to be unset on return
@@ -152,27 +163,27 @@ import_func() {
             # - _impf_verb=1 by default
             # - could also use 'err_msg i ...' here
             # ensure return status is 0
-            (( _impf_verb < $1 )) || {
+            (( _impf_verb < $1 )) \
+                && return
 
-                local i=1 func=${FUNCNAME[1]-}
-                while [[ $func == _* ]]
-                do
-                    # underscore functions are probably not the context we want
-                    (( ++i ))
-                    if [[ -n ${FUNCNAME[i]-} ]]
-                    then
-                        func=${FUNCNAME[i]}
-                    else
-                        break
-                    fi
-                done
+            local i=2 func=${FUNCNAME[1]-}
+            while [[ $func == _* ]]
+            do
+                # underscore functions are probably not the context we want
+                if [[ -n ${FUNCNAME[i]-} ]]
+                then
+                    func=${FUNCNAME[i]}
+                else
+                    break
+                fi
+                (( i++ ))
+            done
 
-                # report LVL for import_func calls
-                [[ $func == import_func ]] \
-                    && func+=" (LVL=${IMPORT_FUNC_LVL})"
+            # report LVL for import_func calls
+            [[ $func == import_func ]] \
+                && func+=" (LVL=${IMPORT_FUNC_LVL})"
 
-                printf >&2 '%s\n' "${func}: $2"
-            }
+            printf >&2 '%s\n' "${func}: $2"
         }
 
         _def_libdir() {
@@ -348,11 +359,6 @@ import_func() {
         }
     fi
 
-    # retain verbosity of parent call, if set
-    [[ -v _impf_verb ]] \
-        && local -I _impf_verb \
-        || local _impf_verb=1
-
     # options
     local  _all _force _local
     local _flag OPTARG OPTIND=1
@@ -369,9 +375,12 @@ import_func() {
     done
     shift $(( OPTIND-1 ))
 
+
     # positional args are function or file names
     local i fn fns=( "$@" )
     shift $#
+    _verb_msg 3 "initial fns: '${fns[*]}'"
+
 
     if [[ ! -v _all  && ! -v _force ]]
     then
@@ -415,7 +424,6 @@ import_func() {
             "    $( declare -p FUNCNAME )"
         return 81
     }
-
 
     # define libdir and excluded paths for local call
     local x_paths=() libdir="$HOME"/.bash_lib
