@@ -101,7 +101,10 @@ import_func() {
         # parent import_func already running
         # - manage the LVL variable to improve reporting through _verb_msg
         (( IMPORT_FUNC_LVL++ ))
-        trap '(( IMPORT_FUNC_LVL-- )); trap - return;' RETURN
+        trap '
+            (( IMPORT_FUNC_LVL-- ))
+            trap - return
+        ' RETURN
 
         # retain verbosity of parent call
         [[ -v _impf_verb ]] \
@@ -116,24 +119,26 @@ import_func() {
         # no parent import_func running
         local IMPORT_FUNC_LVL=1
         local _impf_verb=1
-        trap '_impf_cleanup $? && { trap - return; }' RETURN
 
-        _impf_cleanup() {
+        # Namespace cleanup routine
+        # - unset local functions and reset the return trap.
+        # - commonly, the files sourced below also contain calls to import_func. The
+        #   logic of the IMPORT_FUNC_LVL variable above is meant to ensure that this
+        #   cleanup function isn't called when child import_func calls return.
+        # - NB, use 'declare -tf _impf_cleanup' if you want to be able to reset the return
+        #   trap from inside the cleanup function; otherwise, use 'trap - return' in the
+        #   'body' of the trap call.
+        local _subfuncs=()
+        trap '
+            _verb_return $?
+            unset -f "${_subfuncs[@]}"
+            trap - return
+        ' RETURN
 
-            # TODO:
-            # - can we just set a standard _clean_funcs array, and clean up those? then we can just
-            #   add functions to the array as we go, instead of manually managing the list
+        _subfuncs+=( _verb_return )
+        _verb_return() {
 
-            # Namespace clean-up routine
-            # - unset local functions and reset the return trap.
-            # - commonly, the files sourced below also contain calls to import_func. The
-            #   logic of the IMPORT_FUNC_LVL variable above is meant to ensure that this
-            #   cleanup function isn't called when child import_func calls return.
-            # - NB, use 'declare -tf _impf_cleanup' if you want to be able to reset the return
-            #   trap from inside the cleanup function; otherwise, use 'trap - return' in the
-            #   'body' of the trap call.
-
-            _verb_msg 2 "_impf_cleanup triggered with LVL=$IMPORT_FUNC_LVL"
+            _verb_msg 2 "_verb_return triggered with LVL=$IMPORT_FUNC_LVL"
 
             (( _impf_verb > 2 )) && {
                 _verb_msg 3 "  code $1, ln ${BASH_LINENO[0]} of $( basename "${BASH_SOURCE[1]}" ):"
@@ -142,10 +147,6 @@ import_func() {
                 mapfile -t decs < <( declare -p FUNCNAME BASH_COMMAND )
                 for m in "${decs[@]}"; do _verb_msg 3 "  ${m#declare ?? }"; done
             }
-
-            unset -f _impf_cleanup _verb_msg _def_libdir \
-                _def_find_cmd _def_grep_cmd _def_grep_cmdln \
-                _match_src_fns _src_fn
         }
 
         # subfunctions to be unset on return
@@ -154,6 +155,7 @@ import_func() {
         #   actually takes <10 us for a resonably short function, or ~ 1 us longer than
         #   a no-op. It somehow seems to take less time than a no-op with a string
         #   argument of the same function definition.
+        _subfuncs+=( _verb_msg )
         _verb_msg() {
 
             # Print a message if _verb setting is high enough
@@ -186,6 +188,7 @@ import_func() {
             printf >&2 '%s\n' "${func}: $2"
         }
 
+        _subfuncs+=( _def_libdir )
         _def_libdir() {
 
             # define search root for source files
@@ -217,6 +220,7 @@ import_func() {
             _verb_msg 2 "libdir: '$libdir'"
         }
 
+        _subfuncs+=( _def_find_cmd )
         _def_find_cmd() {
 
             # - use find to match filenames in libdir
@@ -267,6 +271,7 @@ import_func() {
             _verb_msg 3 "find_cmd: '${find_cmd[*]}'"
         }
 
+        _subfuncs+=( _def_grep_cmd )
         _def_grep_cmd() {
 
             # grep path and opts
@@ -279,10 +284,11 @@ import_func() {
             grep_cmd+=( --include='*.sh' --include='*.bash' )
         }
 
+        _subfuncs+=( _def_grep_cmdln )
         _def_grep_cmdln() {
 
             # TODO:
-            # - add exclde args for x_paths
+            # - add exclude args for x_paths
 
             # build pattern and define whole grep command-line
             local func_alts grep_ptn
@@ -300,6 +306,7 @@ import_func() {
             _verb_msg 3 "grep command-line: ${grep_cmdln[*]@Q}"
         }
 
+        _subfuncs+=( _match_src_fns )
         _match_src_fns() {
 
             # match source filenames using grep_cmd, and parse the result
@@ -336,7 +343,8 @@ import_func() {
             _verb_msg 2 "matched source files: '$( declare -p src_fns )'"
         }
 
-        _src_fn() {
+        _subfuncs+=( _imp_fn )
+        _imp_fn() {
 
             # store and mask the return trap, if set, so it doesn't fire on returning
             # from source call
@@ -438,7 +446,7 @@ import_func() {
         # Run find and import the selected files
         while IFS='' read -rd '' fn <&3
         do
-            _src_fn "$fn"
+            _imp_fn "$fn"
 
         done 3< <( "${find_cmd[@]}" )  # print0 at end?
 
@@ -477,7 +485,7 @@ import_func() {
                 && continue
 
             # import
-            _src_fn "${src_fns[$func]}"
+            _imp_fn "${src_fns[$func]}"
         done
     fi
     return 0
