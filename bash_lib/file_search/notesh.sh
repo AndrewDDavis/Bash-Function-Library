@@ -33,15 +33,20 @@
 # - if two args are passed for pattern, maybe treat it like -%% 'word1 word2'?
 # - otherwise, how to pass -%% ...
 
+# - create project aliases, like --bread, or --project=bread
+
+# dependencies
+import_func run_vrb \
+    || return
+
 notesh() {
 
     : "Open notes matching a pattern
 
     Usage: notesh [options] [--] [grep-options] 'pattern'
 
-    This function searches a directory tree for text files with matches to a pattern,
-    and opens the selected file. If more than one file is matched by the pattern, an
-    interactive selection screen is presented.
+    Search for and open a notes file with content that matches a pattern. If more than
+    one file is matched by the pattern, an interactive selection screen is presented.
 
     By default, text files in '~/Documents' are searched, and any symlinks encountered
     are dereferenced and followed. If the working directory is a subdirectory of
@@ -55,217 +60,235 @@ notesh() {
 
     Options
 
-      -p | -e | -v
-      : open file using pager (default), editor, or vs-code ('code -n')
-
-      -x 'cmd'
-      : open file using custom command
-
       -d 'dir'
       : search in 'dir/' instead of '~/Documents/'.
 
       -f
       : match anywhere in the file, rather than only section headings
+
+      -o <p|e|s|v>
+      : open file using PAGER (default), EDITOR, sublime text ('subl -n'), or
+        vs-code ('code -n')
+
+      -x 'cmd ...'
+      : open file using custom command; the argument will be split into words.
     "
 
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
-        { docsh -TD; return; }
+    [[ $# -eq 0 || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
-    # defaults
-    local cmd _f doc_root
+    # cleanup routine
+    trap '
+        unset -f _parse_opts _def_grep_cmd _match_fns _select_fn
+        trap - return
+    ' RETURN
 
-    # dir to search
-    doc_root=$HOME/Documents
-    [[ $PWD == ${doc_root}/* ]] &&
-        doc_root=.
+    _parse_opts() {
 
-    # command to open file: -p = pager (default), -e = EDITOR, -v = vs-code
-    str_to_words cmd "${PAGER:-less}"
+        # root of search tree
+        doc_root=$HOME/Documents
+        [[ $PWD == ${doc_root}/* ]] \
+            && doc_root=.
 
-    # args
-    local _flag OPTIND=1 OPTARG
-    while getopts ':d:fx:pev' _flag
-    do
-        case $_flag in
-            ( d )
-                doc_root=$OPTARG
-                [[ $doc_root != '/' ]] &&
-                    doc_root=${doc_root%/}
-            ;;
-            ( f )
-                _f=1
-            ;;
-            ( x )
-                str_to_words -q cmd "$OPTARG"
-            ;;
-            ( p )
-                str_to_words -q cmd "${PAGER:-less}"
-            ;;
-            ( e )
-                str_to_words -q cmd "${EDITOR:-vi}"
-            ;;
-            ( v )
-                cmd=( "$( builtin type -P code )" -n )
-            ;;
-            ( \? )
-                # likely [u]grep option: preserve it and stop processing options
-                # - OPTIND will have advanced if a lone option was used (like -X) rather than a blob
-                _flag=$(( OPTIND-1 ))
-                [[ ${!_flag} == -${OPTARG} ]] &&
-                    (( OPTIND-- ))
-                break
-            ;;
-            ( : )
-                err_msg 2 "missing arg for '-$OPTARG'"
-                return
-            ;;
-        esac
-    done
-    shift $(( OPTIND-1 ))
+        # default opener is PAGER
+        str_to_words opener "${PAGER:-less}"
 
-
-    # debug
-    # printf >&2 '<%s>\n' "$@"
-    # set +x
-    # return
-
-    # [u]grep command path and default args
-    # - TODO: allow GNU grep as well
-    local grep_cmdline grep_ptn
-
-    grep_cmdline=( "$( builtin type -P ugrep )" ) \
-        || return 9
-
-    # pattern argument required
-    # - all else should be grep options
-    [[ $# -gt 0 ]] ||
-        return 99
-
-    grep_ptn=${!#}
-
-    grep_cmdline+=( '-UIjrl0' "${@:1:$(($#-1))}" )
-
-    shift $#
-
-
-    if  [[ ! -v _f
-        && $grep_ptn != *[![:alpha:][:digit:][:blank:].-]*
-    ]]
-    then
-        # for a simple pattern, add regex for heading lines
-        # - refer to the  _expand_keyword() function in scw()
-        grep_ptn="^(#|=).*${grep_ptn}"
-
-        # match only files with a plausible extension
-        # - NB, matching no extension at the same time is tricky: it's possible with
-        #   the glob -g '!*.*', but that will exclude all the files with extensions
-        #   (--exclude patterns take priority over --include patterns).
-        # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
-        # - or do a seperate search with the no-extension glob...
-        grep_cmdline+=( -O 'md,adoc,txt,text,markdown' )
-    fi
-
-    grep_cmdline+=( -- "$grep_ptn" "$doc_root" )
-
-    # capture filenames
-    # - for quoted output to shell, use -m1 --format='%h%~'. In a script like this, it
-    #   is better to simply use -l.
-    # - consider --exclude-dir=.git if there are any git dirs in the search dir
-    local fn fns grep_pid grep_rs
-
-    mapfile -d '' fns < \
-        <(  set -x
-            "${grep_cmdline[@]}"
-    )
-
-    # check ugrep return status from subprocess
-    grep_pid=$!
-    wait $grep_pid || {
-        grep_rs=$?
-        [[ $grep_rs -eq 1 ]] && return 1
-        err_msg $grep_rs "ugrep error"; return
+        # args
+        local flag OPTIND=1 OPTARG
+        while getopts ':fd:o:x:' flag
+        do
+            case $flag in
+                ( d )
+                    doc_root=$OPTARG
+                    [[ $doc_root != '/' ]] \
+                        && doc_root=${doc_root%/}
+                ;;
+                ( f )
+                    full_match=1
+                ;;
+                ( o )
+                    # define opener from first char of OPTARG
+                    case ${OPTARG:0:1} in
+                        ( p ) str_to_words -q opener "${PAGER:-less}" ;;
+                        ( e ) str_to_words -q opener "${EDITOR:-vi}" ;;
+                        ( s ) opener=( "$( builtin type -P subl )" -n ) ;;
+                        ( v ) opener=( "$( builtin type -P code )" -n ) ;;
+                    esac
+                ;;
+                ( x )
+                    str_to_words -q opener "$OPTARG"
+                ;;
+                ( \? )
+                    # likely [u]grep option: preserve it and stop processing options
+                    # - OPTIND will have advanced if a lone option was used (like -X) rather than a blob
+                    flag=$(( OPTIND-1 ))
+                    [[ ${!flag} == -${OPTARG} ]] &&
+                        (( OPTIND-- ))
+                    break
+                ;;
+                ( : )
+                    err_msg 2 "missing argument for '$OPTARG'"
+                    return
+                ;;
+            esac
+        done
+        n=$(( OPTIND-1 ))
     }
 
-    # select a file
-    if [[ ${#fns[@]} -eq 1 ]]
-    then
-        fn=${fns[0]}
+    _def_grep_cmd() {
 
-    else
+        # - TODO: allow GNU grep as well
+        grep_cmdln=( "$( builtin type -P ugrep )" ) \
+            || return 9
+
+        grep_cmdln+=( '-UIjRl0' )
+
+        # pattern argument required
+        [[ $# -gt 0 ]] \
+            || return 3
+
+        # - all else should be grep options
+        grep_ptn=${!#}
+        grep_cmdln+=( "${@:1:$(($#-1))}" )
+        shift $#
+
+        if  [[ ! -v full_match
+            && $grep_ptn != *[![:alpha:][:digit:][:blank:].-]* ]]
+        then
+            # for a simple pattern, add regex for heading lines
+            # - refer to the  _expand_keyword() function in scw()
+            grep_ptn="^(#|=).*${grep_ptn}"
+
+            # match only files with a plausible extension
+            # - NB, matching no extension at the same time is tricky: it's possible with
+            #   the glob -g '!*.*', but that will exclude all the files with extensions
+            #   (--exclude patterns take priority over --include patterns).
+            # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
+            # - or do a seperate search with the no-extension glob...
+            grep_cmdln+=( -O 'md,adoc,txt,text,markdown' )
+        fi
+
+        grep_cmdln+=( -- "$grep_ptn" "$doc_root" )
+    }
+
+    _match_fns() {
+
+        # match using grep
+        # capture filenames
+        # - for quoted output to shell, use -m1 --format='%h%~'. In a script like this,
+        #   it is better to simply use -l.
+        # - consider --exclude-dir=.git if there are any git dirs in the search dir
+        local grep_rs #grep_pid
+
+        mapfile -d '' fns < \
+            <(
+            set -x
+            "${grep_cmdln[@]}"
+        )
+
+        # check ugrep return status from subprocess
+        # grep_pid=$!
+        # wait $grep_pid \
+        wait $! \
+            || {
+            grep_rs=$?
+            [[ $grep_rs -eq 1 ]] \
+                && return 1 \
+                || { err_msg $grep_rs "grep command call error"; return; }
+        }
+
+        # tested grep + find for matching
+        # - about the same, but more complicated
+        # - might be faster for larger number of files
+        #   printf 'find + grep vvv\n\n'
+        #   time find ~/Sync/Notes/ \( -type d -name .git -prune \) -o -type f -name '*.md.txt' \
+        #       -exec egrep -li "^#.*$@" {} +
+        # - NB, sed is unwieldy for this task
+    }
+
+    # _sort_fns() {
+
+        # sort fns
+
+        # TODO
+        # - present candidate files grouped by subdir of ~/Documents/, or format like:
+        #   1) filename from this/long/path
+    # }
+
+    _select_fn() {
+
+        # select a file from the matches
+        if (( ${#fns[@]} == 1 ))
+        then
+            fn=${fns[0]}
+            verb_msg 1 "Matched $fn"
+            # verb_msg 1 '' "Matched Opening file with ${opener[0]}: '$fn'"
+            return
+        fi
+
         ## improve file path strings for display:
         # - replace HOME in root dir with ~
         # - strip root dir from filenames
-        # - wrap file paths at a comfortable width, with indentation
+        # - wrap file paths at a comfortable width, and indent following lines
         # - bold file basenames and root dir
-
         local _bld _rsb _rst
         _bld=$'\e[1m'
         _rsb=$'\e[22m'
         _rst=$'\e[0m'
 
-        local dr_dsp fn_bn fns_dsp=()
+        local dr_dsp=${_bld}${doc_root/#"$HOME"/\~}/${_rsb}
+        printf >&2 '%s\n' '' "Matching files from '${dr_dsp}':" ''
 
-        dr_dsp=${_bld}${doc_root/#${HOME}/\~}/${_rsb}
-
+        local fn_bn fns_dsp=()
         for fn in "${fns[@]}"
         do
             fn=$( command fmt -sw88 <<< "${fn#"${doc_root}"/}" )
-            fn=$( command sed '1 {p;d;}; s/^/    /' <<< "$fn" )
+            fn="${fn//$'\n'/&    }"
+            # fn=$( command sed '1 {p;d;}; s/^/    /' <<< "$fn" )
             fn_bn=${fn##*/}
-            fn=${fn%"${fn_bn}"}${_bld}${fn_bn}${_rsb}
+            fn=${fn%"$fn_bn"}${_bld}${fn_bn}${_rsb}
 
             fns_dsp+=( "$fn" )
         done
 
-        # could use fzf, e.g.
-        # fn=$( fzf <<< $( printf '%s\n' "${fns[@]}" ) )
-        # -m for multi
-
-        # TODO:
-        # - present candidate files grouped by subdir of ~/Documents/, or format like:
-        #   1) filename from this/long/path
-
-        # or the Bash builtin 'select'
-        printf '\n%s\n\n' "Matching files from '${dr_dsp}':"
-
+        # Call the Bash builtin 'select'
+        # - Ctrl-D prevents a selection and returns 1
+        # - fn is set to null when response is invalid
         PS3=$'\n'"Select a file to open, by number (^D to cancel): "
 
-        # select:
-        # - Ctrl-D prevents a selection and returns 1
-        # - fn is set to null for an invalid response
         select fn in "${fns_dsp[@]}"
-        do break
+        do
+            [[ -z $fn ]] || break
+
         done || return
 
-        [[ -n $fn ]] || return
+        # recover the un-decorated filename from the selection
+        fn=${fns[REPLY-1]}
 
-        # recover the proper filename
-        fn=${fn/${_bld}/}
-        fn=${fn/${_rsb}/}
-        fn=${fn//$'\n    '/ }
-        fn=${doc_root}/${fn}
-    fi
-
-    printf '\n%s\n\n' "Opening file with ${cmd[0]}: '$fn'"
-
-    (
-        set -x
-        "${cmd[@]}" "$fn"
-    )
+        # TODO:
+        #
+        # - consider using fzf, e.g.
+        #   fn=$( fzf <<< $( printf '%s\n' "${fns[@]}" ) )
+        #   -m for multi
+    }
 
 
-    # testing grep + find
-    # - about the same, but more complicated; might be faster for larger number of files
-    #printf 'find + grep vvv\n\n'
-    #time find ~/Sync/Notes/ \( -type d -name .git -prune \) -o -type f -name '*.md.txt' -exec  \
-    #    egrep -li "^#.*$@" {} +
+    # set defaults and parse options
+    local doc_root opener full_match _verb=2
+    local -i n
+    _parse_opts "$@" || return
+    shift $n
 
-    # sed is unwieldy for this task
-    # printf '\n\nsed vvv\n\n'
-    # time find ~/Sync/Notes/ \( -type d -name .git -prune \) -o -type f -name '*.md.txt' -exec  \
-    #     bash -c '_str=$0
-    #              [[ -n $(sed -nE "/^#.*${_str}/I p" "$@") ]] && echo "$@"
-    #             ' "$1" '{}' \;
-    #
-    #printf '\n\n'
+    # [u]grep command path and default args
+    local grep_cmdln grep_ptn
+    _def_grep_cmd "$@" || return
+    shift $#
+
+    # match files and select one to open
+    local fn fns
+    _match_fns  || return
+    # _sort_fns   || return
+    _select_fn  || return
+
+    run_vrb "${opener[@]}" "$fn"
 }
