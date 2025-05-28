@@ -44,14 +44,14 @@ func-where() {
         fi
     }
 
-    # record state of extdebug, and enable it
-    local _ed_state
+    # record state of extdebug, and ensure it's enabled
+    local _ed_keepon
     if shopt extdebug >/dev/null
     then
-        _ed_state=1
+        _ed_keepon=1
+    else
+        shopt -s extdebug
     fi
-
-    shopt -s extdebug
 
 
     # gather func defn info
@@ -91,8 +91,6 @@ func-where() {
     done
 
     # reset extdebug
-    if [[ -v _ed_state ]]
-    then
-        shopt -s extdebug
-    fi
+    [[ -v _ed_keepon ]] \
+        || shopt -u extdebug
 }
