@@ -121,7 +121,8 @@ loci() (
         done < <( locate -b0 newline )
         \`\`\`
     "
-    [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
+
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 
     # return on non-zero return status
@@ -226,7 +227,7 @@ loci() (
             ;;
         esac
     done
-    shift $(( OPTIND - 1 ))
+    shift $(( OPTIND-1 ))
 
     # the rest of the arguments must be patterns
     local pats=( "$@" )
@@ -293,14 +294,14 @@ loci() (
         if [[ -n ${_word-} ]]
         then
             # word: ensure the pattern is surrounded by non-alpha chars
-            pats[$i]="(^|[^[:alpha:]])${pat}(\$|[^[:alpha:]])"
+            pats[i]="(^|[^[:alpha:]])${pat}(\$|[^[:alpha:]])"
 
         elif [[ -n ${_xact-} ]]
         then
             # xact: anchor the pattern to match the full basename or path
             [[ ${pat:0:1} == '^' ]] || pat='^'"$pat"
             [[ ${pat:(-1)} == '$' ]] || pat="$pat"'$'
-            pats[$i]="$pat"
+            pats[i]="$pat"
         fi
     done
 
@@ -380,11 +381,10 @@ loci() (
     #  -0 : process nulls
     #  -r : don't run the command with empty input
 
-    {
-        _run_filt ${_nulls:+-0} "${loc_args[@]}" |
-            xargs -r ${_nulls:+-0} "${_pp_cmd[@]}"
-    } \
-        && ps_arr=( "${PIPESTATUS[@]}" ) \
+    { _run_filt ${_nulls:+-0} "${loc_args[@]}" \
+        | xargs -r ${_nulls:+-0} "${_pp_cmd[@]}"
+
+    }   && ps_arr=( "${PIPESTATUS[@]}" ) \
         || ps_arr=( "${PIPESTATUS[@]}" )
 
     # maybe use a mkfifo to capture the exit code:
