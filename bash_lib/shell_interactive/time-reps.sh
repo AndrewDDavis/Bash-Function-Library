@@ -1,5 +1,5 @@
 # dependencies
-import_func is_int verb_msg \
+import_func is_int vrb_msg \
 	|| return
 
 time-reps() {
@@ -77,7 +77,7 @@ time-reps() {
 		&& grep_cmd+=( real ) \
 		|| grep_cmd+=( . )
 
-	verb_msg 2 "N=$n (inner reps)" \
+	vrb_msg 2 "N=$n (inner reps)" \
 		"M=$m   (outer meta-reps)"
 
 	# NB, time writes to STDERR

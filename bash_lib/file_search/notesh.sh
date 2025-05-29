@@ -36,7 +36,7 @@
 # - create project aliases, like --bread, or --project=bread
 
 # dependencies
-import_func run_vrb \
+import_func run_vrb vrb_msg \
     || return
 
 notesh() {
@@ -221,8 +221,8 @@ notesh() {
         if (( ${#fns[@]} == 1 ))
         then
             fn=${fns[0]}
-            verb_msg 1 "Matched $fn"
-            # verb_msg 1 '' "Matched Opening file with ${opener[0]}: '$fn'"
+            vrb_msg 1 "Matched $fn"
+            # vrb_msg 1 '' "Matched Opening file with ${opener[0]}: '$fn'"
             return
         fi
 

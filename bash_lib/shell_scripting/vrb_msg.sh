@@ -2,13 +2,13 @@
 import_func is_nn_array \
     || return
 
-verb_msg() {
+vrb_msg() {
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] && {
 
         : "Print a message to stderr if indicated by the verbosity setting
 
-            Usage: verb_msg <level> \"message body\" ...
+            Usage: vrb_msg <level> \"message body\" ...
 
             This function compares the value of a variable called '_verb' against the
             'level' argument passed on the command line. If _verb >= level, the message
@@ -27,13 +27,13 @@ verb_msg() {
             Examples
 
               # an info message that should usually print
-              verb_msg 1 \"triggered a routine\"
+              vrb_msg 1 \"triggered a routine\"
 
               # a message that isn't usually required
-              verb_msg 2 \"the value of x is \$x\"
+              vrb_msg 2 \"the value of x is \$x\"
 
               # may only print with -vv
-              verb_msg 3 \"the gg routine returned \$gg\"
+              vrb_msg 3 \"the gg routine returned \$gg\"
         "
         docsh -TD
         return
