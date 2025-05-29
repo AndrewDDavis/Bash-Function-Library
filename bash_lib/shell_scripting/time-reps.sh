@@ -2,26 +2,55 @@
 import_func seqi is_int \
 	|| return
 
-time-nits() {
+time-reps() {
 
-	: "Time a number of repetitions (default 1000) of a command
+	: "Time repetitions of a command
 
-	Usage: time_nits [-n N] command [args ...]
+		Usage: time-reps [options] command [args ...]
 
-	Examples
+		Records the time it takes to runs the provided command-line repeatedly 1000
+		times (n), then repeats the timed loop a total of 10 times (m). The stdout of
+		the command is diverted to /dev/null, to prevent the time of printing to the
+		terminal from influencing the results. Only the 'real' time is reported, unless
+		only 1 meta-loop is requested.
 
-	  time-nits echo hi >/dev/null
+		For reference purposes, running 1000 iterations of a no-op command typically
+		takes ~2 ms on my machine. A very simple builtin command such as 'echo hi'
+		may take ~3 ms, while a simple external call such as '/bin/echo hi' may take
+		~1100 ms. This implies ~3 us for 1 run of a very simple builtin command, or
+		~1 ms for 1 call of an external commmand. Often the first meta-iteration
+		takes longer than the next ones, but not always. Using the meta-loop gives
+		more consistent, faster results, compared to repeatedly running the timed
+		loop in an interactive terminal session.
+
+		Simple commands work well as input. To test more complex command lines, e.g.
+		with redirections, it is necessary to wrap the commands in a function, then
+		pass the function call as the command to time-reps. This adds a small amount of
+		overhead (~4 ms to run a no-op or simple builtin 1000 times via a function).
+
+		Options
+
+			-n N
+			: number of repetitions of the command on the inner loop (default 1000)
+
+			-m M
+			: meta-repetitions of the loop (default 10)
+
+		Examples
+
+		  time-nits echo hi
 	"
 	(( $# == 0 )) && set -- '-h'
 
 	# defaults and options
-	local -i _n=1000
+	local -i n=1000 m=10
 
 	local flag OPTARG OPTIND=1
-	while getopts ':n:h' flag
+	while getopts ':n:m:h' flag
 	do
 		case $flag in
-			( n ) _n=$OPTARG ;;
+			( n ) n=$OPTARG ;;
+			( m ) m=$OPTARG ;;
 			( h ) docsh -TD; return ;;
 			( : )  err_msg 2 "missing argument for option $OPTARG"; return ;;
 			( \? ) err_msg 3 "unknown option: '$OPTARG'"; return ;;
@@ -30,20 +59,28 @@ time-nits() {
 	shift $(( OPTIND-1 ))
 
 	(( $# > 0 )) || return 2
-	is_int -p $_n || return 3
+	is_int -p $n || return 3
+	is_int -p $m || return 4
 
-	# defining the array first does not run faster at the fast end, but can prevent
-	# random slow results when measuring very short times
-	# local i is
-	# mapfile -t is < <( seqi "$_n" )
-		# for i in "${is[@]}"
+	# define grep cmd
+	local grep_cmd
+	grep_cmd=( "$( builtin type -P grep )" )
+
+	(( m > 1 )) \
+		&& grep_cmd+=( real ) \
+		|| grep_cmd+=( . )
 
 	# NB, time writes to STDERR
-	local i
-	time {
-		for (( i=0; i<_n; i++ ))
-		do
-			"$@"
-		done
-	}
+	local i j
+	for (( j=0; j<m; j++ ))
+	do
+		{
+			time {
+				for (( i=0; i<n; i++ ))
+				do
+					"$@"
+				done
+			}
+		} 2>&1 1>/dev/null | "${grep_cmd[@]}"
+	done
 }
