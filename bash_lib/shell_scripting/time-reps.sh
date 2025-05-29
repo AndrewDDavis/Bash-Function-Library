@@ -1,5 +1,5 @@
 # dependencies
-import_func seqi is_int \
+import_func is_int verb_msg \
 	|| return
 
 time-reps() {
@@ -36,22 +36,27 @@ time-reps() {
 			-m M
 			: meta-repetitions of the loop (default 10)
 
+			-v
+			: print the values of N and M before running the timing
+
 		Examples
 
 		  time-nits echo hi
 	"
-	(( $# == 0 )) && set -- '-h'
+
+	[[ $# -eq 0  || $1 == @(-h|--help) ]] \
+		&& { docsh -TD; return; }
 
 	# defaults and options
-	local -i n=1000 m=10
+	local -i n=1000 m=10 _verb=1
 
 	local flag OPTARG OPTIND=1
-	while getopts ':n:m:h' flag
+	while getopts ':n:m:v' flag
 	do
 		case $flag in
 			( n ) n=$OPTARG ;;
 			( m ) m=$OPTARG ;;
-			( h ) docsh -TD; return ;;
+			( v ) (( _verb++ )) ;;
 			( : )  err_msg 2 "missing argument for option $OPTARG"; return ;;
 			( \? ) err_msg 3 "unknown option: '$OPTARG'"; return ;;
 		esac
@@ -63,12 +68,17 @@ time-reps() {
 	is_int -p $m || return 4
 
 	# define grep cmd
+	# TODO: use rematch
 	local grep_cmd
-	grep_cmd=( "$( builtin type -P grep )" )
+	grep_cmd=( "$( builtin type -P grep )" ) \
+		|| return 9
 
 	(( m > 1 )) \
 		&& grep_cmd+=( real ) \
 		|| grep_cmd+=( . )
+
+	verb_msg 2 "N=$n (inner reps)" \
+		"M=$m   (outer meta-reps)"
 
 	# NB, time writes to STDERR
 	local i j
