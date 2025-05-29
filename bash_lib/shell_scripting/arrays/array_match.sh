@@ -1,5 +1,5 @@
 # TODO:
-# - try to use match-sh (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external
+# - try to use rematch() (i.e. [[ ... =~ ... ]]) instead of grep, to avoid the external
 #   command call
 
 # dependencies
