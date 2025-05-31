@@ -1,8 +1,8 @@
 # dependencies (implied)
-# - NB, longopts should never be used in these funcs,
-#   or there would be a never-ending loop
-# import_func docsh err_msg \
-#     || return
+# - NB, longopts should not be called from docsh or err_msg, or there would be a never-
+#   ending loop
+#import_func docsh err_msg
+#   || return
 
 longopts() {
 
