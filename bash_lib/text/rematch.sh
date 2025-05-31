@@ -1,7 +1,8 @@
 # TODO
 # - timing: putting docstrings at the top of this function took the execution time from
 #   ~170 us to ~290 us, amazingly; got to get docsh working with strings that are not
-#   in the function definition.
+#   in the function definition. Even putting the no-op and string argument inside the
+#   'if' statement for $# eq 0 adds ~ 35 ms to the execution time.
 # - the return trap, which unsets functions and resets itself, accounts for ~ 25 us of
 #   the runtime, whereas populating the array of subfunctions accounts for another 10 us.
 # - reading the function definitions themselves accounts for ~ 20 us
