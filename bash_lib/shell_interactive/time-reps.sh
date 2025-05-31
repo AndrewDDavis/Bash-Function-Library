@@ -15,13 +15,15 @@ time-reps() {
 		only 1 meta-loop is requested.
 
 		For reference purposes, running 1000 iterations of a no-op command typically
-		takes ~2 ms on my machine. A very simple builtin command such as 'echo hi'
-		may take ~3 ms, while a simple external call such as '/bin/echo hi' may take
-		~1100 ms. This implies ~3 us for 1 run of a very simple builtin command, or
-		~1 ms for 1 call of an external commmand. Often the first meta-iteration
-		takes longer than the next ones, but not always. Using the meta-loop gives
-		more consistent, faster results, compared to repeatedly running the timed
-		loop in an interactive terminal session.
+		takes ~2 ms on my machine. A very simple builtin command such as 'echo hi' may
+		take ~3 ms, while a simple external call such as '/bin/echo hi' may take ~1100
+		ms. This implies ~3 us for 1 run of a very simple builtin command, or ~1 ms for
+		1 call of an external commmand.
+
+		Often the first meta-iteration takes longer than the next ones, but not always.
+		Using the meta-loop with a pipe that sends the inner loop into a subshell seems
+		to give more consistent, faster results, compared to repeatedly running the
+		timed loop in an interactive terminal session.
 
 		Simple commands work well as input. To test more complex command lines, e.g.
 		with redirections, it is necessary to wrap the commands in a function, then
