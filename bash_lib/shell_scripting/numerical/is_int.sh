@@ -1,11 +1,13 @@
-# posix
 is_int () {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
         : "Check for valid integer
 
-        Usage: is_int [options] <string>
+        Usage: is_int [options] <string> ...
+
+        Return true (0) if all arguments are integers, false (1) for anything else,
+        including the null-string.
 
         Options
 
@@ -14,68 +16,74 @@ is_int () {
 
         Examples
 
-        # check for valid non-neg int
-        if is_int -z \"\$var\"
-        then
-            echo \"\$var is non-neg int\"
-        else
-            echo \"negatory\"
-        fi
+          # check for valid non-neg int
+          is_int -z \"\$var\" \
+            || echo \"var should be non-neg int\"
         "
         docsh -TD
         return
     }
 
-    local p=0 z=0
+    local _p _z
     local flag OPTARG OPTIND=1
-
     while getopts ":pz" flag
     do
         case $flag in
             ( p )
-                p=1 ;;
+                _p=1 ;;
             ( z )
-                z=1 ;;
-            ( '?' )
+                _z=1 ;;
+            ( \? )
                 # could be e.g. '-123'
-                OPTIND=$(( OPTIND - 1 ))
+                OPTIND=$(( OPTIND-1 ))
                 break ;;
         esac
     done
     shift $(( OPTIND-1 ))
 
-    local s="$1"
-    shift
+    # remaining args are strings to test
+    local -i rs
+    (( $# > 0 )) \
+        && rs=0 \
+        || rs=1
 
-    # in Bash, for pos/neg int, could do:
-    #[[ ${s#[-+]} == +([0123456789]) ]]
+    # local s=$1
+    # shift
+    local s
+    for s in "$@"
+    do
+        # in Bash, for pos/neg int, could do:
+        #   [[ ${s#[-+]} == +([0123456789]) ]]
+        # or use some regex in AWK...
+        #   anyway
 
-    # or, some regex in AWK...
-    # anyway
+        # discard valid sign character
+        if [[ -v _p  || -v _z ]]
+        then
+            # pos or non-neg only
+            s=${s#[+]}
+        else
+            # pos/neg
+            s=${s#[-+]}
+        fi
 
-    if [ "$p" -eq 1 ] || [ "$z" -eq 1 ]
-    then
-        # pos or non-neg only
-        s=${s#[+]}
-    else
-        # pos/neg
-        s=${s#[-+]}
-    fi
+        # examine remaining chars
+        case $s in
+            ( *[!0-9]* | '' )
+                rs=1
+                break
+            ;;
+            ( * )
+                # integer
+                # - check for invalid 0, otherwise, we're OK
+                if [[ -v _p ]] && (( s == 0 ))
+                then
+                    rs=1
+                    break
+                fi
+            ;;
+        esac
+    done
 
-    case $s in
-
-        ( *[!0-9]* | '' )
-            return 1 ;;
-
-        ( * )
-            # integer
-
-            # check for 0
-            if [ "$p" -eq 1 ] && [ "$s" -eq 0 ]
-            then
-                return 1
-            else
-                return 0
-            fi
-    esac
+    return $rs
 }
