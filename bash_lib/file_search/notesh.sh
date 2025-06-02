@@ -36,7 +36,7 @@
 # - create project aliases, like --bread, or --project=bread
 
 # dependencies
-import_func run_vrb vrb_msg \
+import_func run_vrb vrb_msg str_split is_int \
     || return
 
 notesh() {
@@ -79,7 +79,7 @@ notesh() {
 
     # cleanup routine
     trap '
-        unset -f _parse_opts _def_grep_cmd _match_fns _select_fn
+        unset -f _parse_opts _def_grep_cmd _match_fns _select_fns
         trap - return
     ' RETURN
 
@@ -180,7 +180,7 @@ notesh() {
         # - consider --exclude-dir=.git if there are any git dirs in the search dir
         local grep_rs #grep_pid
 
-        mapfile -d '' fns < \
+        mapfile -d '' matched_fns < \
             <(
             set -x
             "${grep_cmdln[@]}"
@@ -208,21 +208,21 @@ notesh() {
 
     # _sort_fns() {
 
-        # sort fns
+        # sort matched_fns
 
         # TODO
         # - present candidate files grouped by subdir of ~/Documents/, or format like:
         #   1) filename from this/long/path
     # }
 
-    _select_fn() {
+    _select_fns() {
 
         # select a file from the matches
-        if (( ${#fns[@]} == 1 ))
+
+        if (( ${#matched_fns[@]} == 1 ))
         then
-            fn=${fns[0]}
-            vrb_msg 1 "Matched $fn"
-            # vrb_msg 1 '' "Matched Opening file with ${opener[0]}: '$fn'"
+            sel_fns[0]=${matched_fns[0]}
+            vrb_msg 1 "Matched ${sel_fns[0]}"
             return
         fi
 
@@ -239,8 +239,8 @@ notesh() {
         local dr_dsp=${_bld}${doc_root/#"$HOME"/\~}/${_rsb}
         printf >&2 '%s\n' '' "Matching files from '${dr_dsp}':" ''
 
-        local fn_bn fns_dsp=()
-        for fn in "${fns[@]}"
+        local fn fn_bn fns_dsp=()
+        for fn in "${matched_fns[@]}"
         do
             fn=$( command fmt -sw88 <<< "${fn#"${doc_root}"/}" )
             fn="${fn//$'\n'/&    }"
@@ -253,22 +253,42 @@ notesh() {
 
         # Call the Bash builtin 'select'
         # - Ctrl-D prevents a selection and returns 1
-        # - fn is set to null when response is invalid
-        PS3=$'\n'"Select a file to open, by number (^D to cancel): "
+        # - nums is set to null when response is invalid (not a listed number)
+        local PS3 nums
+        PS3=$'\n''File number(s) to open (list with comma, ^D to cancel): '
 
-        select fn in "${fns_dsp[@]}"
+        select nums in "${fns_dsp[@]}"
         do
-            [[ -z $fn ]] || break
+            sel_fns=()
+            if [[ -n $nums ]]
+            then
+                # single number provided
+                # recover the un-decorated filename from the selection
+                sel_fns[0]=${matched_fns[REPLY-1]}
+
+            else
+                # invalid response, may be list, e.g. 2,3,4
+                str_split -qd ',' nums "$REPLY"
+                is_int "${nums[@]}" \
+                    || { vrb_msg 1 "invalid reply: '$REPLY'" "expected e.g. '1' or '2,4'"; continue; }
+
+                local n m=${#matched_fns[@]}
+                for n in "${nums[@]}"
+                do
+                    (( n > 0 )) && (( n <= m )) \
+                        || { vrb_msg 1 "invalid value: '$n'"; continue 2; }
+
+                    sel_fns+=( "${matched_fns[n-1]}" )
+                done
+            fi
+            [[ -v sel_fns[*] ]] && break
 
         done || return
-
-        # recover the un-decorated filename from the selection
-        fn=${fns[REPLY-1]}
 
         # TODO:
         #
         # - consider using fzf, e.g.
-        #   fn=$( fzf <<< $( printf '%s\n' "${fns[@]}" ) )
+        #   sel_fns[0]=$( fzf <<< $( printf '%s\n' "${matched_fns[@]}" ) )
         #   -m for multi
     }
 
@@ -285,10 +305,10 @@ notesh() {
     shift $#
 
     # match files and select one to open
-    local fn fns
+    local matched_fns=() sel_fns=()
     _match_fns  || return
     # _sort_fns   || return
-    _select_fn  || return
+    _select_fns  || return
 
-    run_vrb "${opener[@]}" "$fn"
+    run_vrb "${opener[@]}" "${sel_fns[@]}"
 }
