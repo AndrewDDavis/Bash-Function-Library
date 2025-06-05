@@ -4,7 +4,7 @@ import_func is_int vrb_msg \
 
 time-reps() {
 
-	: "Time repetitions of a command
+	: """Time repetitions of a command
 
 		Usage: time-reps [options] command [args ...]
 

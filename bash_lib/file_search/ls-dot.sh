@@ -1,12 +1,12 @@
 # deps
 import_func alias-resolve \
-    || return 63
+    || return
 
 ls-dot() {
 
     [[ $# -gt 0  &&  $1 == @(-h|--help) ]] && {
 
-        : "List only dot-files in a directory
+        : """List only dot-files in a directory
 
         Usage: ls-dot [--use-alias=...] [ls-options] [dir ...]
 
@@ -19,7 +19,7 @@ ls-dot() {
 
         Also set aliases, like:
         alias ll-dot='ls-dot --use_alias=ll'
-        "
+        """
         docsh -TD
         return
     }

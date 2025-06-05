@@ -6,7 +6,7 @@ array_reindex() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
 
-        : "Recreate the index of an array, while preserving the order
+        : """Recreate the index of an array, while preserving the order
 
         Usage: array_reindex [options] <array-name>
 
@@ -16,7 +16,7 @@ array_reindex() {
 
           -c <n>
           : ignore gaps before index 'n'
-        "
+        """
         docsh -TD
         return
     }

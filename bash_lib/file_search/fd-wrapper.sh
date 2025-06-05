@@ -12,7 +12,7 @@ import_func array_strrepl tree-fromfiles \
 
 fd-wrapper() {
 
-    : "Find variant with user-friendly syntax and defaults
+    : """Find variant with user-friendly syntax and defaults
 
     Usage: fd-wrapper [options] [pattern] [path ...]
 
@@ -120,7 +120,7 @@ fd-wrapper() {
 
         fd -H '^(\\.)?Trash(-[0-9]+)?' ~/ \\
             -X du -hsc | sort -h
-    "
+    """
 
     # fd or fdfind command path and default args
     local fd_cmd

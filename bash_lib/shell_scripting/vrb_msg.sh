@@ -6,7 +6,7 @@ vrb_msg() {
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] && {
 
-        : "Print a message to stderr if indicated by the verbosity setting
+        : """Print a message to stderr if indicated by the verbosity setting
 
             Usage: vrb_msg <level> \"message body\" ...
 
@@ -34,7 +34,7 @@ vrb_msg() {
 
               # may only print with -vv
               vrb_msg 3 \"the gg routine returned \$gg\"
-        "
+        """
         docsh -TD
         return
     }

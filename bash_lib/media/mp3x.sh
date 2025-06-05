@@ -1,6 +1,6 @@
 mp3x() {
 
-    : "Transcode audio files to VBR mp3 files using ffmpeg and lame.
+    : """Transcode audio files to VBR mp3 files using ffmpeg and lame.
 
     Usage: mp3x [-i ifx] [-o ofx] [-d wdir]
 
@@ -14,7 +14,7 @@ mp3x() {
       -d wdir : working dir, default current dir
 
     Outputs directory of converted files within wdir, e.g. 'mp3-vbr/' or 'm4a-cbr/'.
-    "
+    """
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

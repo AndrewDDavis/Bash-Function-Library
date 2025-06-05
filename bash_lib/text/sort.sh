@@ -4,11 +4,11 @@ sort-noansi() {
 
     [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
 
-        : "Sort while ignoring ANSI escape sequences
+        : """Sort while ignoring ANSI escape sequences
 
           - Uses awk to sort the text provided on STDIN.
           - Any options provided are passed to sort.
-        "
+        """
         docsh -TD
         return
     }

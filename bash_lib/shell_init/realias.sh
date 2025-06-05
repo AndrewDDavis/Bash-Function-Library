@@ -6,7 +6,7 @@ realias() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Define a command alias, retaining any previous definitions
+        : """Define a command alias, retaining any previous definitions
 
         Usage: realias <command> <alias-string>
 
@@ -65,7 +65,7 @@ realias() {
           # option to skip the check and retain the old command.
           realias -f fgrep 'fgrep --color=auto'
           # now fgrep='grep -F --color=auto'
-        "
+        """
         docsh -TD
         return
     }

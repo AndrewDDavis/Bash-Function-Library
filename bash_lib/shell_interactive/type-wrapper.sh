@@ -5,7 +5,7 @@ type-wrapper() {
 
     [[ $# == 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print command type(s) without printing function definitions
+        : """Print command type(s) without printing function definitions
 
         Usage: type-wrapper [args for \`type\`] <command-name> ...
 
@@ -17,7 +17,7 @@ type-wrapper() {
         all the ways that each command would be interpreted (e.g. executable, shell
         function, builtin, etc.). However, the output of type is passed through a
         \`sed\` filter that suppresses the printing of any function definitions.
-        "
+        """
         docsh -TD
         return
     }

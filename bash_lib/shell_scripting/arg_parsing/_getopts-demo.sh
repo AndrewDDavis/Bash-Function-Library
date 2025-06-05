@@ -1,6 +1,6 @@
 _getopts-demo() {
 
-    : "Demonstrate and test simple getopts functionality
+    : """Demonstrate and test simple getopts functionality
 
         Error reporting:
 
@@ -10,7 +10,7 @@ _getopts-demo() {
           returns with status 0, so the loop merrily carries on. Another important
           difference when using default error reporting is that OPT becomes '?',
           rather than ':', for a missing argument.
-    "
+    """
 
 	[[ ${1-} == @(-h|--help) ]] &&
     	{ docsh -TD; return; }

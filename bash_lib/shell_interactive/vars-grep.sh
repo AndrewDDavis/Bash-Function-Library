@@ -5,7 +5,7 @@ vars-grep() {
 
     [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
 
-        : "Print variables that match a pattern
+        : """Print variables that match a pattern
 
         Usage: vars-grep [-a] [grep-opts] [pattern]
 
@@ -34,7 +34,7 @@ vars-grep() {
 
           # arrays
           vars-grep -a '^declare -[^ ]*a[^ ]* '
-        "
+        """
         docsh -TD
         return
     }

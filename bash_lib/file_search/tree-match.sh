@@ -4,7 +4,7 @@ import_func std-args array_match \
 
 tree-match() {
 
-    : "Search for files matching pattern, display as tree
+    : """Search for files matching pattern, display as tree
 
         Usage: tree-match [options] [pattern] [--] [dir1] ...
 
@@ -65,7 +65,7 @@ tree-match() {
 
           --noreport
           : omit the file and directory report at the end of the listing
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

@@ -2,10 +2,10 @@ if [[ -n $( command -v subl ) ]]
 then
     subl-diff() {
 
-        : "Diff files in Sublime-Text using the Compare-Side-by-Side plugin
+        : """Diff files in Sublime-Text using the Compare-Side-by-Side plugin
 
             Usage: subl-diff <fileA> <fileB>
-        "
+        """
 
         [[ $# -eq 2 ]] \
             || { docsh -TD; return; }

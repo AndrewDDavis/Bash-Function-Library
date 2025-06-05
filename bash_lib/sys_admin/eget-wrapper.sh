@@ -6,7 +6,7 @@
 
 eget-wrapper() {
 
-    : "Wrapper for common operations using eget
+    : """Wrapper for common operations using eget
 
         Usage
 
@@ -24,7 +24,7 @@ eget-wrapper() {
         Briefly:
 
         ...
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

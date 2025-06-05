@@ -2,7 +2,7 @@ str_to_words() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        : "Split string into words, respecting quoting and escaped whitespace
+        : """Split string into words, respecting quoting and escaped whitespace
 
         Usage: str_to_words [-q] <array-name> [string ...]
 
@@ -68,7 +68,7 @@ str_to_words() {
         This works safely in simple cases, but it does not respect quoting within the
         string when word-splitting, so it cannot preserve whitespace within the
         elements. str_to_words offers this feature with a simpler command syntax.
-        "
+        """
         docsh -TD
         return
     }

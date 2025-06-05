@@ -2,7 +2,7 @@ sed-delln() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Delete lines matching regex pattern.
+        : """Delete lines matching regex pattern.
 
         Usage: sed-delln [options] <pattern> <filename>
 
@@ -17,7 +17,7 @@ sed-delln() {
         - All unrecognized arguments are passed to sed.
 
         Example: sed-delln '^dirname' bash_extended_history
-        "
+        """
         docsh -TD
         return
     }

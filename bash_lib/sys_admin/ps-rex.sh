@@ -5,7 +5,7 @@ ps-rex() (
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        : "Display formatted and filtered process list
+        : """Display formatted and filtered process list
 
         Usage
 
@@ -68,7 +68,7 @@ ps-rex() (
 
         - info/columns that would be nice/useful: S,PRI,NI,RSS,lstart,user,group
         - when using grep or sed to search, escape or bracket a char to prevent needing grep -v (e.g. sea\rchterm, [s]earchterm)
-        "
+        """
         docsh -TD
         return
     }

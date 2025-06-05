@@ -3,7 +3,7 @@ alias convert-shrink_if_larger='img-shrink'
 
 img-shrink() {
 
-    : "resizes an image to a lower resolution if it exceeds a set size
+    : """resizes an image to a lower resolution if it exceeds a set size
 
     - uses imagemagick's convert
     - preserves aspect ratio
@@ -13,7 +13,7 @@ img-shrink() {
     Options
 
     -m : max res (default 2048)
-    "
+    """
     [[ $# -eq 0 || $1 == -h ]] &&
         { docsh -TD; return; }
 

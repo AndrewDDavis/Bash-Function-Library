@@ -1,6 +1,6 @@
 str_is_glob() {
 
-    : "Check whether a string contains globbing metacharacters
+    : """Check whether a string contains globbing metacharacters
 
         Usage: str_is_glob <string> ...
 
@@ -9,7 +9,7 @@ str_is_glob() {
         returns with status code 0 (true). Otherwise it returns 1 (false).
 
         It does not account for quoting or escaping of the metacharacters.
-    "
+    """
 
     local s rs=1
 

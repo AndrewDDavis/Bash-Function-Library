@@ -1,6 +1,6 @@
 seqi() {
 
-    : "Print a sequence of integers
+    : """Print a sequence of integers
 
         Usage: seqi [first [increment]] last
 
@@ -28,7 +28,7 @@ seqi() {
 
         -w
         : equalize width of printed numbers by padding with leading zeroes
-    "
+    """
 
     # defaults and options
     local _s='\n' _w

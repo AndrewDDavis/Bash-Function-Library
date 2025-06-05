@@ -1,9 +1,9 @@
 tere() {
 
-    : "Use tere to navigate, then cd to the chosen dir
+    : """Use tere to navigate, then cd to the chosen dir
 
     Tere is a TUI file explorer. For command usage, run 'command tere --help'.
-    "
+    """
 
     [[ ${1-} == @(-h|--help) ]] &&
         { docsh -TD; return; }

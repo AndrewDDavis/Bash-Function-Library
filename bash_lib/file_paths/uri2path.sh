@@ -1,6 +1,6 @@
 uri2path() {
 
-    : "Convert URI to file path using Python 3"
+    : """Convert URI to file path using Python 3"
 
     local u script
 

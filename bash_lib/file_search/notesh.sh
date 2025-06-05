@@ -41,7 +41,7 @@ import_func run_vrb vrb_msg str_split is_int \
 
 notesh() {
 
-    : "Open notes matching a pattern
+    : """Open notes matching a pattern
 
     Usage: notesh [options] [--] [grep-options] 'pattern'
 
@@ -72,7 +72,7 @@ notesh() {
 
       -x 'cmd ...'
       : open file using custom command; the argument will be split into words.
-    "
+    """
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }

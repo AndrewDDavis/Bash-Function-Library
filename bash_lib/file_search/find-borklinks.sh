@@ -1,12 +1,12 @@
 find-borklinks() {
 
-    : "Print broken symlinks within a directory tree
+    : """Print broken symlinks within a directory tree
 
     Usage: find-borklinks [path] [search-terms]
 
     All arguments are passed to the 'find' command, then arguments are added to limit
     the search results to broken symlinks.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

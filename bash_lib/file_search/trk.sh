@@ -2,7 +2,7 @@
 
     trk() {
 
-        : "Wrapper for tracker3 file search tool and indexer
+        : """Wrapper for tracker3 file search tool and indexer
 
         Usage: trk ( s | i ) args
 
@@ -27,7 +27,7 @@
             -e : Check whether file is eligible for mining based on config
 
         See \`man tracker3-search\` etc., or \`tracker3 --help\` for all options.
-        "
+        """
 
         [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
             { docsh -TD; return; }

@@ -2,7 +2,7 @@ trap-err() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Show a useful message on non-zero return status
+        : """Show a useful message on non-zero return status
 
         The output differs depending on the context, whether run for the return of
         a function, a sourced file, or a command.
@@ -73,7 +73,7 @@ trap-err() {
           of a varaible when using 'local' or 'declare' (e.g. \`local foo=\$( cmd ... )\`),
           the return status of the subshell is lost; the local command returns 0
           regardless. So only use inline init with local for very simple cases.
-        "
+        """
         docsh -TD
         return
     }

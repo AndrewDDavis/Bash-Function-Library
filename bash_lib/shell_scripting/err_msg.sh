@@ -41,7 +41,7 @@ err_msg() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print log-style messages to stderr
+        : """Print log-style messages to stderr
 
         Usage: err_msg <rs> [\"message body\" ...]
 
@@ -83,7 +83,7 @@ err_msg() {
                 trap-err $?
                 return
             ' ERR
-        "
+        """
         docsh -TD
         return
     }

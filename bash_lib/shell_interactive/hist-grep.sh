@@ -11,13 +11,13 @@ import_func array_from_glob \
 
 hist-grep() {
 
-    : "Search the shell history file(s) for occurrences of a pattern
+    : """Search the shell history file(s) for occurrences of a pattern
 
         Usage: hist-grep [grep-args] <pattern>
 
         Pattern matching is performed by \`grep -E\`, and the glob for history files
         is \`~/.bash*history\`.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

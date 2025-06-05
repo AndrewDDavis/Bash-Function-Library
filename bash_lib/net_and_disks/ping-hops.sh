@@ -1,6 +1,6 @@
 ping-hops() {
 
-    : "Determine number of hops to a host
+    : """Determine number of hops to a host
 
     Usage: ping-hops [-t n] [options] host
 
@@ -9,7 +9,7 @@ ping-hops() {
 
     Other than option '-t <n>', which sets the start value of TTL (default 24), any
     further arguments are passed to ping.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

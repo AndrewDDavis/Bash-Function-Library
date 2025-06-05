@@ -2,7 +2,7 @@ str_trim() {
 
     [[ $# -gt 0 && $1 == @(-h|--help) ]] && {
 
-        : "Trim whitespace from start and end of a string
+        : """Trim whitespace from start and end of a string
 
         Accepts a string as an argument or on STDIN, and uses a sed script to trim
         horizontal whitespace characters from the start and end. These are commonly
@@ -20,7 +20,7 @@ str_trim() {
           echo \"\$str\" | ${FUNCNAME[0]}
           ${FUNCNAME[0]} < <( echo \"\$str\" )
           ${FUNCNAME[0]} <<< \"\$str\"
-        "
+        """
         docsh -TD
         return
     }
@@ -30,7 +30,7 @@ str_trim() {
     filt="
         s/^[[:blank:]]+//
         s/[[:blank:]]+$//
-    "
+    """
 
     if [[ $# -gt 0 ]]
     then

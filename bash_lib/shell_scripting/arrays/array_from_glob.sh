@@ -7,7 +7,7 @@ alias glob-to-array='array_from_glob'
 
 array_from_glob() {
 
-    : "Expand a glob pattern into an array
+    : """Expand a glob pattern into an array
 
         Usage: array_from_glob <array-name> <pattern>
 
@@ -21,7 +21,7 @@ array_from_glob() {
 
         The return status is 0 (true) for at least one match, 1 (false) for no matches,
         or > 1 for an error.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

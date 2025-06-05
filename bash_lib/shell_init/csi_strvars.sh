@@ -2,7 +2,7 @@ csi_strvars() {
 
     [[ ${1-} == @(-h|--help) ]] && {
 
-        : "Define variables to apply styles and colours to terminal text.
+        : """Define variables to apply styles and colours to terminal text.
 
         Usage
 
@@ -64,7 +64,7 @@ csi_strvars() {
             + \`blue=\$( tput setaf 4 )\`
             + \`reset=\$( tput sgr0 )\`
             + \`dim=\$( tput dim )\`
-        "
+        """
         docsh -TD
         return
     }

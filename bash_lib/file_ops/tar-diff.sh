@@ -1,6 +1,6 @@
 tar-diff() {
 
-    : "Compare archive files against the file-system
+    : """Compare archive files against the file-system
 
         Usage: tar-diff [-v] <archive> [path ...]
 
@@ -14,7 +14,7 @@ tar-diff() {
         causes extra file info to be printed, like 'ls -l'.
 
         Returns 1 if some files differed.
-    "
+    """
 
 	[[ $# -eq 0  || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }

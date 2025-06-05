@@ -6,7 +6,7 @@ run_vrb() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print command line to STDERR as it is being run
+        : """Print command line to STDERR as it is being run
 
         Usage: run_vrb [options] [--] <command-line ...>
 
@@ -49,7 +49,7 @@ run_vrb() {
           _v=1
           [[ \$foo == bar ]] && (( _v++ ))
           run_vrb -\$_v borg-go create
-        "
+        """
         docsh -TD
         return
     }

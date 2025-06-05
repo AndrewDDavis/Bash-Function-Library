@@ -2,7 +2,7 @@ alias archive-check='tar-check'
 
 tar-check() {
 
-    : "Check tarfiles using compression tools and tar
+    : """Check tarfiles using compression tools and tar
 
     Usage: tar-check <file-path> ...
 
@@ -17,7 +17,7 @@ tar-check() {
 
       > A tar-format archive contains a checksum that most likely will detect
         errors in the metadata, but it will not detect errors in the data.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

@@ -1,6 +1,6 @@
 zip-info() {
 
-    : "Show zip archive info and file listing
+    : """Show zip archive info and file listing
 
     Usage: zip-info [opts] archive.zip
 
@@ -13,7 +13,7 @@ zip-info() {
     - The only difference with -s (short) output, is that is omits the
       compression ratio column, and with -l (long) is that is prints the
       compressed size instead of ratio.
-    "
+    """
 
     [[ $# -eq 0 ||  $1 == @(-h|--help) ]] &&
     	    { docsh -TD; return; }

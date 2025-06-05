@@ -11,7 +11,7 @@ alias ttag="tt --all -l --git --no-filesize --no-user --no-time --no-permissions
 
 treeza() {
 
-    : "Directory tree view
+    : """Directory tree view
 
         Usage: treeza [eza-options] [path ...]
 
@@ -38,7 +38,7 @@ treeza() {
           ttag : combines tta and ttg
 
         Refer to the eza manpage for explanations of the options.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }

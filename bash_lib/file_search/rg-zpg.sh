@@ -1,6 +1,6 @@
 rg-zpg() {
 
-    : "search with ripgrep, open in pager"
+    : """search with ripgrep, open in pager"
 
     # - open in vs-code with code -g "$fn:$ln"
 

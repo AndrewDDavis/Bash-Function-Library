@@ -1,6 +1,6 @@
 d2n() {
 
-    : "Wrapper function for Rorden's dcm2niix tool
+    : """Wrapper function for Rorden's dcm2niix tool
 
         Calls dcm2niix with my usual settings on dicoms found in the passed dir
 
@@ -8,7 +8,7 @@ d2n() {
           - If no dir supplied, uses the current directory
           - NIfTI files are output in the current working directory
           - Additional options may be supplied, as long as the search dir is the last argument
-    "
+    """
 
     [[ -n ${1-} ]] ||
         set -- '.'

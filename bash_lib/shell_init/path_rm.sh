@@ -2,12 +2,12 @@ path_rm() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print new PATH with an element removed
+        : """Print new PATH with an element removed
 
         Usage: path_rm <path> ...
 
         All instances of the path are removed from the PATH variable.
-        "
+        """
         docsh -TD
         return
     }

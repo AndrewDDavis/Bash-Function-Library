@@ -1,6 +1,6 @@
 find-newest() {
 
-    : "Find newest files in a directory tree
+    : """Find newest files in a directory tree
 
         Usage: find-newest [-n N] [path] [search-terms]
 
@@ -18,7 +18,7 @@ find-newest() {
 
           # newest 12 files modified in the last week, not including those in .git/
           find-newest -L . -name .git -prune -o \( -type f -mtime 7 \)
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

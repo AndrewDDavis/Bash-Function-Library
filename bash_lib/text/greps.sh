@@ -14,7 +14,7 @@ alias egreps="greps -E"
 
 greps() {
 
-    : "Smart-case matching with grep
+    : """Smart-case matching with grep
 
     Usage
 
@@ -31,7 +31,7 @@ greps() {
     is also disabled if the -i, --ignore-case, or --no-ignore-case options are used. The
     comments of this function's code contain a comparison of options relevant to
     case-sensitive matching across various grep tools.
-    "
+    """
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
@@ -137,7 +137,7 @@ greps() {
 
 _parse_grepopts() {
 
-    : "Keep command-line argument blobs intact while identifying pattern arg(s)
+    : """Keep command-line argument blobs intact while identifying pattern arg(s)
 
     Usage: _parse_grepopts opt_arr posarg_arr pattern_arr \"\$@\"
 
@@ -152,7 +152,7 @@ _parse_grepopts() {
         was provided by -e, --regexp, -f or --file.
       - Options may be issued after positional arguments, unless the '--' argument is
         used to terminate option parsing.
-    "
+    """
 
     # name-refs to handle the arrays
     local -n _opts=$1 _posargs=$2 _pats=$3
@@ -235,7 +235,7 @@ _parse_grepopts() {
 #     - did not support -f
 # greps() {
 
-#     : "Smart-case wrapper function for grep
+#     : """Smart-case wrapper function for grep
 
 #     Usage
 

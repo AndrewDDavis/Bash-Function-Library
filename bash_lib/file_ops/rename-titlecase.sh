@@ -4,13 +4,13 @@ import_func str_to_words array_match \
 
 rename-titlecase() {
 
-    : "Change filename words to title-case
+    : """Change filename words to title-case
 
         Usage: rename-titlecase {file-name} ...
 
           - Operates only on file basenames, not the whole path.
           - Ignores some small words, e.g.: 'a', 'an', 'the', 'and', 'at', 'with'.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

@@ -6,7 +6,7 @@ array_irepl() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Replace indexed array element with one or more new elements
+        : """Replace indexed array element with one or more new elements
 
         Usage: array_irepl <array-name> <index> [elem ...]
 
@@ -23,7 +23,7 @@ array_irepl() {
 
           # replace element #4 with two others
           array_irepl iarr 4 abc def
-        "
+        """
         docsh -TD
         return
     }

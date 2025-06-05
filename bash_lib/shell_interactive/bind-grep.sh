@@ -4,7 +4,7 @@ import_func alias-resolve array_strrepl \
 
 bind-grep() {
 
-    : "Search readline or stty keybindings
+    : """Search readline or stty keybindings
 
         Usage
 
@@ -71,7 +71,7 @@ bind-grep() {
 
           # print all defined terminal bindings
           bind-grep -s -v undef
-    "
+    """
 
     [[ $# -eq 0  ||  $1 == -h ]] &&
         { docsh -TD; return; }

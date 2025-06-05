@@ -4,7 +4,7 @@ import_func is_set_array is_idx_array \
 
 array_sort() {
 
-    : "Sort array elements
+    : """Sort array elements
 
     Usage: array_sort <array-name> [sort-options]
 
@@ -22,7 +22,7 @@ array_sort() {
 
       declare -p abc
       # declare -a abc=([0]=\"999\" [1]=\"7\" [2]=\"3\" [3]=\"2\")
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

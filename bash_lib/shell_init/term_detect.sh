@@ -18,7 +18,7 @@ term_detect() {
 
     [[ ${1-} == @(-h|--help) ]] && {
 
-        : "Set environment variables based on the current terminal emulator
+        : """Set environment variables based on the current terminal emulator
 
         This function attempts to detect the current terminal emulator, and set the
         TERM_PROGRAM environment variable if it is not already set (e.g. by Apple
@@ -26,7 +26,7 @@ term_detect() {
 
         It also tests whether stdout is a tty and tries to detect the number of
         colours supported by the terminal, and sets the TERM_NCLRS variable.
-        "
+        """
 
         docsh -TD
         return

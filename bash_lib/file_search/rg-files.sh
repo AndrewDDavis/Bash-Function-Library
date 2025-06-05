@@ -1,6 +1,6 @@
 rg-files() {
 
-    : "Search for files using ripgrep
+    : """Search for files using ripgrep
 
     Calls rg with the following options:
 
@@ -12,7 +12,7 @@ rg-files() {
       --no-ignore-vcs
       --no-ignore-exclude
       --no-ignore-global
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

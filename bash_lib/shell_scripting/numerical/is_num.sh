@@ -1,7 +1,7 @@
 # awk way (Bourne)
 is_num () {
 
-    : "check for any valid number
+    : """check for any valid number
 
     example
 
@@ -11,7 +11,7 @@ is_num () {
     else
         echo \"negatory\"
     fi
-    "
+    """
 
     local s=$1
     shift

@@ -1,13 +1,13 @@
 _print_args() {
 
-    : "Print arguments provided to the function.
+    : """Print arguments provided to the function.
 
         Usage: _print_args ...
 
         This function prints its options and positional parameters in a compact but
         readable format. It is intended for troubleshooting shell scripts during
         development. If PA_COMPACT is not null, a compact form is used.
-    "
+    """
 
     [[ ${1-} == @(-h|--help) ]] \
         && { docsh -TD; return; }

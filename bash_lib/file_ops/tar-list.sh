@@ -1,6 +1,6 @@
 tar-list() {
 
-    : "List files in a tar archive
+    : """List files in a tar archive
 
     Usage: tar-list [tar-options] <archive-file>
 
@@ -25,7 +25,7 @@ tar-list() {
 
       - If a large archive is commonly listed, better archive formats include [zip](https://askubuntu.com/a/1036234/52041)
         and possibly [dar](https://github.com/Edrusb/DAR), and tpxz.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

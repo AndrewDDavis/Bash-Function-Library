@@ -19,7 +19,7 @@ alias rmnt="mnt"
 
 mnt() {
 
-    : "Mount remote shares, backups, archives, or encrypted files
+    : """Mount remote shares, backups, archives, or encrypted files
 
     Usage: mnt [opts] [-l | destination]
 
@@ -89,7 +89,7 @@ mnt() {
         boot using 'tmpfiles.d'.
 
     [1]: https://wiki.archlinux.org/title/Udisks
-    "
+    """
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
@@ -360,7 +360,7 @@ mnt() {
         mopts+=( --vfs-cache-mode writes )
 
         (   set -x
-            "$mcmd" mount "${mopts[@]}" "$dest_tag": "$loc_mntpt"
+            "$mcmd" mount "${mopts[@]}" "$dest_tag": """$loc_mntpt"
         ) \
             && "${cmd_pths[sed]}" >&2 "s:$HOME:~:" \
                 <<< "Mounted ${dest_tag} at '${loc_mntpt}'."

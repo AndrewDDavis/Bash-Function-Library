@@ -12,7 +12,7 @@ alias eloci='loci --regex'
 
 loci() (
 
-    : "Convenient file search with locate
+    : """Convenient file search with locate
 
     Usage: loci [options] <pattern> [...]
 
@@ -120,7 +120,7 @@ loci() (
             printf 'fn: %s\n' \"\${fn@Q}\"
         done < <( locate -b0 newline )
         \`\`\`
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

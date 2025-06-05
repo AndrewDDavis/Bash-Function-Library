@@ -1,6 +1,6 @@
 zipit() (
 
-    : "Move files or directory trees to a zip archive.
+    : """Move files or directory trees to a zip archive.
 
     This is a wrapper function for quickly adding files to a zip archive,
     and then removing the source files to simulate a move operation.
@@ -66,7 +66,7 @@ zipit() (
      -o : make archive mtime same as newest file in the archive.
     -ws : require ** to match across directory boundaries.
      -y : archive symlinks as symlinks.
-    "
+    """
 
 	[[ $# -eq 0 || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }

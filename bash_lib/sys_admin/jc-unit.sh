@@ -6,7 +6,7 @@ jc-unit() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-	    : "Show 100 lines of journalctl output for a systemd unit
+	    : """Show 100 lines of journalctl output for a systemd unit
 
 	        Usage: jc-unit [jc-opts] <unit>
 

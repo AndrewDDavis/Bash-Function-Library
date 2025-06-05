@@ -4,7 +4,7 @@ import_func array_strrepl str_to_words \
 
 alias-resolve() {
 
-    : "Expand an alias to a command line, using recursion if necessary
+    : """Expand an alias to a command line, using recursion if necessary
 
     Usage: alias-resolve [options] <name> [array-name]
 
@@ -45,7 +45,7 @@ alias-resolve() {
 
       alias-resolve ll ls_cmd
       # ls_cmd may be: ( LC_COLLATE=C.utf8 ls --color=auto -lh )
-    "
+    """
 
     # defaults and options
     local _env=1 _pr

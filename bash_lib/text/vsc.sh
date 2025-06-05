@@ -12,7 +12,7 @@ alias vscn='vsc -n'
 
 vsc() {
 
-    : "Launch Commonly-Used VS-Code Projects Using Aliases
+    : """Launch Commonly-Used VS-Code Projects Using Aliases
 
         Usage: vscode-wrapper [--proj=word] [vs-code arguments ...]
 
@@ -29,7 +29,7 @@ vsc() {
 
           # open the 'bread' project directory in a new window
           vscode-launcher -n --proj=bread
-    "
+    """
 
 	[[ $# -eq 0  || $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }
@@ -70,9 +70,9 @@ vsc() {
 
 _vscl_aliases() {
 
-    : "Read vsc-launcher alias definition file,
+    : """Read vsc-launcher alias definition file,
         then add aliases to projs array
-    "
+    """
 
     [[ $# -eq 1 ]] \
         || return 20

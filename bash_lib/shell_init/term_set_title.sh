@@ -2,7 +2,7 @@ term_set_title() {
 
     [[ $# == 0 || $1 == @(-h|--help) ]] && {
 
-        : "Change the terminal emulator's window and tab titles.
+        : """Change the terminal emulator's window and tab titles.
 
         Usage: term_set_title [opts] [code] <string>
 
@@ -37,7 +37,7 @@ term_set_title() {
         - On ChromeOS, the Terminal does not have its own settings for the tab and
           window titles, and gives each tab the simple title 'Terminal'. It requires
           code 2 to change the tab title.
-        "
+        """
         docsh -TD
         return
     }

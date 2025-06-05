@@ -4,7 +4,7 @@ alias rx='fc-wrapper'
 
 fc-wrapper() {
 
-    : "Re-execute lines from history
+    : """Re-execute lines from history
 
         The 'fc' builtin is used to display or re-execute commands from the history
         list. This function is meant to be aliased as fcx or rx, and runs 'fc -s' to
@@ -72,7 +72,7 @@ fc-wrapper() {
 
           # edit a list of the last 5 commands, then run the saved list
           fc -5
-    "
+    """
 
     [[ $# -gt 0  && $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

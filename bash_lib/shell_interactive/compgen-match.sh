@@ -17,7 +17,7 @@ compgen-match() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "List shell features and definitions using compgen.
+        : """List shell features and definitions using compgen.
 
         Usage: compgen-match <action> [string]
 
@@ -53,7 +53,7 @@ compgen-match() {
 
         ls-signals | grep -i 'p\$'
         : list signals ending in p
-        "
+        """
         docsh -TD
         return
     }

@@ -1,6 +1,6 @@
 find-colour() {
 
-    : "Colourize find results using ls
+    : """Colourize find results using ls
 
     Usage: find-colour [path] [search-terms]
 
@@ -9,7 +9,7 @@ find-colour() {
 
     The output isn't exactly the same as the colorization of fd and bfs, since those
     programs selectively color the dir portion of a path.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

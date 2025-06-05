@@ -2,12 +2,12 @@ if [[ -n $( command -v dos2unix ) ]]
 then
     ls-crlf() {
 
-        : "Print files with dos line endings
+        : """Print files with dos line endings
 
         Usage: ls-crlf [glob ...]
 
         The glob or extended glob will be used to match files to check (e.g. '**').
-        "
+        """
         [[ $# -eq 0 || $1 == -h ]] &&
             { docsh -TD; return; }
 
@@ -23,7 +23,7 @@ fi
 
 grep-crlf() {
 
-    : "Find text files with DOS line-endings
+    : """Find text files with DOS line-endings
 
     Usage: grep-crlf [file or dir ...]
 
@@ -33,7 +33,7 @@ grep-crlf() {
     searched.
 
     To visualize the CR characters (as ^M), you may pipe the output to 'cat -v'.
-    "
+    """
     [[ $# -eq 0 || $1 == -h ]] &&
         { docsh -TD; return; }
 

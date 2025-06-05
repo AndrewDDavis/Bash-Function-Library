@@ -1,6 +1,6 @@
 compspec_reuse() {
 
-    : "Re-use the compspec for a command
+    : """Re-use the compspec for a command
 
         Usage: compspec_reuse {parent-cmd} {new-cmd}
 
@@ -19,7 +19,7 @@ compspec_reuse() {
           #   complete -F _systemctl systemctl
           # - then the scw completion function would pre-load and call _systemctl
           compspec_reuse systemctl scw
-    "
+    """
 
     # TODO:
     # - consider checking the BASH_COMPLETION_USER_DIR variable

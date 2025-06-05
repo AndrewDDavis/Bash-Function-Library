@@ -1,6 +1,6 @@
 cp-tree() {
 
-    : "Copy file hierarchies, preserving permissions with tar.
+    : """Copy file hierarchies, preserving permissions with tar.
 
 	Usage: cp-tree [options] <srcdir> <destdir>
 

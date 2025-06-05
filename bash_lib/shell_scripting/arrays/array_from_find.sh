@@ -3,7 +3,7 @@ alias find_to_array='array_from_find'
 
 array_from_find() {
 
-    : "Run find to populate an array with file paths
+    : """Run find to populate an array with file paths
 
         Usage: array_from_find <array-name> [find-arguments] ...
 
@@ -46,7 +46,7 @@ array_from_find() {
         or > 1 for an error.
 
         [1]: https://www.gnu.org/software/findutils/manual/html_node/find_html/Regular-Expressions.html
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

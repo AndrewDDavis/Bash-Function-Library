@@ -4,7 +4,7 @@ import_func str_to_words \
 
 rename-nameswap() {
 
-    : "Rename file so that \"the file name\" becomes \"name, the file\""
+    : """Rename file so that \"the file name\" becomes \"name, the file\""
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

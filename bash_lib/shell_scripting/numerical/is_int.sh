@@ -2,7 +2,7 @@ is_int () {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Check for valid integer
+        : """Check for valid integer
 
         Usage: is_int [options] <string> ...
 
@@ -19,7 +19,7 @@ is_int () {
           # check for valid non-neg int
           is_int -z \"\$var\" \
             || echo \"var should be non-neg int\"
-        "
+        """
         docsh -TD
         return
     }

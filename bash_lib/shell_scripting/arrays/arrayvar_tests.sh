@@ -106,7 +106,7 @@
 
 is_array() {
 
-    : "Return true for array variable, whether set, unset, or empty"
+    : """Return true for array variable, whether set, unset, or empty"
 
     local -n __avt_arrnm__=${1:?variable name required}
 
@@ -121,13 +121,13 @@ is_array() {
 
 is_mt_array() {
 
-    : "Return true for an empty array variable (no elements, not even a NUL)
+    : """Return true for an empty array variable (no elements, not even a NUL)
 
         These could be defined using, e.g.:
           arr=()
         or
           declare -a arr
-    "
+    """
 
     [[ $( declare -p "${1:?variable name required}" 2>/dev/null ) \
         == 'declare -'*([! ])[aA]*([! ])" ${1}"?('=()') ]]
@@ -135,7 +135,7 @@ is_mt_array() {
 
 is_set_array() {
 
-    : "Return true for an array variable with any value set, including NUL"
+    : """Return true for an array variable with any value set, including NUL"
 
     local -n __avt_arrnm__=${1:?variable name required}
 
@@ -144,7 +144,7 @@ is_set_array() {
 
 is_nn_array() {
 
-    : "Return true for an array variable with at least 1 non-null element"
+    : """Return true for an array variable with at least 1 non-null element"
 
     local -n __avt_arrnm__=${1:?variable name required}
 
@@ -160,7 +160,7 @@ is_nn_array() {
 
 is_idx_array() {
 
-    : "Return true for indexed array variable, whether empty or not"
+    : """Return true for indexed array variable, whether empty or not"
 
     local -n __avt_arrnm__=${1:?variable name required}
 
@@ -169,7 +169,7 @@ is_idx_array() {
 
 is_asoc_array() {
 
-    : "Return true for associative array variable, whether empty or not"
+    : """Return true for associative array variable, whether empty or not"
 
     local -n __avt_arrnm__=${1:?variable name required}
 

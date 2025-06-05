@@ -2,7 +2,7 @@ str_split() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Split string into array elements
+        : """Split string into array elements
 
         Usage: str_split [-d delim] <array-name> [string] ...
 
@@ -23,7 +23,7 @@ str_split() {
           str_split -d '/' path_elems 'path/to/split'
 
         See Also: str_to_words, str_join_with
-        "
+        """
         docsh -TD
         return
     }

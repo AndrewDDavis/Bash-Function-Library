@@ -1,6 +1,6 @@
 diff-filenames() {
 
-    : "Compare filenames among directories
+    : """Compare filenames among directories
 
     Usage: diff-filenames [-s] <path1> <path2> [search-options]
 
@@ -20,7 +20,7 @@ diff-filenames() {
 
       # compare only regular files from two directories
       diff-dir_fns dir1 dir2 -type f
-    "
+    """
 
     local _s
     [[ ${1-} == -s ]] &&

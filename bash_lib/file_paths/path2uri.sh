@@ -1,6 +1,6 @@
 path2uri() {
 
-    : "Convert file path to URI using Python 3"
+    : """Convert file path to URI using Python 3"
 
     local p script
 

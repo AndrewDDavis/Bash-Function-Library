@@ -1,6 +1,6 @@
 ffmpeg-frames() {
 
-    : "Output video frame(s) as images
+    : """Output video frame(s) as images
 
     Usage: ffmpeg-frames <infile> <time> ...
 
@@ -14,7 +14,7 @@ ffmpeg-frames() {
         + '1:00' : 1 min
 
     - The output format will be '{video-name}-#.jpg'.
-    "
+    """
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

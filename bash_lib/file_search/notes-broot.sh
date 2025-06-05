@@ -1,6 +1,6 @@
 notes-broot() {
 
-    : "Use broot to quickly search for txt notes"
+    : """Use broot to quickly search for txt notes"
 
     # TODO:
     # - add options like food, home, etc for starting subdirs

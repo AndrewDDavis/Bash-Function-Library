@@ -9,7 +9,7 @@ alias du-fd='du-find --fd'
 
 du-find() {
 
-    : "Match files using find or fd, show disk usage with du
+    : """Match files using find or fd, show disk usage with du
 
         Usage: du-find [--fd] [find-or-fd-arguments]
 
@@ -22,7 +22,7 @@ du-find() {
         present, e.g. when doing '-prune -o \( ... -print0 \)'.
 
         With option --fd, the fd command is used to match files, rather than find.
-    "
+    """
 
 	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }

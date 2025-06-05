@@ -2,7 +2,7 @@ set_lscolors() {
 
     [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
 
-        : "Customize colours used by GNU ls, tree, and others
+        : """Customize colours used by GNU ls, tree, and others
 
             Usage
 
@@ -63,7 +63,7 @@ set_lscolors() {
 
             256-color sequences
             - https://user-images.githubusercontent.com/1482942/93023823-46a6ba80-f5e1-11ea-9ea3-6a3c757704f4.png
-        "
+        """
         docsh -TD
         return
     }

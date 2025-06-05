@@ -3,7 +3,7 @@ alias vid-trim='ffmpeg-trim'
 
 ffmpeg-trim() {
 
-    : "Trim video file, optionally without re-encoding
+    : """Trim video file, optionally without re-encoding
 
     Usage
 
@@ -33,7 +33,7 @@ ffmpeg-trim() {
 
     - All other arguments will be passed to ffmpeg as output file options, i.e.
       before the output file argument.
-    "
+    """
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

@@ -1,6 +1,6 @@
 calc-bc() {
 
-    : "Print result of math expression using bc
+    : """Print result of math expression using bc
 
     Usage: calc-bc [options] [--] <expression> ...
 
@@ -76,7 +76,7 @@ calc-bc() {
         # 6.00 (wrong)
         bc -l <<< 'x=(7/116)*100; scale=2; x/1'
         # 6.03 (correct)
-    "
+    """
 
     # defaults and option parsing
     local _sc=6 _fmt

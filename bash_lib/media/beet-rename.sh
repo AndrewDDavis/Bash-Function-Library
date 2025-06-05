@@ -1,11 +1,11 @@
 beet-rename() {
 
-    : "Rename files on disk, and update the path in the beets library
+    : """Rename files on disk, and update the path in the beets library
 
     Usage: beet-rename <oldpath> <newpath>
 
     beet will ask for confirmation first.
-    "
+    """
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

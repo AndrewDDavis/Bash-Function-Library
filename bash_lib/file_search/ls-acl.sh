@@ -3,10 +3,10 @@ alias ls-perms="ls-acl"
 
 ls-acl() {
 
-    : "List file ACLs
+    : """List file ACLs
 
         Runs 'getfacl -pt', with supplied CLI arguments.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

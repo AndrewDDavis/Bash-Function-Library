@@ -14,7 +14,7 @@ _getopts-tester() {
 
     [[ $# -eq 0 ]] || [[ $# -eq 1 && $1 == -h ]] && {
 
-        : "Examine and test the getopts builtin compared to the getopts_long function
+        : """Examine and test the getopts builtin compared to the getopts_long function
 
         Example usage:
 
@@ -71,7 +71,7 @@ _getopts-tester() {
           'a foo:'        --bar   1      ? (unset)     +1   0 msg: illegal option -- bar
           ':a foo:'       --bar   1      ? foobar      +1   0
           'a b foo'       --foo   1    foo (unset)     +1   0
-        "
+        """
         docsh -TD
         return
     }

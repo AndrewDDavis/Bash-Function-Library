@@ -1,6 +1,6 @@
 man-search() {
 
-    : "Report man pages that match a keyword
+    : """Report man pages that match a keyword
 
         Usage: man-search [options] [[--] man-options] <search-term>
 
@@ -27,7 +27,7 @@ man-search() {
           -w : wildcard (glob) search matching whole word
           -e : match against exact page names and descriptions
           -- : pass remaining args to man
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

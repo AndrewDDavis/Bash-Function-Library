@@ -17,7 +17,7 @@ complete -F _comp_complete_longopt \
 
 diff-u() {
 
-    : "Show a patch diff with colour in a pager
+    : """Show a patch diff with colour in a pager
 
     Usage: diff-u [diff-opts] file1 file2
 
@@ -25,7 +25,7 @@ diff-u() {
 
      -u : patch (3 unified context lines around changes)
      -s : report identical files
-    "
+    """
 
     diff -us --color=always "$@" | less -FR
 }

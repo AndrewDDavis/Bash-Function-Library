@@ -6,7 +6,7 @@ array_strrepl() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
 
-        : "Replace array element matching string with one or more new elements
+        : """Replace array element matching string with one or more new elements
 
         Usage: array_strrepl <array-name> <string> [elem1 [elem2 ...]]
 
@@ -14,7 +14,7 @@ array_strrepl() {
         then any further elements are added to follow. If no new elements are provided,
         the matching element is deleted. Indices following the replaced element
         are adjusted as explained by array_irepl().
-        "
+        """
         docsh -TD
         return
     }

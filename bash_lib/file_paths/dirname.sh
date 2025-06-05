@@ -2,7 +2,7 @@ dirname() {
 
     if [[ $# -eq 0  || $1 == @(-h|--help) ]]
     then
-        : "Strip last component from a file path
+        : """Strip last component from a file path
 
         Usage: dirname [option] <path> ...
 
@@ -33,7 +33,7 @@ dirname() {
 
           dirname stdio.h
           # .
-        "
+        """
         docsh -TD
         return
     elif [[ $1 == --version ]]

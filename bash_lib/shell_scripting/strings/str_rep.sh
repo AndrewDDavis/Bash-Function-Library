@@ -1,6 +1,6 @@
 str_rep() {
 
-    : "Print repetitions of a character or string.
+    : """Print repetitions of a character or string.
 
     Usage: str-rep <str> <n>
 

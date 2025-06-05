@@ -8,7 +8,7 @@ longopts() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Handle --long-opts and --key=value command line arguments
+        : """Handle --long-opts and --key=value command line arguments
 
         Usage
 
@@ -84,7 +84,7 @@ longopts() {
                     ( * ) err_msg 4 \"unexpected op: '\$flag', '\${OPTARG-}'\"; return  ;;
                 esac
             done
-        "
+        """
         docsh -TD
         return
     }

@@ -5,7 +5,7 @@ ps-pgrep() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-	    : "List selected processes and info using ps and pgrep commands
+	    : """List selected processes and info using ps and pgrep commands
 
             Usage: ps-pgrep [options] <ERE pattern>
 
@@ -57,7 +57,7 @@ ps-pgrep() {
             - introduce -k or --signal option to kill processes or send other signal once you have the
                   list you want
               -k [sig] : send signal to processes (default TERM, see /usr/bin/kill -L for a list)
-        "
+        """
         docsh -TD
 	    return
     }

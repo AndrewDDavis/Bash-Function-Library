@@ -21,7 +21,7 @@
 
 tarc() (
 
-    : "Copy or move files to a tar archive.
+    : """Copy or move files to a tar archive.
 
     Usage: tarc [opts] [--] [tar-opts] path1 [path2 ...]
 
@@ -158,7 +158,7 @@ tarc() (
 
 	  Options to the compression program may be passed using --options, e.g.:
 	  --options='compression-level=9'.
-    "
+    """
 
 	[[ $# -eq 0 || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }

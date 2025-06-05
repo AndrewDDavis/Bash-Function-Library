@@ -2,7 +2,7 @@
 
 _trap-tester() {
 
-    : "Test the functionality of Bash function traps
+    : """Test the functionality of Bash function traps
 
         This function is intended to troubleshoot and explore how commands and
         variables behave when used in a function trap. Here are the results
@@ -19,7 +19,7 @@ _trap-tester() {
         caller 0    |    # $? = 1 |   # $? = 1 |     # $? = 1 |     # $? = 1
         caller 1    |    # $? = 1 |   # $? = 1 |     # $? = 1 |     # $? = 1
         ( exit 13 ) |
-    "
+    """
 
     # avoid printing the trap for interactive completion functions
     # e.g. echo $SO<Tab>
@@ -29,7 +29,7 @@ _trap-tester() {
     trap -- '
         [[ -t 1  &&  -v FUNCNAME[0] ]] && {
             echo "ERR trap from ${FUNCNAME[0]}()" >&2
-            { printf '%s' "caller 1: "; caller 1; } >&2
+            { printf '%s' "caller 1: """; caller 1; } >&2
             return
         }
     ' ERR

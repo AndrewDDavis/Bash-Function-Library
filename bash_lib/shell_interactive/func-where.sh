@@ -1,6 +1,6 @@
 func-where() {
 
-    : "Show file path of a function definition
+    : """Show file path of a function definition
 
         Usage: func-where [-s] <func-name> ...
 
@@ -10,7 +10,7 @@ func-where() {
 
         If the -s option is passed, the function is re-imported by sourcing the
         relevant file path instead of printing it.
-    "
+    """
 
     # defaults and options
     local _s
@@ -84,7 +84,7 @@ func-where() {
         else
             # grep-style output
             [[ $# -gt 1 ]] &&
-                printf '%s' "${func_nm}: "
+                printf '%s' "${func_nm}: """
 
             printf '%s\n' "ln. $src_ln in '$src_fn'"
         fi

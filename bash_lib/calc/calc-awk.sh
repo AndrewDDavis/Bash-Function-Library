@@ -1,6 +1,6 @@
 calc-awk() {
 
-    : "Print result of math expression using awk
+    : """Print result of math expression using awk
 
     Usage: calc-awk [options] <expression> ...
 
@@ -40,7 +40,7 @@ calc-awk() {
 
       # sine of pi/4
       calc-awk 'pi=atan2(0, -1)' 'sin(pi/4)'
-    "
+    """
 
     # defaults and option parsing
     local _fmt='%.6g' awk_cmd

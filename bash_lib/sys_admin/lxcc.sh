@@ -5,7 +5,7 @@ then
     then
         lxcc() {
 
-            : "Administer LXD from a guest container"
+            : """Administer LXD from a guest container"
 
             sudo LXD_SOCKET=/root/lxd/termina_lxd.socket lxc "$@"
         }

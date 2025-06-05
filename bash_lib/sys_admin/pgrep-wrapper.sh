@@ -6,7 +6,7 @@ pgrep-wrapper() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-	    : "Call pgrep with common options
+	    : """Call pgrep with common options
 
             Usage: pgrep-wrapper [options] <ERE pattern>
 
@@ -26,7 +26,7 @@ pgrep-wrapper() {
 
               pgrep-showcli='pgrep -fa'
               pgrep-showname='pgrep -fl'
-        "
+        """
         docsh -TD
 	    return
     }

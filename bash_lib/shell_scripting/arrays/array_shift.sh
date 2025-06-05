@@ -4,7 +4,7 @@ import_func is_set_array is_idx_array seqi array_pop \
 
 array_shift() {
 
-    : "Remove initial array element(s) and decrement later indices
+    : """Remove initial array element(s) and decrement later indices
 
     Usage: array_shift <array-name> [number]
 
@@ -26,7 +26,7 @@ array_shift() {
 
       declare -p abcs
       # declare -a abc=([0]=\"d\" [1]=\"e\" [2]=\"f\")
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

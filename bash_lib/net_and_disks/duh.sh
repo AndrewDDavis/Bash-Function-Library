@@ -1,6 +1,6 @@
 duh() {
 
-    : "Print sorted disk usage of a directory tree
+    : """Print sorted disk usage of a directory tree
 
     Usage: duh [du-options] [path-root]
 
@@ -38,7 +38,7 @@ duh() {
 
       -x (--one-file-system)
       : do not cross file-system boundaries
-    "
+    """
 
 	[[ $# -eq 1  && $1 == @(-h|--help) ]] &&
     	{ docsh -TD; return; }

@@ -1,6 +1,6 @@
 diff-trees() {
 
-    : "Compare filenames between two filesystem trees
+    : """Compare filenames between two filesystem trees
 
     Usage: diff-trees <path1> <path2> [tree-options]
 
@@ -10,7 +10,7 @@ diff-trees() {
     of all containing directories for the unique files.
 
     See also diff-filenames.
-    "
+    """
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

@@ -26,7 +26,7 @@ ugrep-files() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Search for files by their content
+        : """Search for files by their content
 
         Usage: ugrep-files [opts] <pattern> [path-root ...]
 
@@ -152,7 +152,7 @@ ugrep-files() {
 
           --index
           : Speed up recursive searches by using index files created by 'ugrep-indexer'
-        "
+        """
         docsh -TD
         return
     }
@@ -302,7 +302,7 @@ ugrep-files() {
 
 #     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-#         : "Search file contents, display matching files as list or tree
+#         : """Search file contents, display matching files as list or tree
 
 #         Usage: grep-files [opts] <pattern> [path-root ...]
 

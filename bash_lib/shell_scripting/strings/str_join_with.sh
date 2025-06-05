@@ -2,7 +2,7 @@ str_join_with() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Join all arguments into a string using a delimiter
+        : """Join all arguments into a string using a delimiter
 
         Usage: str_join_with <delim> <elem1> <elem2> ...
 
@@ -27,7 +27,7 @@ str_join_with() {
         remembering the command line a bit fragile. One could also use a simple loop,
         but that takes a few more lines, so it's a good idea to use this function even
         in simple cases.
-        "
+        """
         docsh -TD
         return
     }

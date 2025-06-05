@@ -5,7 +5,7 @@
 
 tree-fromfiles() {
 
-    : "Print tree view of files passed on STDIN
+    : """Print tree view of files passed on STDIN
 
         Usage: tree-fromfiles [tree-options] < <( find -type f -print0 )
 
@@ -17,7 +17,7 @@ tree-fromfiles() {
           - Corrects tree's output to compensate for the filename removal, by
             deindenting lines, adding newlines before root dirs, and decrementing the
             directory count.
-    "
+    """
 
     # read null-delimited filenames from stdin, replace newlines with escape codes
     local file_list

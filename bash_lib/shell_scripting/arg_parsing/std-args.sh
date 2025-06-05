@@ -1,6 +1,6 @@
 std-args() {
 
-    : "Group arguments into arrays, setting aside some special ones
+    : """Group arguments into arrays, setting aside some special ones
 
         Usage: std-args A1 A2 S1 S2 [-s sf lf [-s ...]] [--] \"\$@\"
 
@@ -73,7 +73,7 @@ std-args() {
 
         # inspect results
         declare -p opt_arr posarg_arr spec_idcs spec_args _stdopts
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

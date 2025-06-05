@@ -6,13 +6,13 @@ array_max() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
 
-        : "Print maximum value from array
+        : """Print maximum value from array
 
         Usage: array_max <array name>
 
         Return status is 0 for success, 2 for more than 1 arg, 3 if the name is not a
         non-empty array, and 4 if an array element is not an integer.
-        "
+        """
         docsh -TD
         return
     }

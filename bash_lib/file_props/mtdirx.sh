@@ -1,6 +1,6 @@
 mtdirx() {
 
-    : "Test for an empty directory and use expressive return codes
+    : """Test for an empty directory and use expressive return codes
 
     Usage: mtdirx [-P] <path>
 
@@ -22,7 +22,7 @@ mtdirx() {
 
     Since this function uses the built-in \`test\` command rather than \`find\`, it
     does not rely on the user having read and execute permissions for the path.
-    "
+    """
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 

@@ -2,12 +2,12 @@ path_has() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Check whether path is already part of the PATH variable
+        : """Check whether path is already part of the PATH variable
 
         Usage: path_has <path> ...
 
         The function returns False if any of the paths are not on the PATH.
-        "
+        """
         docsh -DT
         return
     }

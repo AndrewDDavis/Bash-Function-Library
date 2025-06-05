@@ -5,7 +5,7 @@ import_func csi_strvars \
 _pr_colrz_docs() {
 
     # keep the docs outside the function to keep it as lean as possible
-    : "Apply terminal control sequences to format text, especially the prompt.
+    : """Apply terminal control sequences to format text, especially the prompt.
 
     Usage: prompt_colourize [options] s1 s2 s3
 
@@ -28,7 +28,7 @@ _pr_colrz_docs() {
 
     See the \"Terminal Control Sequences\" section of my Shell and Terminal Emulators
     notes file, and the \"Prompt\" section for the particulars of prompt strings.
-    "
+    """
     docsh -TD
     return
 }

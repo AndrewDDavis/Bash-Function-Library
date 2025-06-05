@@ -3,12 +3,12 @@
     # ytree: classic TUI file manager
     yt() {
 
-        : "wrapper function to run ytree, then cd on exit
+        : """wrapper function to run ytree, then cd on exit
 
             Usage: ytree [archive file|directory]
 
             - exit with ^Q
-        "
+        """
 
         local yt_file yt_cmd
 

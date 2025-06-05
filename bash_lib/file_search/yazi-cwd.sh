@@ -6,7 +6,7 @@
 
     yazi-cwd()
     {
-        : "cd to a directory after running yazi"
+        : """cd to a directory after running yazi"
 
     	local cwd tmpfn
 

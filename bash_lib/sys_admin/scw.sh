@@ -5,7 +5,7 @@ import_func run_vrb array_strrepl array_pop \
 # aliases
 scw-lsmounts() {
 
-    : "list interesting mounts and gvfs services, with headers and styling"
+    : """list interesting mounts and gvfs services, with headers and styling"
 
     # use sed to trim the output after the first blank line
     scw -u lsu-all --color 'gvfs-*' '*.mount' \
@@ -15,7 +15,7 @@ scw-lsmounts() {
 
 scw-lssocks() {
 
-    : "list sockets from both user and system contexts"
+    : """list sockets from both user and system contexts"
 
     # user and system contexts give separate lists
     scw -s list-sockets --all \
@@ -28,7 +28,7 @@ scw() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Run systemctl command lines
+        : """Run systemctl command lines
 
         Usage: scw [context] [VAR=value] [command] [arguments ...]
 
@@ -166,7 +166,7 @@ scw() {
 
           # show all nuances of dependencies for a unit (wanted, requiers, after, ...)
           scw [-u] show <unit>
-        "
+        """
         docsh -DT
         return
     }

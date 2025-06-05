@@ -41,7 +41,7 @@
 
 tarx() {
 
-    : "Extract files from a tar archive
+    : """Extract files from a tar archive
 
     Usage: tarx [options] <archive> [path ...]
 
@@ -88,7 +88,7 @@ tarx() {
 
 	  Options to the compression program may be passed using --options, e.g.:
 	  --options='compression-level=9'.
-    "
+    """
 
 	[[ $# -eq 0  || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }

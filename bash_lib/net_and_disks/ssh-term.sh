@@ -1,6 +1,6 @@
 ssh-term() {
 
-    : "Send TERM_PROGRAM, so tab titles can work properly on ChromeOS Terminal.
+    : """Send TERM_PROGRAM, so tab titles can work properly on ChromeOS Terminal.
 
         Usage: ssh-term [options] user@host
 
@@ -28,7 +28,7 @@ ssh-term() {
           - This indicates that sshd, on user authentication, does more than just drop
             the user into a shell. This may have to do with PAM authentication modules. See
             the login process section of \`man sshd\` for details.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { dosh -TD; return; }

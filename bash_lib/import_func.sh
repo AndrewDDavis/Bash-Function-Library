@@ -7,7 +7,7 @@ import_func() {
     # function docs (relies on docsh imported below)
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Import a function to use in a script or interactive shell
+        : """Import a function to use in a script or interactive shell
 
         Usage
 
@@ -80,7 +80,7 @@ import_func() {
           # in .bashrc
 
           BASH_FUNCLIB=~/.bashrc.d import_func -a
-        "
+        """
         docsh -TD
         return
     }

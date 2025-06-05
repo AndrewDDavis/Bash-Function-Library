@@ -10,10 +10,10 @@ prompt_cwd_or_status() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print string for PS1, depending on return status of previous command
+        : """Print string for PS1, depending on return status of previous command
 
         Usage: prompt_cwd_or_status \$?
-        "
+        """
         docsh -TD
         return
     }
@@ -45,7 +45,7 @@ prompt_cwd_or_status() {
 __scwd_docs() {
 
     # keep the docs out of the func defn to keep it lean
-    : "Print truncated working directory path for use in PS1
+    : """Print truncated working directory path for use in PS1
 
     Usage: _shrtn_cwd [options ...]
 
@@ -95,7 +95,7 @@ __scwd_docs() {
     # now, with 'cd -L ..', prompt and PWD would return to /etc
     # however 'ls ..' lists the contents of d1
     # also 'mkdir ../d3' creates the directory /etc/d1/d3, not /etc/d3!
-    "
+    """
     docsh -TD
 }
 
@@ -245,11 +245,11 @@ _shrtn_cwd() {
 
 _ret_statstr() {
 
-    : "Usage: _ret_statstr <n> <code>
+    : """Usage: _ret_statstr <n> <code>
 
     - n is the target number of characters for the string
     - code is the return status code of the previous command
-    "
+    """
 
     # Define variables for control sequence codes
     #

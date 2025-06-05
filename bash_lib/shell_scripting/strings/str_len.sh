@@ -1,6 +1,6 @@
 str_len() {
 
-    : "Print lengths of strings passed as input, 1 per line"
+    : """Print lengths of strings passed as input, 1 per line"
 
     # TODO: ignore ANSI formatting characters
 

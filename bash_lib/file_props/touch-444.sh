@@ -3,14 +3,14 @@ alias mk444='touch-444'
 
 touch-444() {
 
-    : "Create a file and give it world-readable permissions
+    : """Create a file and give it world-readable permissions
 
         Usage: touch-444 [-f] <file-name ...>
 
         Options
 
           -f : perform chmod, even if the file exists
-    "
+    """
 
     # option parsing
     local _f

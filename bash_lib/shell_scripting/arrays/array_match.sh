@@ -11,7 +11,7 @@ array_match () {
     # function docs
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
 
-        : "Test array elements for match to a pattern
+        : """Test array elements for match to a pattern
 
         Usage: array_match [options ...] <array-name> <pattern>
 
@@ -75,7 +75,7 @@ array_match () {
           # number of elements with an s
           array_match -sc arr 's'
           # 3
-        "
+        """
         docsh -TD
         return
     }

@@ -1,6 +1,6 @@
 mtdir() {
 
-    : "Test for an empty directory
+    : """Test for an empty directory
 
     Usage: mtdir [-P] <path>
 
@@ -12,7 +12,7 @@ mtdir() {
 
     If the path is a symlink, mtdir normally follows it to evaluate the file it points
     to. To cause symlinks to produce a failed test, use the -P option.
-    "
+    """
     [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
 

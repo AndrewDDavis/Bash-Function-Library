@@ -4,7 +4,7 @@ import_func is_set_array is_idx_array array_sort argmax \
 
 array_pop() {
 
-    : "Remove array element(s) and decrement later indices
+    : """Remove array element(s) and decrement later indices
 
     Usage: array_pop <array-name> [index ...]
 
@@ -28,7 +28,7 @@ array_pop() {
 
       declare -p abcs
       # declare -a abcs=([0]=\"b\" [1]=\"d\" [2]=\"e\" [3]=\"f\")
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

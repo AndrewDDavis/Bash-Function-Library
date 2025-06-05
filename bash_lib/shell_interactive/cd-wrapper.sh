@@ -4,7 +4,7 @@ cd-wrapper() {
 
     [[ ${1-} == @(-h|--help) ]] && {
 
-        : "Change the working directory and update the directory stack
+        : """Change the working directory and update the directory stack
 
         Usage
 
@@ -82,7 +82,7 @@ cd-wrapper() {
 
           popd +N
           : remove the Nth dir from the stack
-        "
+        """
         docsh -TD
         return
     }

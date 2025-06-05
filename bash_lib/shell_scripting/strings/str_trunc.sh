@@ -1,6 +1,6 @@
 str_trunc() {
 
-    : "Shorten a string, substituting '...'.
+    : """Shorten a string, substituting '...'.
 
         Usage: str_trunc [opts] <n> <str>
 
@@ -16,7 +16,7 @@ str_trunc() {
         Example
 
           str_trunc 12 the_path_to_shorten
-    "
+    """
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

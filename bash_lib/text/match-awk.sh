@@ -1,6 +1,6 @@
 match-awk() {
 
-    : "Test for pattern match using awk
+    : """Test for pattern match using awk
 
         Usage: match-awk 'pattern' <<< test-string
 
@@ -14,7 +14,7 @@ match-awk() {
           -a : when used with -p, print all matching lines
 
         Returns 0 (true) for a match, or 1 for no match.
-    "
+    """
 
     # defaults and option parsing
     local _a=0 _p=0

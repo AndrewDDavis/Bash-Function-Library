@@ -2,7 +2,7 @@ path_check_add () {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Check directory existence and add to PATH variable
+        : """Check directory existence and add to PATH variable
 
         Usage: path_check_add [options] path [path2 [path3 ...]]
 
@@ -16,7 +16,7 @@ path_check_add () {
         -o       : adds only one (the first existing) of multiple path arguments
         -q       : suppress warning in the event that path is already in PATH
         -s <s>   : add subdirectories named <s>, to maxdepth 3
-        "
+        """
         docsh -DT
         return
     }

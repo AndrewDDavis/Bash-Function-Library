@@ -2,12 +2,12 @@ argmax() {
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
 
-        : "Print maximum value of arguments
+        : """Print maximum value of arguments
 
         Usage: argmax <number> ...
 
         Integers only.
-        "
+        """
         docsh -TD
         return
     }

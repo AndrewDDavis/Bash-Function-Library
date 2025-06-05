@@ -3,7 +3,7 @@ alias man='man-wrapper'
 
 man-wrapper() {
 
-    : "Limit man page width on wide terminals
+    : """Limit man page width on wide terminals
 
         Usage: man-wrapper [--mw=<n>] [man-options] name ...
 
@@ -25,7 +25,7 @@ man-wrapper() {
 
         All other arguments are passed to man as usual. To view the help page for man,
         use '/bin/man -h' or 'command man -h'.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -DT; return; }

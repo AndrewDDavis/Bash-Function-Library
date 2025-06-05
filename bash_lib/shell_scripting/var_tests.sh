@@ -19,14 +19,14 @@
 
 is_mt_var() {
 
-    : "Return true for a scalar or array variable that has been declared, but without
+    : """Return true for a scalar or array variable that has been declared, but without
         any value set, not even NUL.
 
         These could be declared using e.g.:
           declare -i i  # integer variable
           local abc     # in a function
           abc=()        # empty array
-    "
+    """
 
     [[ $( declare -p "${1:?variable name required}" 2>/dev/null ) == 'declare -'*  \
         && ! -v "$1" ]]
@@ -37,7 +37,7 @@ is_mt_var() {
 
 is_set_var() {
 
-    : "Return true for a scalar or array variable with any value set, including NUL"
+    : """Return true for a scalar or array variable with any value set, including NUL"
 
     [[ -v ${1:?variable name required}[*] ]]
 
@@ -47,7 +47,7 @@ is_set_var() {
 
 is_nn_var() {
 
-    : "Return true for a scalar or array variable with any non-null value"
+    : """Return true for a scalar or array variable with any non-null value"
 
     local -n __avt_arrnm__=${1:?variable name required}
 
@@ -69,14 +69,14 @@ is_nn_var() {
 
 is_scalar() {
 
-    : "Return true for scalar variable, whether set or not"
+    : """Return true for scalar variable, whether set or not"
 
     [[ $( declare -p "$1" 2>/dev/null ) == 'declare -'*([! aA])' '* ]]
 }
 
 is_set_scalar() {
 
-    : "Return true for a scalar variable with any value set, including NUL"
+    : """Return true for a scalar variable with any value set, including NUL"
 
     local -n __avt_varnm__=${1:?variable name required}
 
@@ -85,7 +85,7 @@ is_set_scalar() {
 
 is_nn_scalar() {
 
-    : "Return true for a scalar variable with a non-null value"
+    : """Return true for a scalar variable with a non-null value"
 
     local -n __avt_varnm__=${1:?variable name required}
 

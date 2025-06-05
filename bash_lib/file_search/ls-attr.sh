@@ -3,10 +3,10 @@ alias ls-xattr="ls-attr"
 
 ls-attr() {
 
-    : "List file extended attributes, including system ones
+    : """List file extended attributes, including system ones
 
         Runs 'getfattr -d -m -', followed by supplied CLI arguments.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

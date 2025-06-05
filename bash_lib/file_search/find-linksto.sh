@@ -4,7 +4,7 @@ import_func physpath array_from_find \
 
 find-linksto() {
 
-    : "Print symlinks pointing to a directory or file
+    : """Print symlinks pointing to a directory or file
 
     Usage: find-linksto <pattern> <search-root>
 
@@ -21,7 +21,7 @@ find-linksto() {
 
       # find all links within the user's .local directory
       find-linksto . ~/.local
-    "
+    """
 
     [[ $# -ne 2  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }

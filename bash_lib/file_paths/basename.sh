@@ -2,7 +2,7 @@ basename() {
 
     if [[ $# -eq 0  || $1 == @(-h|--help) ]]
     then
-        : "Strip leading directories and suffix from file paths
+        : """Strip leading directories and suffix from file paths
 
         Usage
 
@@ -49,7 +49,7 @@ basename() {
           basename -a any/str1 any/str2
           # str1
           # str2
-        "
+        """
         docsh -TD
         return
     elif [[ $1 == --version ]]

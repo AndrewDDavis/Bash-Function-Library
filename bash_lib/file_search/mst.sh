@@ -1,6 +1,6 @@
 mst() {
 
-    : "Search for files using mate-search-tool
+    : """Search for files using mate-search-tool
 
     Usage: mst [options] [pattern [root-dir]]
 
@@ -20,7 +20,7 @@ mst() {
     For documentation of all options, refer to the \`mate-search-tool\` manpage. For
     more complete documentation of the application, refer to 'Search for Files' in the
     Gnome help browser application.
-    "
+    """
 
     [[ ${1-} == @(-h|--help) ]] &&
         { docsh -TD; return; }

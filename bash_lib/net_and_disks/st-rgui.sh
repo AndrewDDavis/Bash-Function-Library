@@ -1,12 +1,12 @@
 st-rgui() {
 
-    : "Start remote syncthing GUI in browser
+    : """Start remote syncthing GUI in browser
 
     Usage: st-rgui [-n]
 
       - with '-n' connects from outside the Hawthorne network
       - currently, always connects to nemo
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] &&
 	    { docsh -TD; return; }

@@ -2,7 +2,7 @@ path_check_symlink() {
 
     [[ $# -lt 2  || $1 == @(-h|--help) ]] && {
 
-        : "Check whether two paths are symlinked, and both on PATH
+        : """Check whether two paths are symlinked, and both on PATH
 
         Usage: path_check_symlink [options] <path1> <path2>
 
@@ -10,7 +10,7 @@ path_check_symlink() {
 
           -q : suppress warning if paths are symlinked
           -r : remove path2 if paths are symlinked
-        "
+        """
         docsh -DT
         return
     }
