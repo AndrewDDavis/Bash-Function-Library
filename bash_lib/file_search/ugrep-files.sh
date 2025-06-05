@@ -14,6 +14,10 @@
 #   testing matrix:
 #   'ugrep-files -tTi attachment' from '~/Documents/Health...' dir
 #   'ugrep-files -i truecrypt' from '~/Documents/Computing...' dir
+#
+# - make an option to send the file matches to an array, as in:
+#
+#   mapfile -t aaa < <( ugrep-files 'pattern' )
 
 # dependencies
 import_func run_vrb \
