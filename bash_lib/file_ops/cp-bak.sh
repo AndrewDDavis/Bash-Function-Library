@@ -5,9 +5,9 @@ cp-bak() (
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Create simple file backup copies
+        docsh -TD """Create simple file backup copies
 
-        Usage : ${FUNCNAME[0]} [opts] [--] [cp-opts] <filename> ...
+        Usage : cp-bak [opts] [--] [cp-opts] <filename> ...
 
         Options (unrecognized options are passed on to cp):
 
@@ -29,7 +29,7 @@ cp-bak() (
           -v
           : show result of copy using 'ls -l' (-vv to also show verbose copy op)
 
-        ${FUNCNAME[0]} makes a copy of each filename, creating a unique file name by
+        cp-bak makes a copy of each filename, creating a unique file name by
         appending .bak and possibly an integer, as necessary. The copy is performed
         using 'cp -pi' by default, to preserve permissons and modification times, and
         not clobber existing files.
@@ -40,7 +40,7 @@ cp-bak() (
         This function is intended for simple file backups, e.g. when editing config
         files, to allow quick reversion of changes. For a full incremental backup
         solution, use e.g. borg-go or tar.
-        "
+        """
         return 0
     }
 

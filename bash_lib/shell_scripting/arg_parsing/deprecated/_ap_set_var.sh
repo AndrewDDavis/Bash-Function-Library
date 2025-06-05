@@ -4,13 +4,13 @@ _ap_set_var() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Get required arg from lumped string or next arg.
+        docsh -TD """Get required arg from lumped string or next arg.
 
         Usage: _ap_set_var <var-name> \"\${1:-}\" || shift
 
         Hint: check out _arg_def instead
 
-        "
+        """
         return 0
     }
 

@@ -2,15 +2,15 @@ svg2png() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-	    docsh -TD "convert svg to png
+        docsh -TD """Convert svg to png
 
-	    Uses rsvg-convert, from the librsvg2-bin package
+            Uses rsvg-convert, from the librsvg2-bin package
 
-	    Usage: svg2png [options] infile.svg outfile.png
+            Usage: svg2png [options] infile.svg outfile.png
 
-        Produces 512 x 512 by default, use -w and -h to change.
-    	"
-	    return 0
+            Produces 512 x 512 by default, use -w and -h to change.
+        """
+        return 0
     }
 
     local ifn=${@: -2 : 1 }

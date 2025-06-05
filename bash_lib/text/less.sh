@@ -65,7 +65,7 @@ export LESSHISTFILE="${XDG_DATA_HOME:-$HOME/.local/share}"/less/lesshst
 lessx() {
 
     [[ $# -gt 0 && $1 =~ ^(-h|--help)$ ]] && {
-        docsh -T "
+        docsh -T """
         Run $(command -v less)
         # attempted to do limited line length, but it looked bad...
 
@@ -84,7 +84,7 @@ lessx() {
         Up/Down    : forward/backward by line
         Left/Right : scroll sideways by half-window (or to end with Ctrl-)
         PgDn/PgUp  : forward/backward by window
-        "
+        """
         return 0
     }
 
@@ -112,7 +112,7 @@ then
 
         [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-            docsh -TD "View source code in less with syntax highlighting
+            docsh -TD """View source code in less with syntax highlighting
 
             Usage
 
@@ -133,7 +133,7 @@ then
                 + bright with xterm256 (light BG)
             - When using ansi output format, there is only 1 (hard-coded)
                 colour theme.
-            "
+            """
             return 0
         }
 

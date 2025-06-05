@@ -4,7 +4,7 @@ _arg_lumper() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Parse a positional argument by splitting it, or just cycle the lump
+        docsh -TD """Parse a positional argument by splitting it, or just cycle the lump
 
         Usage: ${FUNCNAME[0]} opt lump \"\${1:-}\"
 
@@ -110,7 +110,7 @@ _arg_lumper() {
 
               [[ -z \${lump:-} ]] && shift
           done
-        "
+        """
         return 0
     }
 
@@ -170,7 +170,7 @@ _arg_def() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Define named var from \`lump\` or next positional arg.
+        docsh -TD """Define named var from \`lump\` or next positional arg.
 
         Usage: ${FUNCNAME[0]} <var-name> lump \"\$@\"
 
@@ -184,7 +184,7 @@ _arg_def() {
               ( f )  ${FUNCNAME[0]} foo lump \"\$@\" || shift
 
           # ...
-        "
+        """
         return 0
     }
 
@@ -214,13 +214,13 @@ _arg_addto_arrvar() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Used in arg-parsing, like _arg_def, but add required arg to array.
+        docsh -TD """Used in arg-parsing, like _arg_def, but add required arg to array.
 
         Usage: _ap_add_arrvar <var-name> lump \"\${1:-}\" || shift
 
         Like _arg_def, returns 0 if the value is taken from \`lump\`, or 1 if taken from
         next arg.
-        "
+        """
         return 0
     }
 

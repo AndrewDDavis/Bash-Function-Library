@@ -1,12 +1,10 @@
-# Pandoc for text file conversion
-
 mdconv() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Convert markdown text files to different formats
+        docsh -TD """Convert markdown text files to different formats
 
-        Function relies on pandoc. Creates a file with the same name, but adds
+        mdconv relies on pandoc. Creates a file with the same name, but adds
         '_converted_' and changes the extension. The extension used for Markdown is
         '.md.txt'.
 
@@ -14,13 +12,13 @@ mdconv() {
 
         RTF/ODT/HTML to Markdown (Commonmark with extensions):
 
-          ${FUNCNAME[0]} md <file.rtf>
+          mdconv md <file.rtf>
 
         Markdown to RTF/ODT/HTML/PDF (use lower-case):
 
-          ${FUNCNAME[0]} rtf <file.md>
+          mdconv rtf <file.md>
 
-        "
+        """
         return 0
     }
 

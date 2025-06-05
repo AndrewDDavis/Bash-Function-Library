@@ -2,21 +2,21 @@ man-web() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-	    docsh -TD "Read man pages from the web
+        docsh -TD """Read man pages from the web
 
-	    Uses text based browsers links2 or w3m.
+        Uses text based browsers links2 or w3m.
 
-	    Usage: man-web [-u] name
+        Usage: man-web [-u] name
 
-	    Options
+        Options
 
           -u: use ubuntu source (default debian)
 
-	    Example
+        Example
 
-	      man-web w3m
-	    "
-	    return 0
+          man-web w3m
+        """
+        return 0
     }
 
     local url="https://manpages.debian.org/jump?q="

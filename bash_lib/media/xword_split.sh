@@ -1,11 +1,17 @@
 # MuTool process PDF
 xword_split() {
-    (( $# == 0 )) && {
-        docsh "Split a large (newspaper) page into 4 quadrants
+
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
+
+        docsh -TD """Split a large (newspaper) page into 4 quadrants
+
             Usage: xword_split <full-page.pdf>
+
             Outputs:
-            - xword_pages.pdf with each quadrant as a separate page.
-            - xword_kenyptic.pdf with only quadrants 3 and 4."
+
+              - xword_pages.pdf with each quadrant as a separate page.
+              - xword_kenyptic.pdf with only quadrants 3 and 4.
+        """
         return 0
     }
 

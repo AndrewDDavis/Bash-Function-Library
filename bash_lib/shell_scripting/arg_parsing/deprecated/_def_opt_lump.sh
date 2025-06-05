@@ -4,7 +4,7 @@ _def_opt_lump() {
 
     [[ $# -eq 0 ]] && {
 
-        docsh -TD "Define variables 'opt' and 'lump' when parsing arguments
+        docsh -TD """Define variables 'opt' and 'lump' when parsing arguments
 
         Usage: ${FUNCNAME[0]} \"\$1\"
 
@@ -42,7 +42,7 @@ _def_opt_lump() {
               shift
               unset opt lump
           done
-        "
+        """
         return 0
     }
 
@@ -79,7 +79,7 @@ _split_opt_lump() {
 
     [[ $# -eq 0 ]] && {
 
-        docsh -TD "Split a positional argument into 'opt' and 'lump' parts
+        docsh -TD """Split a positional argument into 'opt' and 'lump' parts
 
         Usage:  IFS=\$'\\n' read -rd '' opt lump < <( ${FUNCNAME[0]} \"\$1\" )
 
@@ -117,7 +117,7 @@ _split_opt_lump() {
               shift
               unset opt lump
           done
-        "
+        """
         return 0
     }
 
@@ -155,12 +155,11 @@ _split_opt_lump() {
     printf '%s\n' "$opt" "${lump:-}"
 }
 
-
 _ap_add_arrvar() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Like _ap_set_var, but add required arg to array
+        docsh -TD """Like _ap_set_var, but add required arg to array
 
         Usage: _ap_add_arrvar <var-name> \"\${1-}\" || shift
 
@@ -171,7 +170,7 @@ _ap_add_arrvar() {
           - _arg_addto_arrvar
 
         Hint: call _arg_addto_arrvar instead.
-        "
+        """
         return 0
     }
 

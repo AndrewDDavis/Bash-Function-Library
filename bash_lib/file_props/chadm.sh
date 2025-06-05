@@ -2,7 +2,7 @@ chadm() {
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] && {
 
-        docsh -TD "Make a file or directory editable by an admin group.
+        docsh -TD """Make a file or directory editable by an admin group.
 
         This is meant to reduce overuse and abuse of sudo, by allowing an admin group to
         edit files without needing elevated priviledges. CAUTION: don't use this on the
@@ -15,7 +15,7 @@ chadm() {
 
         Usage
 
-          ${FUNCNAME[0]} [options] _path_ ...
+          chadm [options] _path_ ...
 
         The _path_ is a regular file or directory to modify. Multiple paths may be
         passed.
@@ -27,7 +27,7 @@ chadm() {
 
           -r
           : change the owner to root (by default, doesn't modify the owner)
-        "
+        """
         return 0
     }
 

@@ -8,13 +8,13 @@
 
 helpm() {
 
-    : "Display help pages for shell builtins or functions in a pager
+    : """Display help pages for shell builtins or functions in a pager
 
     Uses the value of \$PAGER or 'less', with formatting as if they're man pages. Uses
     'docsh' to get the help text for functions.
 
     Usage: helpm <command>
-    "
+    """
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }

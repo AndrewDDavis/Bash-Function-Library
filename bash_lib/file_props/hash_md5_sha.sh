@@ -2,16 +2,16 @@ md5sum-mk() {
 
     if [[ $# -eq 0 || $1 == @(-h|--help) ]]
     then
-        docsh -TD "Create md5 checksum file(s)
+        docsh -TD """Create md5 checksum file(s)
 
-        Usage: ${FUNCNAME[0]} <filename> ...
+        Usage: md5sum-mk <filename> ...
 
         For each passed file, creates file at same path, with '.md5' added to the name.
 
         To check a file, run:
 
           md5sum -c file.md5
-        "
+        """
         return 0
     fi
 

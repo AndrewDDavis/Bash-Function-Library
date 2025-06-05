@@ -1,10 +1,10 @@
 # gedit editor
 gedit-adm() (
     [[ $# -eq 0 || $1 =~ ^(-h|--?help)$ ]] && {
-        docsh -TD "Edit file(s) as root using gedit
+        docsh -TD """Edit file(s) as root using gedit
         
         Usage: gedit-adm file1 [file2 ...]
-        "
+        """
         return
     }
     
