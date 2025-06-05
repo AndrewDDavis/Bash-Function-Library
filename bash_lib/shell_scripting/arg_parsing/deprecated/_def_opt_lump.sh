@@ -6,7 +6,7 @@ _def_opt_lump() {
 
         docsh -TD """Define variables 'opt' and 'lump' when parsing arguments
 
-        Usage: ${FUNCNAME[0]} \"\$1\"
+        Usage: _def_opt_lump \"\$1\"
 
         - For an argument like \`-a\`, sets \`opt=a\` and \`lump\` remains unset.
         - For an argument like \`--foo\`, sets \`opt=foo\` and \`lump\` remains unset.
@@ -21,7 +21,7 @@ _def_opt_lump() {
 
           while [[ \${1:-} == -* ]]
           do
-              ${FUNCNAME[0]} \"\$1\" || { shift; break; }
+              _def_opt_lump \"\$1\" || { shift; break; }
 
               while [[ -n \${opt:-} ]]
               do
@@ -81,7 +81,7 @@ _split_opt_lump() {
 
         docsh -TD """Split a positional argument into 'opt' and 'lump' parts
 
-        Usage:  IFS=\$'\\n' read -rd '' opt lump < <( ${FUNCNAME[0]} \"\$1\" )
+        Usage:  IFS=\$'\\n' read -rd '' opt lump < <( _split_opt_lump \"\$1\" )
 
         - For an argument like \`-a\`, outputs only \`a\`.
         - For an argument like \`--foo\`, outputs only \`foo\`.
@@ -96,7 +96,7 @@ _split_opt_lump() {
 
           while [[ \${1:-} == -* ]]
           do
-              IFS=\$'\\n' read -rd '' opt lump < <( ${FUNCNAME[0]} \"\$1\" )
+              IFS=\$'\\n' read -rd '' opt lump < <( _split_opt_lump \"\$1\" )
 
               while [[ -n \${opt:-} ]]
               do

@@ -6,9 +6,9 @@ _arg_lumper() {
 
         docsh -TD """Parse a positional argument by splitting it, or just cycle the lump
 
-        Usage: ${FUNCNAME[0]} opt lump \"\${1:-}\"
+        Usage: _arg_lumper opt lump \"\${1:-}\"
 
-        ${FUNCNAME[0]} sets the opt and lump variables in the following ways:
+        _arg_lumper sets the opt and lump variables in the following ways:
 
         | Type        | E.g.      |  opt | lump |
         | ----------- | --------- | ---- | ---- |
@@ -19,11 +19,11 @@ _arg_lumper() {
         | Special     |         - |    - |      |
         | Special     |        -- |   -- |      |
 
-        Moreover, if \`lump\` is set to a non-empty value when ${FUNCNAME[0]} is called,
+        Moreover, if \`lump\` is set to a non-empty value when _arg_lumper is called,
         \`opt\` will be set to the first character of \`lump\` and \`lump\` will be set
         to the remaining characters, without using the positional argument provided.
 
-        After running ${FUNCNAME[0]} to parse an argument, a case statement should
+        After running _arg_lumper to parse an argument, a case statement should
         follow to take appropriate actions depending on the value of opt. When opt
         indicates that an argument is due, _arg_def should be used to get the value,
         either from the next arg or the lump.
@@ -47,7 +47,7 @@ _arg_lumper() {
 
 
 
-        ${FUNCNAME[0]} returns code 0 (true) if there is a non-empty lump, or if the
+        _arg_lumper returns code 0 (true) if there is a non-empty lump, or if the
         first positional arg starts with '-'. Otherwise, it returns 1 (false).
 
 
@@ -70,7 +70,7 @@ _arg_lumper() {
           # Parse command-line arguments
           local opt lump
 
-          while ${FUNCNAME[0]} opt lump \"\$@\"
+          while _arg_lumper opt lump \"\$@\"
           do
               case \$opt in
                   ( -- )
@@ -115,7 +115,7 @@ _arg_lumper() {
     }
 
     [[ $# -lt 3 ]] && {
-        err_msg 2 "Usage: ${FUNCNAME[0]} opt lump \"\${1:-}\""
+        err_msg 2 "Usage: _arg_lumper opt lump \"\${1:-}\""
         return 2
     }
 
@@ -172,7 +172,7 @@ _arg_def() {
 
         docsh -TD """Define named var from \`lump\` or next positional arg.
 
-        Usage: ${FUNCNAME[0]} <var-name> lump \"\$@\"
+        Usage: _arg_def <var-name> lump \"\$@\"
 
         Returns 0 if the value is taken from \`lump\`, or 1 if taken from next arg.
 
@@ -181,7 +181,7 @@ _arg_def() {
           # ... as in _arg_lumper
 
           case \$opt in
-              ( f )  ${FUNCNAME[0]} foo lump \"\$@\" || shift
+              ( f )  _arg_def foo lump \"\$@\" || shift
 
           # ...
         """

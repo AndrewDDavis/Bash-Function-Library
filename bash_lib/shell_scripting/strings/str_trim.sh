@@ -13,13 +13,13 @@ str_trim() {
           str=\$'\\t\\t abc def '
           printf ' :%s:\n' \"\$( echo \"\$str\" )\"
           # :                abc def :
-          printf ' :%s:\n' \"\$( ${FUNCNAME[0]} \"\$str\" )\"
+          printf ' :%s:\n' \"\$( str_trim \"\$str\" )\"
           # :abc def:
 
           # can be similarly used as ...
-          echo \"\$str\" | ${FUNCNAME[0]}
-          ${FUNCNAME[0]} < <( echo \"\$str\" )
-          ${FUNCNAME[0]} <<< \"\$str\"
+          echo \"\$str\" | str_trim
+          str_trim < <( echo \"\$str\" )
+          str_trim <<< \"\$str\"
         """
         docsh -TD
         return
