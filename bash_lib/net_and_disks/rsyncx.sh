@@ -8,7 +8,7 @@ alias rsync-check='rsyncx --diff'
 
 rsyncx() {
 
-    :  "Wrapper function for rsync with useful modes
+    : """Wrapper function for rsync with useful modes
 
         Usage: rsyncx [rsync-opts] SRC [... DEST]
 
@@ -158,7 +158,7 @@ rsyncx() {
         named '.rsync-filter'. With -F, the .rsync-filter files may be found in parent
         directories of the transfer root, as well as its subdirectories. Refer to the
         MERGE-FILE FILTER RULES section of the rsync manpage.
-    "
+    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }

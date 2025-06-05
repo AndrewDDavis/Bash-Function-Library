@@ -1,6 +1,6 @@
 ping-ci() {
 
-    docstr="""ping 10 times at 250 ms
+    : """ping 10 times at 250 ms
 
     Usage
 
@@ -11,11 +11,8 @@ ping-ci() {
     """
 
     # print docstrings
-    [[ $# -eq 0 || $1 =~ ^(-h|--help)$ ]] && {
-
-        docsh -TD "$docstr"
-        return 0
-    }
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return 0; }
 
     # parse args, define vars
     local opts=(-c 10 -i 0.25)
