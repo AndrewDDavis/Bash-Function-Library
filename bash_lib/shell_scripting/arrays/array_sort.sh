@@ -53,3 +53,7 @@ array_sort() {
     mapfile -d '' __as_arrnm__ \
         < <( "${sort_cmd[@]}" <( printf '%s\0' "${__as_arrnm__[@]}" ) )
 }
+
+# TODO:
+# - see the Awk example of insertion sort algorithm; nice and simple, could be
+#   implemented in shell code
