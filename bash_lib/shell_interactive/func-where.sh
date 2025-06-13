@@ -9,7 +9,7 @@ func-where() {
         to get the information.
 
         If the -s option is passed, the function is re-imported by sourcing the
-        relevant file path instead of printing it.
+        relevant file instead of printing the path.
     """
 
     # defaults and options
@@ -74,17 +74,51 @@ func-where() {
         src_fn=${BASH_REMATCH[3]}
         src_ln=${BASH_REMATCH[2]}
 
-        # source if requested
         if [[ -v _s ]]
         then
+            # source, if requested
             src_cmd=( builtin source "$src_fn" )
             printf >&2 '%s\n' "${PS4}${src_cmd[*]}"
             "${src_cmd[@]}"
 
         else
-            # grep-style output
+            # print
+
+            # check source line
+            # - NB, if there a sub-functions defined within the function, declare -F will
+            #   return the line-no for one of those! Yikes, better check.
+            # - per bash manpage:
+            #   fname () compound-command [redirection]
+            #   function fname [()] compound-command [redirection]
+            local funcdef_ptn="^[[:blank:]]*("
+            funcdef_ptn+="${func_nm}[[:blank:]]*\\(\\)"
+            funcdef_ptn+="|function[[:blank:]]+${func_nm}([[:blank:]]*\\(\\))?"
+            funcdef_ptn+=")[[:blank:]]+"
+
+            # - read source lines into array
+            local -a src_lines
+            mapfile -t -O1 src_lines < "$src_fn"
+
+            if ! [[ ${src_lines[src_ln]} =~ $funcdef_ptn ]]
+            then
+                # search for the correct line
+                local i m
+                for (( i=1; i<=${#src_lines[*]}; i++ ))
+                do
+                    [[ ${src_lines[i]} =~ $funcdef_ptn ]] && {
+                        src_ln=$i
+                        m=1
+                        break
+                    }
+                done
+
+                [[ -v m ]] \
+                    || { err_msg 9 "'$func_nm' func defn not found at line $src_ln: ${src_lines[src_ln]}"; return; }
+            fi
+
+            # - grep-style context
             [[ $# -gt 1 ]] &&
-                printf '%s' "${func_nm}: """
+                printf '%s' "${func_nm}: "
 
             printf '%s\n' "ln. $src_ln in '$src_fn'"
         fi
