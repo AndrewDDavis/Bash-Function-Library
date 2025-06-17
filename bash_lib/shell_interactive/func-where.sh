@@ -1,24 +1,32 @@
+# docs
+: """Show file path of a function definition
+
+    Usage: func-where [options] <func-name> ...
+
+    This function prints the file path and line number for the definition of a
+    function. It temporarily enables the extdebug option, then runs 'declare -F'
+    to get the information.
+
+    Options
+
+      -e
+      : open function source file in EDITOR instead of printing the path.
+
+      -s
+      : re-import the function by sourcing the relevant file instead of printing
+        the path.
+"""
+
 func-where() {
 
-    : """Show file path of a function definition
-
-        Usage: func-where [-s] <func-name> ...
-
-        This function prints the file path and line number for the definition of a
-        function. It temporarily enables the extdebug option, then runs 'declare -F'
-        to get the information.
-
-        If the -s option is passed, the function is re-imported by sourcing the
-        relevant file instead of printing the path.
-    """
-
     # defaults and options
-    local _s
+    local _s _e
 
     local flag OPTARG OPTIND=1
-    while getopts ':sh' flag
+    while getopts ':esh' flag
     do
         case $flag in
+            ( e ) _e=1 ;;
             ( s ) _s=1 ;;
             ( h ) docsh -TD; return ;;
             ( \? ) err_msg 3 "unknown option: '-$OPTARG'"; return ;;
@@ -55,7 +63,7 @@ func-where() {
 
 
     # gather func defn info
-    local regex_ptn func_nm dec_out src_fn src_ln src_cmd
+    local regex_ptn func_nm dec_out src_fn src_ln
 
     # Define regex separately to avoid shell quoting issues
     # - Pattern matches function name, line number, and source file path
@@ -76,10 +84,17 @@ func-where() {
 
         if [[ -v _s ]]
         then
-            # source, if requested
-            src_cmd=( builtin source "$src_fn" )
+            # source
+            local src_cmd=( builtin source "$src_fn" )
             printf >&2 '%s\n' "${PS4}${src_cmd[*]}"
             "${src_cmd[@]}"
+
+        elif [[ -v _e ]]
+        then
+            # edit
+            local edt_cmd=( "$EDITOR" "$src_fn" )
+            printf >&2 '%s\n' "${PS4}${edt_cmd[*]}"
+            "${edt_cmd[@]}"
 
         else
             # print
