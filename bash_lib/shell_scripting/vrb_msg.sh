@@ -2,42 +2,44 @@
 import_func is_nn_array \
     || return
 
+# docs
+: """Print a message to STDERR, depending on the verbosity level at run-time
+
+    Usage: vrb_msg <level> \"message body\" ...
+
+    This function compares the value of a variable called '_verb' against the
+    'level' argument passed on the command line. If _verb >= level, the message is
+    printed to stderr. If more than one message string is provided, all are printed,
+    separated by newlines. The first message line is tagged with the function name
+    that called vrb_msg, and the following lines are indented to match. Leading
+    null-string message arguments cause an empty line to be printed before the first
+    message line.
+
+    If the '_verb' varaible is not set, or its value is not an integer, it is
+    considered equal to 0. The recommended default is to set _verb=1 in the calling
+    function. Then the value could be incremented, e.g. when the user passes a -v flag
+    on the command line, or decremented with -q.
+
+    Unlike the err_msg function, which prints log-style messages and sets a return
+    value, vrb_msg prints messages with a more subtle context element and always
+    returns true.
+
+    Examples
+
+      # an info message that should usually print
+      vrb_msg 1 \"triggered a routine\"
+
+      # a message that isn't usually required
+      vrb_msg 2 \"the value of x is \$x\"
+
+      # may only print with -vv
+      vrb_msg 3 \"the gg routine returned \$gg\"
+"""
+
 vrb_msg() {
 
-    [[ $# -lt 2  || $1 == @(-h|--help) ]] && {
-
-        : """Print a message to stderr if indicated by the verbosity setting
-
-            Usage: vrb_msg <level> \"message body\" ...
-
-            This function compares the value of a variable called '_verb' against the
-            'level' argument passed on the command line. If _verb >= level, the message
-            is printed to stderr. If more than one string is provided, all are printed,
-            separated by newlines. Leading null messages print an empty line, without
-            the usual leading context.
-
-            If _verb is not set, or its value is not an integer, it is considered equal
-            to 0. The recommended default is to set _verb=1 in the calling function.
-            Then the value could be incremented when the user passes a -v flag on the
-            command line, or decremented with -q.
-
-            Unlike err_msg, which prints log-style messages and sets a return value,
-            this function prints a more subtle context message and always returns true.
-
-            Examples
-
-              # an info message that should usually print
-              vrb_msg 1 \"triggered a routine\"
-
-              # a message that isn't usually required
-              vrb_msg 2 \"the value of x is \$x\"
-
-              # may only print with -vv
-              vrb_msg 3 \"the gg routine returned \$gg\"
-        """
-        docsh -TD
-        return
-    }
+    [[ $# -lt 2  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     # - NB, unset _verb is considered == 0
     [[ ${_verb-} -lt $1 ]] \
