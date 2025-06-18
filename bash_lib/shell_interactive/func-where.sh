@@ -100,15 +100,20 @@ func-where() {
             # print
 
             # check source line
-            # - NB, if there a sub-functions defined within the function, declare -F will
+            # - NB, if there a sub-functions defined within the function, declare -F may
             #   return the line-no for one of those! Yikes, better check.
             # - per bash manpage:
             #   fname () compound-command [redirection]
             #   function fname [()] compound-command [redirection]
+            # - a compound command is surrounded by {...}, (...), [[...]], or ((...))
+            # - bash-completion package uses:
+            #   _comp_abspath()
+            #   {
+            #   ...
             local funcdef_ptn="^[[:blank:]]*("
             funcdef_ptn+="${func_nm}[[:blank:]]*\\(\\)"
             funcdef_ptn+="|function[[:blank:]]+${func_nm}([[:blank:]]*\\(\\))?"
-            funcdef_ptn+=")[[:blank:]]+"
+            funcdef_ptn+=")([[:blank:]]*[{([]|\$)"
 
             # - read source lines into array
             local -a src_lines
@@ -128,7 +133,7 @@ func-where() {
                 done
 
                 [[ -v m ]] \
-                    || { err_msg 9 "'$func_nm' func defn not found at line $src_ln: ${src_lines[src_ln]}"; return; }
+                    || { err_msg 9 "func defn for '$func_nm' not found at line $src_ln of '$src_fn': ${src_lines[src_ln]}"; return; }
             fi
 
             # - grep-style context
