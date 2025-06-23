@@ -152,10 +152,15 @@ notesh() {
         grep_cmdln+=( "${@:1:$(($#-1))}" )
         shift $#
 
+        # regex to match a 'simple' pattern
+        # - starts with alpha-num char, later can be blanks, ., and -
+        local simpl_ptn='^[[:alnum:]]'
+        simpl_ptn+='[[:alnum:][:blank:].-]*$'
+
         if  [[ ! -v full_match
-            && $grep_ptn != *[![:alpha:][:digit:][:blank:].-]* ]]
+            && $grep_ptn =~ $simpl_ptn ]]
         then
-            # for a simple pattern, add regex for heading lines
+            # simple pattern: add regex for heading lines (markdown or adoc)
             # - refer to the  _expand_keyword() function in scw()
             grep_ptn="^(#|=).*${grep_ptn}"
 
