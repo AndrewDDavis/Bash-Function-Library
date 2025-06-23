@@ -39,40 +39,41 @@
 import_func run_vrb vrb_msg str_split is_int \
     || return
 
+: """Open notes matching a pattern
+
+Usage: notesh [options] [--] [grep-options] 'pattern'
+
+Search for and open a notes file with content that matches a pattern. If more than one
+file is matched by the pattern, an interactive selection screen is presented.
+
+By default, text files in '~/Documents' are searched, and any symlinks encountered are
+dereferenced and followed. If the working directory is a subdirectory of '~/Documents',
+and '-d' is not used, the working directory is searched.
+
+The \`ugrep\` command is used to match the pattern, using smart-case matching and POSIX
+ERE syntax by default. If the pattern comprises simple words, without regex pattern
+characters other than '.', it is expanded to match section headings (markdown and
+asciidoc supported). In this case, a glob is also used to only match files with
+plausible extensions.
+
+Options
+
+  -a
+  : match anywhere in the file, don't add section heading regex to simple patterns
+
+  -d 'dir'
+  : search in 'dir/' instead of '~/Documents/'.
+
+  -o <p|e|s|v>
+  : open file using PAGER (default), EDITOR, sublime text ('subl -n'), or vs-code
+    ('code -n'). Only the first character of the argument is used, so that 'subl' or
+    'VSCode' would also work as expected.
+
+  -x 'cmd ...'
+  : open file using custom command; the argument will be split into words.
+"""
+
 notesh() {
-
-    : """Open notes matching a pattern
-
-    Usage: notesh [options] [--] [grep-options] 'pattern'
-
-    Search for and open a notes file with content that matches a pattern. If more than
-    one file is matched by the pattern, an interactive selection screen is presented.
-
-    By default, text files in '~/Documents' are searched, and any symlinks encountered
-    are dereferenced and followed. If the working directory is a subdirectory of
-    '~/Documents', and '-d' is not used, the working directory is searched.
-
-    The \`ugrep\` command is used to match the pattern, using smart-case matching and
-    POSIX ERE syntax by default. If the pattern is simple, containing only alphanumeric
-    characters, spaces, dash, and dot, it is expanded to match lines that are mardown
-    or asciidoc headings. In this case, a glob is also used to only match files with
-    plausible extensions.
-
-    Options
-
-      -d 'dir'
-      : search in 'dir/' instead of '~/Documents/'.
-
-      -f
-      : match anywhere in the file, rather than only section headings
-
-      -o <p|e|s|v>
-      : open file using PAGER (default), EDITOR, sublime text ('subl -n'), or
-        vs-code ('code -n')
-
-      -x 'cmd ...'
-      : open file using custom command; the argument will be split into words.
-    """
 
     [[ $# -eq 0 || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }
@@ -95,20 +96,21 @@ notesh() {
 
         # args
         local flag OPTIND=1 OPTARG
-        while getopts ':fd:o:x:' flag
+        while getopts ':ad:o:x:' flag
         do
             case $flag in
+                ( a )
+                    full_match=1
+                ;;
                 ( d )
                     doc_root=$OPTARG
                     [[ $doc_root != '/' ]] \
                         && doc_root=${doc_root%/}
                 ;;
-                ( f )
-                    full_match=1
-                ;;
                 ( o )
                     # define opener from first char of OPTARG
-                    case ${OPTARG:0:1} in
+                    local oc=${OPTARG:0:1}
+                    case ${oc,,} in
                         ( p ) str_to_words -q opener "${PAGER:-less}" ;;
                         ( e ) str_to_words -q opener "${EDITOR:-vi}" ;;
                         ( s ) opener=( "$( builtin type -P subl )" -n ) ;;
