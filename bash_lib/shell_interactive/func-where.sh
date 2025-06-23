@@ -1,5 +1,5 @@
 # docs
-: """Show file path of a function definition
+: """Print file path of a function definition
 
     Usage: func-where [options] <func-name> ...
 
@@ -62,17 +62,17 @@ func-where() {
     fi
 
 
-    # gather func defn info
-    local regex_ptn func_nm dec_out src_fn src_ln
+    # Gather func defn info
 
-    # Define regex separately to avoid shell quoting issues
-    # - Pattern matches function name, line number, and source file path
-    # - E.g. for the_func() defined in 'a func.sh', declare -F would output:
+    # define regex separately to avoid shell quoting issues
+    # - pattern matches function name, line number, and source file path
+    # - e.g. for the_func() defined in 'a func.sh', declare -F would output:
     #   'the_func 1 a func.sh'
-    # - Then, [[ $sss =~ ^([^ ]+)\ ([0-9]+)\ (.+)$ ]] would produce:
+    # - then, [[ $sss =~ ^([^ ]+)\ ([0-9]+)\ (.+)$ ]] would produce:
     #   BASH_REMATCH=([0]="the_func 1 a func.sh" [1]="the_func" [2]="1" [3]="a func.sh")
-    regex_ptn='^([^ ]+) ([0-9]+) (.+)$'
+    local regex_ptn='^([^ ]+) ([0-9]+) (.+)$'
 
+    local func_nm dec_out src_fn src_ln
     for func_nm in "$@"
     do
         dec_out=$( declare -F "$func_nm" ) \
@@ -87,7 +87,14 @@ func-where() {
             # source
             local src_cmd=( builtin source "$src_fn" )
             printf >&2 '%s\n' "${PS4}${src_cmd[*]}"
+
+            # NB, if import_func runs in the sourced file, it will complain about
+            # functrace (from extdebug)
+            shopt -u extdebug
+
             "${src_cmd[@]}"
+
+            shopt -s extdebug
 
         elif [[ -v _e ]]
         then
