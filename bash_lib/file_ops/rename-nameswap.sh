@@ -1,6 +1,6 @@
 # deps
 import_func str_to_words \
-    || return 63
+    || return
 
 rename-nameswap() {
 

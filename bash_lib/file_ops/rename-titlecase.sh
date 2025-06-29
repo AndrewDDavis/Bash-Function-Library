@@ -1,6 +1,6 @@
 # dependencies
 import_func str_to_words array_match \
-    || return 63
+    || return
 
 rename-titlecase() {
 

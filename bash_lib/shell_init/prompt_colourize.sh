@@ -1,6 +1,6 @@
 # dependencies
 import_func csi_strvars \
-    || return 63
+    || return
 
 _pr_colrz_docs() {
 

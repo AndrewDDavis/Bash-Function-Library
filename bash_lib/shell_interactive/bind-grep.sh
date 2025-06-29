@@ -1,6 +1,6 @@
 # deps
 import_func alias-resolve array_strrepl \
-    || return 63
+    || return
 
 bind-grep() {
 

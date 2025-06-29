@@ -1,6 +1,6 @@
 # import dependencies
 import_func str_to_words array_match array_irepl array_reindex \
-    || return 63
+    || return
 
 realias() {
 

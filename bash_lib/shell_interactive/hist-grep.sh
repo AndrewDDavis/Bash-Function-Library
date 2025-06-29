@@ -7,7 +7,7 @@
 
 # deps
 import_func array_from_glob \
-    || return 63
+    || return
 
 hist-grep() {
 

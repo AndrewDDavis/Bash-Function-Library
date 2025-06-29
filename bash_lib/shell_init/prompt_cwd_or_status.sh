@@ -1,6 +1,6 @@
 # dependencies
 import_func csi_strvars str_trunc is_int \
-    || return 63
+    || return
 
 # prefer basename function for speed, but it's not fatal
 import_func basename \

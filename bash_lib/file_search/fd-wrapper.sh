@@ -8,7 +8,7 @@ alias fdu='fd-wrapper -HI' # unrestricted search
 alias fd-tree='fd-wrapper --tree'
 
 import_func array_strrepl tree-fromfiles \
-    || return 63
+    || return
 
 fd-wrapper() {
 
