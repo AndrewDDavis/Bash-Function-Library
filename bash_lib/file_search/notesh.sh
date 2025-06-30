@@ -187,7 +187,8 @@ notesh() {
         # - consider --exclude-dir=.git if there are any git dirs in the search dir
         local grep_rs #grep_pid
 
-        mapfile -d '' matched_fns < \
+        # - start from 1 to match the selection display
+        mapfile -d '' -O1 matched_fns < \
             <(
             set -x
             "${grep_cmdln[@]}"
@@ -228,7 +229,7 @@ notesh() {
 
         if (( ${#matched_fns[@]} == 1 ))
         then
-            sel_fns[0]=${matched_fns[0]}
+            sel_fns[0]=${matched_fns[1]}
             vrb_msg 1 "Matched ${sel_fns[0]}"
             return
         fi
@@ -259,34 +260,44 @@ notesh() {
         done
 
         # Call the Bash builtin 'select'
+        # - sel is set to the displayed filename, or null when response is invalid
+        #   to select (not a listed number)
+        # - the REPLY variable has the actual response from the user
         # - Ctrl-D prevents a selection and returns 1
-        # - nums is set to null when response is invalid (not a listed number)
-        local PS3 nums
-        PS3=$'\n''File number(s) to open (list with comma, ^D to cancel): '
+        local PS3 sel nums
+        PS3=$'\n''File number(s) to open (e.g. 1,3,5; a = all, ^D = cancel): '
 
-        select nums in "${fns_dsp[@]}"
+        select sel in "${fns_dsp[@]}"
         do
             sel_fns=()
-            if [[ -n $nums ]]
+            if [[ -n $sel ]]
             then
                 # single number provided
                 # recover the un-decorated filename from the selection
-                sel_fns[0]=${matched_fns[REPLY-1]}
+                sel_fns=( "${matched_fns[REPLY]}" )
 
             else
-                # invalid response, may be list, e.g. 2,3,4
-                str_split -qd ',' nums "$REPLY"
-                is_int "${nums[@]}" \
-                    || { vrb_msg 1 "invalid reply: '$REPLY'" "expected e.g. '1' or '2,4'"; continue; }
+                # response was not a single number
+                if [[ $REPLY == a ]]
+                then
+                    # select all
+                    sel_fns=( "${matched_fns[@]}" )
 
-                local n m=${#matched_fns[@]}
-                for n in "${nums[@]}"
-                do
-                    (( n > 0 )) && (( n <= m )) \
-                        || { vrb_msg 1 "invalid value: '$n'"; continue 2; }
+                else
+                    # handle list, e.g. 2,3,4
+                    str_split -qd ',' nums "$REPLY"
+                    is_int "${nums[@]}" \
+                        || { vrb_msg 1 "invalid reply: '$REPLY'" "expected e.g. '1' or '2,4'"; continue; }
 
-                    sel_fns+=( "${matched_fns[n-1]}" )
-                done
+                    local n m=${#matched_fns[*]}
+                    for n in "${nums[@]}"
+                    do
+                        (( n > 0 )) && (( n <= m )) \
+                            || { vrb_msg 1 "invalid value: '$n'"; continue 2; }
+
+                        sel_fns+=( "${matched_fns[n]}" )
+                    done
+                fi
             fi
             [[ -v sel_fns[*] ]] && break
 
@@ -297,6 +308,7 @@ notesh() {
         # - consider using fzf, e.g.
         #   sel_fns[0]=$( fzf <<< $( printf '%s\n' "${matched_fns[@]}" ) )
         #   -m for multi
+        # - or one of the TUI options, like 'dialog'
     }
 
 
