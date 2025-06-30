@@ -1,10 +1,8 @@
 # deps
 import_func array_strrepl str_to_words \
-    || return 63
+    || return
 
-alias-resolve() {
-
-    : """Expand an alias to a command line, using recursion if necessary
+: """Expand an alias to a command line, using recursion if necessary
 
     Usage: alias-resolve [options] <name> [array-name]
 
@@ -45,7 +43,9 @@ alias-resolve() {
 
       alias-resolve ll ls_cmd
       # ls_cmd may be: ( LC_COLLATE=C.utf8 ls --color=auto -lh )
-    """
+"""
+
+alias-resolve() {
 
     # defaults and options
     local _env=1 _pr
@@ -54,7 +54,7 @@ alias-resolve() {
     while getopts ':ehp' flag
     do
         case $flag in
-            ( e ) _env='' ;;
+            ( e ) _env=0 ;;
             ( h ) docsh -TD; return ;;
             ( p ) _pr=1 ;;
             ( \? ) err_msg 2 "unknown option: '-$OPTARG'"; return ;;
@@ -64,21 +64,21 @@ alias-resolve() {
     shift $(( OPTIND-1 ))
 
     # positional args
-    (( $# < 3 )) ||
-        { err_msg 5 "too many arguments: '$*'"; return; }
-
-    # posn args
+    # - name is the command to resolve
+    # - al_words is the nameref to the array of alias words
     local name=${1:?"name required"}
     shift
 
-    local -n al_words
     if (( $# > 0 ))
     then
-        al_words=$1
+        local -n al_words=$1
         shift
     else
-        al_words=CMD_ALIAS
+        local -n al_words=CMD_ALIAS
     fi
+
+    (( $# == 0 )) \
+        || { err_msg 5 "too many arguments: '$*'"; return; }
 
     # return false for no current alias definition
     builtin alias "$name" &>/dev/null \
@@ -115,7 +115,7 @@ alias-resolve() {
         }
     done
 
-    if [[ -n $_env  && ${al_words[0]} == *=* ]]
+    if (( _env )) && [[ ${al_words[0]} == *=* ]]
     then
         # add env cmd
         al_words=( env "${al_words[@]}" )
