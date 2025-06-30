@@ -1,94 +1,104 @@
 # deps (optional)
 import_func greps
 
+: """Print variables that match a pattern
+
+Usage: vars-grep [-a] [grep-opts] [pattern]
+
+This function prints variable names from the current shell environment that match the
+pattern provided on the command line. If no pattern is provided, all variable names
+are printed.
+
+If the greps function is available, it is used to provide smart-case matching (case-
+insensitive unless the pattern contains uppercase letters). The -E flag is added by
+default, so that patterns are treated as POSIX ERE regex expressions.
+
+The 'declare' built-in command is used to print all variables, before filtering
+them with grep or greps. Other than the -a option, all arguments are passed
+through to grep.
+
+Options
+
+  -a
+  : Match against variable values, rather than only names and attributes.
+
+Notes
+
+  - For name-only searches, 'ls-vars | grep -i zip' will print a list of
+    variable names that contain 'zip' (case-insensitive). OTOH,
+    'vars-grep -a zip' will match against the variable names and values.
+
+Examples
+
+  # match variables with OPT in the name
+  vars-grep OPT
+
+  # match variables with zip (or Zip, ZIP, ...) in the name or value
+  vars-grep -a zip
+
+  # match all arrays (even read-only, exported, etc.)
+  vars-grep '^declare -[^ ]*a[^ ]* '
+"""
+
 vars-grep() {
 
-    [[ $# -gt 0  && $1 == @(-h|--help) ]] && {
+    [[ $# -gt 0  && $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
-        : """Print variables that match a pattern
-
-        Usage: vars-grep [-a] [grep-opts] [pattern]
-
-        By default, this function compares the pattern with variable names set in the
-        current shell, and prints the matches. If the greps function is available, it
-        will be used to provide smart-case matching. The -E flag is added by default.
-
-        Options
-
-          -a
-          : Match against variable names, values, and attributes, as output by the
-            declare or typeset builtins.
-
-        Notes
-
-          - Beyond the -a option, all arguments are passed to grep, which is used to
-            filter the output of 'declare -p'. The 'greps' wrapper function is
-            called, so that smart-case pattern matching is used (case-insensitive
-            unless the pattern contains uppercase letters).
-
-          - For name-only searches, 'ls-vars | grep -i zip' will print a list of
-            variable names that contain 'zip' (case-insensitive). OTOH,
-            'vars-grep -a zip' will match against the variable names and values.
-
-        Examples
-
-          # arrays
-          vars-grep -a '^declare -[^ ]*a[^ ]* '
-        """
-        docsh -TD
-        return
-    }
-
-    # use double-underscore variable names so they don't interfere with those of the
-    # shell environment
+    # args
+    # - use double-underscore var names to prevent collisions with the shell environment
     local __all
-    [[ ${1-} == -a ]] &&
-        { __all=1; shift; }
+    [[ ${1-} == -a ]] \
+        && { __all=1; shift; }
 
     # no filtering if no args
-    [[ $# -eq 0 ]] &&
-        set -- '^'
+    [[ $# -eq 0 ]] \
+        && set -- '^'
 
-    local __grep_cmd \
-        __sed_cmd \
-        __dec_cmd \
-        __var_filt
-
-    __dec_cmd=( builtin declare -p )
-
+    local __grep_cmd __sed_cmd
     if [[ -n $( command -v greps ) ]]
     then
         __grep_cmd=( greps -E )
     else
-        __grep_cmd=( "$( builtin type -P grep )" -E )
+        __grep_cmd=( "$( builtin type -P grep )" -E ) \
+            || return 9
     fi
 
-    __sed_cmd=( "$( builtin type -P sed )" )
-    __sed_cmd+=( 's/=.*//' )
-
-    # filter local vars from results
-    __var_filt=( "${__grep_cmd[@]}" -Ev '__all|__grep_cmd|__sed_cmd|__dec_cmd|__var_filt' )
-
-    # pattern arg and options for grep
+    # remaining args are pattern and options for grep
     __grep_cmd+=( "$@" )
     shift $#
 
+    __sed_cmd=( "$( builtin type -P sed )" ) \
+        || return 9
+    __sed_cmd+=( 's/=.*//' )
 
+    trap '
+        unset -f _dec_filt
+        trap - return
+    ' RETURN
+
+    _dec_filt() {
+
+        # print variables, but filter this func's local vars
+        builtin declare -p \
+            | command grep -Ev ' (__all|__grep_cmd|__sed_cmd)(=|$)'
+    }
+
+    local rs
     if [[ -v __all ]]
     then
-        "${__dec_cmd[@]}" \
-            | "${__var_filt[@]}" \
+        _dec_filt \
             | "${__grep_cmd[@]}" \
             | "${__sed_cmd[@]}"
 
-        local rs=${PIPESTATUS[2]}
+        rs=${PIPESTATUS[1]}
+
     else
-        "${__dec_cmd[@]}" \
-            | "${__var_filt[@]}" \
+        _dec_filt \
             | "${__sed_cmd[@]}" \
             | "${__grep_cmd[@]}"
 
-        local rs=${PIPESTATUS[3]}
+        rs=${PIPESTATUS[2]}
     fi
 
     return "$rs"
