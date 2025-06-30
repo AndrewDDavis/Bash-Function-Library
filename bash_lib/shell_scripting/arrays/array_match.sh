@@ -6,79 +6,76 @@
 import_func is_array \
     || return
 
+: """Test array elements for match to a pattern
+
+    Usage: array_match [options ...] <array-name> <pattern>
+
+    The elements of the array are tested against the pattern. By default,
+    array_match returns silently with a true or false return status. For the
+    'array-name' argument, pass the name of an existing array variable, not the
+    expanded array.
+
+    By default, the pattern is treated as a POSIX ERE that must match an entire
+    array element, rather than a substring. For the pattern syntax, refer to the
+    manpages of 'regex(7)' and 'grep'.
+
+    Options
+
+    -E : treat pattern as POSIX extended regular expression (ERE)
+    -F : treat pattern as a fixed string
+
+    -i : case-insensitive match
+    -s : allow substring match within array elements
+    -v : invert the logic: test for elements that do not match the pattern
+
+    -c : print only the count of matching elements (overrides -n and -p)
+    -n : print the index or key of the first matching array element
+    -p : print the value of the first matching array element. If both -n and -p are
+         used, the output is in the form 'key:value'.
+    -a : with -n or -p, print all elements or keys, not just the first
+
+    The return status is 0 (true) for a match, 1 (false) for no match, or > 1 if an
+    error occurs. An empty array always returns 1, but array elements consisting of
+    the null string may be matched as usual. It is an error if the named variable
+    is not set, or is a scalar variable rather than an array.
+
+    Examples
+
+      arr=('one' 'bananas' 'apples' 'two words')
+
+      # returns true:
+      array_match arr bananas
+
+      # returns false:
+      array_match arr banana
+
+      # returns true:
+      array_match -s arr banana
+
+      # returns true:
+      array_match arr 'ban.*'
+
+      # returns false:
+      array_match -F arr 'ban.*'
+
+      # prints the first matching element index:
+      array_match -n arr 'ban.*'
+      # 1
+
+      # prints all matching indices and elements:
+      array_match -anp arr '.*n.*'
+      # 0:one
+      # 1:bananas
+
+      # number of elements with an s
+      array_match -sc arr 's'
+      # 3
+"""
+
 array_match () {
 
-    # function docs
-    [[ $# -eq 0  ||  $1 == @(-h|--help) ]] && {
-
-        : """Test array elements for match to a pattern
-
-        Usage: array_match [options ...] <array-name> <pattern>
-
-        The elements of the array are tested against the pattern. By default,
-        array_match returns silently with a true or false return status. For the
-        'array-name' argument, pass the name of an existing array variable, not the
-        expanded array.
-
-        By default, the pattern is treated as a POSIX ERE that must match an entire
-        array element, rather than a substring. For the pattern syntax, refer to the
-        manpages of 'regex(7)' and 'grep'.
-
-        Options
-
-        -E : treat pattern as POSIX extended regular expression (ERE)
-        -F : treat pattern as a fixed string
-
-        -i : case-insensitive match
-        -s : allow substring match within array elements
-        -v : invert the logic: test for elements that do not match the pattern
-
-        -c : print only the count of matching elements (overrides -n and -p)
-        -n : print the index or key of the first matching array element
-        -p : print the value of the first matching array element. If both -n and -p are
-             used, the output is in the form 'key:value'.
-        -a : with -n or -p, print all elements or keys, not just the first
-
-        The return status is 0 (true) for a match, 1 (false) for no match, or > 1 if an
-        error occurs. An empty array always returns 1, but array elements consisting of
-        the null string may be matched as usual. It is an error if the named variable
-        is not set, or is a scalar variable rather than an array.
-
-        Examples
-
-          arr=('one' 'bananas' 'apples' 'two words')
-
-          # returns true:
-          array_match arr bananas
-
-          # returns false:
-          array_match arr banana
-
-          # returns true:
-          array_match -s arr banana
-
-          # returns true:
-          array_match arr 'ban.*'
-
-          # returns false:
-          array_match -F arr 'ban.*'
-
-          # prints the first matching element index:
-          array_match -n arr 'ban.*'
-          # 1
-
-          # prints all matching indices and elements:
-          array_match -anp arr '.*n.*'
-          # 0:one
-          # 1:bananas
-
-          # number of elements with an s
-          array_match -sc arr 's'
-          # 3
-        """
-        docsh -TD
-        return
-    }
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     # clean up local funcs
     trap '
@@ -125,15 +122,16 @@ array_match () {
         || { err_msg 3 "array variable required, got '${!__am_arrnm__}'"; return; }
 
     # empty array returns 1 (no match), and count of 0
-    local grep_out=()
+    # - NB, using __...__ vars because a namespace collision can cause real problems here
+    local __grep_out__=()
     if [[ -v __am_arrnm__[*] ]]
     then
         # Both matching styles below use grep
         # - NB, I originally tried a form using Bash '[[': [[ "${__am_arrnm__[@]}" =~ $ptn ]].
         #   This was very concise, but not totally precise: an expression combining two
         #   adjascent array values with a space between matches, even though it should not.
-        local grep_cmd
-        grep_cmd=( "$( builtin type -P grep )" ) \
+        local __grep_cmd__
+        __grep_cmd__=( "$( builtin type -P grep )" ) \
             || return
 
         # grep returns with status 0 for a match, 1 for no match
@@ -149,23 +147,23 @@ array_match () {
         #   -v : invert match logic
         #   -x : match whole lines
         #   -z : null-terminated lines
-        grep_cmd+=( -nz "-${re_type}${_i-}${_v-}${_x-}" -e "$ptn" )
+        __grep_cmd__+=( -nz "-${re_type}${_i-}${_v-}${_x-}" -e "$ptn" )
 
         # if not all or count, then only 1 and done
         [[ -v _a  || -v _c ]] \
-            || grep_cmd+=( -m1 )
+            || __grep_cmd__+=( -m1 )
 
         # create array of keys
         # - needed for sparse or associative array
         # - this locks in an order for associative arrays
         # - the index of this array matches the line numbers output by grep
         # - they values are the indices of the input array
-        local i keys=( '' "${!__am_arrnm__[@]}" )
+        local i __keys__=( '' "${!__am_arrnm__[@]}" )
 
         # now we can run with -n, and later convert the line number to the array index
-        mapfile -d '' grep_out < \
-            <( "${grep_cmd[@]}" < \
-                <( for i in "${keys[@]:1}"; do printf '%s\0' "${__am_arrnm__[i]}"; done ) )
+        mapfile -d '' __grep_out__ < \
+            <( "${__grep_cmd__[@]}" < \
+                <( for i in "${__keys__[@]:1}"; do printf '%s\0' "${__am_arrnm__[i]}"; done ) )
 
         # grep return status
         # - NB, $! expands to PID of most recent background job
@@ -177,7 +175,7 @@ array_match () {
     fi
 
     # match count
-    local c=${#grep_out[@]}
+    local c=${#__grep_out__[@]}
 
     if [[ -v _c ]]
     then
@@ -191,8 +189,8 @@ array_match () {
         return 1
 
     else
-        # If we got this far, grep_out has some value e.g.:
-        #   grep_out=([0]="1:abc" [1]="4:bbb")
+        # If we got this far, __grep_out__ has some value e.g.:
+        #   __grep_out__=([0]="1:abc" [1]="4:bbb")
         # It will only have one entry, unless -a was used.
 
         # set key for which info to print
@@ -203,13 +201,13 @@ array_match () {
 
         # print result, converting line numbers to array index
         local s
-        for s in "${grep_out[@]}"
+        for s in "${__grep_out__[@]}"
         do
             i=${s%%:*}
 
             case $k in
-                ( 11 ) printf '%s:%s\n' "${keys[i]}" "${s#*:}" ;;
-                ( 10 ) printf '%s\n' "${keys[i]}" ;;
+                ( 11 ) printf '%s:%s\n' "${__keys__[i]}" "${s#*:}" ;;
+                ( 10 ) printf '%s\n' "${__keys__[i]}" ;;
                 ( 01 ) printf '%s\n' "${s#*:}" ;;
             esac
         done
