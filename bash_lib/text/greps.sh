@@ -1,4 +1,4 @@
-#TODO
+# TODO
 # - make greps less reliant on an external grep call:
 #   e.g., for simple fixed string or ERE pattern matching,
 #   shell regex matching can be used, which is much faster,
@@ -7,14 +7,11 @@
 
 # deps
 import_func alias-resolve array_strrepl \
-    || return 63
+    || return
 
-# Smart-case egrep
 alias egreps="greps -E"
 
-greps() {
-
-    : """Smart-case matching with grep
+: greps """Smart-case matching with grep
 
     Usage
 
@@ -31,7 +28,9 @@ greps() {
     is also disabled if the -i, --ignore-case, or --no-ignore-case options are used. The
     comments of this function's code contain a comparison of options relevant to
     case-sensitive matching across various grep tools.
-    """
+"""
+
+greps() {
 
     [[ $# -eq 0  ||  $1 == @(-h|--help) ]] &&
         { docsh -TD; return; }
@@ -42,8 +41,7 @@ greps() {
         _v=1
 
     # use full patch to grep, but also keep any defined alias
-    local grep_cmd grep_path
-
+    local grep_path grep_cmd
     grep_path=$( builtin type -P grep ) \
         || return
 
@@ -51,7 +49,6 @@ greps() {
         || grep_cmd=( grep )
 
     array_strrepl grep_cmd grep "$grep_path"
-
 
     # GNU grep arg-parsing behaviour:
     # - grep patterns come from the first positional arg, or are given with the -e flag,
