@@ -3,41 +3,41 @@ import_func greps
 
 : """Print variables that match a pattern
 
-Usage: vars-grep [-a] [grep-opts] [pattern]
+    Usage: vars-grep [-a] [grep-opts] [pattern]
 
-This function prints variable names from the current shell environment that match the
-pattern provided on the command line. If no pattern is provided, all variable names
-are printed.
+    This function prints variable names from the current shell environment that match the
+    pattern provided on the command line. If no pattern is provided, all variable names
+    are printed.
 
-If the greps function is available, it is used to provide smart-case matching (case-
-insensitive unless the pattern contains uppercase letters). The -E flag is added by
-default, so that patterns are treated as POSIX ERE regex expressions.
+    If the greps function is available, it is used to provide smart-case matching (case-
+    insensitive unless the pattern contains uppercase letters). The -E flag is added by
+    default, so that patterns are treated as POSIX ERE regex expressions.
 
-The 'declare' built-in command is used to print all variables, before filtering
-them with grep or greps. Other than the -a option, all arguments are passed
-through to grep.
+    The 'declare' built-in command is used to print all variables, before filtering
+    them with grep or greps. Other than the -a option, all arguments are passed
+    through to grep.
 
-Options
+    Options
 
-  -a
-  : Match against variable values, rather than only names and attributes.
+      -a
+      : Match against variable values, rather than only names and attributes.
 
-Notes
+    Notes
 
-  - For name-only searches, 'ls-vars | grep -i zip' will print a list of
-    variable names that contain 'zip' (case-insensitive). OTOH,
-    'vars-grep -a zip' will match against the variable names and values.
+      - For name-only searches, 'ls-vars | grep -i zip' will print a list of
+        variable names that contain 'zip' (case-insensitive). OTOH,
+        'vars-grep -a zip' will match against the variable names and values.
 
-Examples
+    Examples
 
-  # match variables with OPT in the name
-  vars-grep OPT
+      # match variables with OPT in the name
+      vars-grep OPT
 
-  # match variables with zip (or Zip, ZIP, ...) in the name or value
-  vars-grep -a zip
+      # match variables with zip (or Zip, ZIP, ...) in the name or value
+      vars-grep -a zip
 
-  # match all arrays (even read-only, exported, etc.)
-  vars-grep '^declare -[^ ]*a[^ ]* '
+      # match all arrays (even read-only, exported, etc.)
+      vars-grep '^declare -[^ ]*a[^ ]* '
 """
 
 vars-grep() {
