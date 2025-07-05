@@ -6,159 +6,159 @@ alias rsync-local='rsyncx --local'
 alias rsync-remote='rsyncx --remote'
 alias rsync-check='rsyncx --diff'
 
+: """Wrapper function for rsync with useful modes
+
+    Usage: rsyncx [rsync-opts] SRC [... DEST]
+
+    This wrapper function runs rsync with a set of options that are sensible in most
+    situations, and provides a few additional options for common situations.
+    Otherwise, this function passes all of its arguments unchanged to rsync. Rsync
+    requires that remote source or destination names include a colon, as in
+    [user@]host:dir. If DEST is omitted, the contents of SRC are listed.
+
+    By default, rsyncx adds the flags -rlpt and -AXU to the command-line. These are
+    a sensible starting point for almost any transfer. However, they can be
+    selectively negated, like all other options, by using e.g. --no-t. The -N
+    (--crtimes) option is not issued, since it's not available with Debian-compiled
+    rsync at the time of writing.
+
+    Beyond -rlpt, the remaining flags turned on by 'rsync -a' are -goD. Rsyncx only
+    adds these to the command when all SRC and DEST are local. In practice, these
+    flags are ignored by rsync anyway (partially for -g) unless running as super-
+    user on the receiving end, or using --super.
+
+    While rsync only detects whether any SRC or DEST are remote by matching the
+    required colon in the name, rsyncx additionally detects locally-mounted remote
+    filesystems using SSHfs, rclone, or gvfs (e.g. GIO vfs mounts created by
+    Nautilus). This avoids permissions errors for such transfers, as rsync would
+    try and fail to apply -g.
+
+    In addition, rsyncx applies either the --local or --remote flag based on the
+    auto-detection of remote SRC and DEST, unless one is explicitly included on the
+    command-line. These are described below, along with the additional flags that
+    rsyncx makes available.
+
+      --local
+      : This adds -H to the defaults, to preserve hard-links.
+
+      --remote
+      : Adds -z and --partial to the defaults. This compresses data in transit, and
+        preserves partially transferred files. NB, rsync has a good default list of
+        compression exclusions. The --info=progress2 option is also added to show
+        overall transfer progress.
+
+      --remote-mount
+      : Some of the --remote options can also be useful when transferring to or from
+        local directories that are actually a remote filesystem mount, such as
+        through SSHfs. This flag sets the --partial and --info=progress2 flags, and
+        prevents -goD from being added, to avoid permissions errors. When neither
+        of the --local or --remote flags are used, rsyncx will attempt to detect
+        a remote mount and set --remote-mount automatically.
+
+      --diff
+      : Check for differences among files, but don't make any transfers. In addition
+        to the defaults, this adds: -nci --delete. Refer to the notes on -i below:
+        any files that are only on DEST will be marked with *deleting, and any files
+        that are only on SRC will be marked with xx+++++++++.
+
+      --rsbak
+      : Create backup files, using the options: --backup --suffix='.rsbak'. Consider
+        also the --backup-dir option.
+
+      --mv
+      : Simulate moving files. This adds --remove-source-files, and --info=remove to
+        print an info line for each removed file. After a successful transfer, the
+        source files are removed, but empty directories may remain. This can depend
+        on interactions with filters, etc, thus pruning empty directories is not
+        attempted. Suggested commands to prune the dirs are printed.
+
+    Info Reporting Options
+
+    By default, rsync is quiet. To show some basic info including a listing of
+    changed files, -v can be used to turn on a sensible set of --info flags. Using
+    -vv shows very detailed information about the transfer and the application of
+    the filter rules.
+
+    This function adds --info=del,stats to the command-line when -v is not used.
+    This prints file deletions and a short data transfer summary. -h is also added
+    for human readable data units.
+
+    Use -i to print a summary line for each changed file. Using -ii also prints a
+    line for unchanged files. Refer to the rsync manpage under --itemize-changes to
+    decode the summary line. Briefly:
+
+      - If a file is to be removed, the summary line is * followed by the
+        word deleting. Otherwise, the first char is the update type. It may be < or
+        > for files sent and received, . for a file with unchanged content, or c for
+        a directory to be created.
+
+      - The second char is the file type, which may be f, d, L, D, or S.
+
+      - The remaining characters are + for a newly created file. Otherwise, any that
+        are not . indicate what will be updated, or why the file is being
+        transferred, e.g. c for checksum, s for size, t for time, etc.
+
+    Issue '--info=help' to print the rsync's info flag options that may be used. The
+    following options are recommended to achieve the noted effects. Note that
+    explicit --info settings always override the implied settings of e.g. -v or
+    --progress:
+
+      --info=name0
+      : Suppress the file listing when using -v or -vv.
+
+      --info=name2 or -vv
+      : Print a line for each unchanged file.
+
+      --info=skip or -vv
+      : Print a line for each skipped file when using -u (--update).
+
+      --info=progress2
+      : Show overall transfer progress (added with --remote)
+
+      --stats or --info=stats2
+      : Print a detailed file transfer summary.
+
+      --debug=filter or -vv
+      : Print the results of applied filter rules.
+
+    Thus, adding -ni to your existing command line is an excellent way to get a
+    detailed picture of the changes that will occur, before affecting any files. If
+    using -nii with -u, rsyncx also adds --info=skip to get a complete picture.
+
+    Filter Rules
+
+    Rsync builds an ordered list of filter rules as specified on the command-line
+    and found in relevant files. The default is for all files within the transfer
+    root to be included.
+
+    This function honours the filter rules found in '~/.config/rsync/default.rules',
+    if that file exists. They are applied using the merge-files syntax for the
+    '--filter' option, and are intended to exclude machine-specific hidden files,
+    such as '.DS_Store' and lock files. To clear the filter list, use: -f'!' on the
+    command line.
+
+    To exclude files for a single transfer, the --exclude=PATTERN option may be
+    used, which is equivalent to a filter rule of -f'- PATTERN'. The patterns
+    generally follow globbing rules as in other similar tools. Refer to the PATTERN
+    MATCHING RULES section of the rsync manpage for details and examples.
+
+    To include only certain files in a transfer, include rules are needed for the
+    file and any parent directories within the transfer root. Then a trailing
+    exclusion rule that matches all files would be specified, e.g.:
+
+      -f'+ x/' -f'+ x/y/' -f'+ x/y/file.txt' -f'- *' x host:/tmp/
+
+    Exclude rules both hide files on the sending side and protect files on the
+    receiving side. Similarly, include rules both show (or expose) files on the
+    sending side, and risk files on the receiving side.
+
+    The option -F may be used apply per-directory filter rules found in files
+    named '.rsync-filter'. With -F, the .rsync-filter files may be found in parent
+    directories of the transfer root, as well as its subdirectories. Refer to the
+    MERGE-FILE FILTER RULES section of the rsync manpage.
+"""
+
 rsyncx() {
-
-    : """Wrapper function for rsync with useful modes
-
-        Usage: rsyncx [rsync-opts] SRC [... DEST]
-
-        This wrapper function runs rsync with a set of options that are sensible in most
-        situations, and provides a few additional options for common situations.
-        Otherwise, this function passes all of its arguments unchanged to rsync. Rsync
-        requires that remote source or destination names include a colon, as in
-        [user@]host:dir. If DEST is omitted, the contents of SRC are listed.
-
-        By default, rsyncx adds the flags -rlpt and -AXU to the command-line. These are
-        a sensible starting point for almost any transfer. However, they can be
-        selectively negated, like all other options, by using e.g. --no-t. The -N
-        (--crtimes) option is not issued, since it's not available with Debian-compiled
-        rsync at the time of writing.
-
-        Beyond -rlpt, the remaining flags turned on by 'rsync -a' are -goD. Rsyncx only
-        adds these to the command when all SRC and DEST are local. In practice, these
-        flags are ignored by rsync anyway (partially for -g) unless running as super-
-        user on the receiving end, or using --super.
-
-        While rsync only detects whether any SRC or DEST are remote by matching the
-        required colon in the name, rsyncx additionally detects locally-mounted remote
-        filesystems using SSHfs, rclone, or gvfs (e.g. GIO vfs mounts created by
-        Nautilus). This avoids permissions errors for such transfers, as rsync would
-        try and fail to apply -g.
-
-        In addition, rsyncx applies either the --local or --remote flag based on the
-        auto-detection of remote SRC and DEST, unless one is explicitly included on the
-        command-line. These are described below, along with the additional flags that
-        rsyncx makes available.
-
-          --local
-          : This adds -H to the defaults, to preserve hard-links.
-
-          --remote
-          : Adds -z and --partial to the defaults. This compresses data in transit, and
-            preserves partially transferred files. NB, rsync has a good default list of
-            compression exclusions. The --info=progress2 option is also added to show
-            overall transfer progress.
-
-          --remote-mount
-          : Some of the --remote options can also be useful when transferring to or from
-            local directories that are actually a remote filesystem mount, such as
-            through SSHfs. This flag sets the --partial and --info=progress2 flags, and
-            prevents -goD from being added, to avoid permissions errors. When neither
-            of the --local or --remote flags are used, rsyncx will attempt to detect
-            a remote mount and set --remote-mount automatically.
-
-          --diff
-          : Check for differences among files, but don't make any transfers. In addition
-            to the defaults, this adds: -nci --delete. Refer to the notes on -i below:
-            any files that are only on DEST will be marked with *deleting, and any files
-            that are only on SRC will be marked with xx+++++++++.
-
-          --rsbak
-          : Create backup files, using the options: --backup --suffix='.rsbak'. Consider
-            also the --backup-dir option.
-
-          --mv
-          : Simulate moving files. This adds --remove-source-files, and --info=remove to
-            print an info line for each removed file. After a successful transfer, the
-            source files are removed, but empty directories may remain. This can depend
-            on interactions with filters, etc, thus pruning empty directories is not
-            attempted. Suggested commands to prune the dirs are printed.
-
-        Info Reporting Options
-
-        By default, rsync is quiet. To show some basic info including a listing of
-        changed files, -v can be used to turn on a sensible set of --info flags. Using
-        -vv shows very detailed information about the transfer and the application of
-        the filter rules.
-
-        This function adds --info=del,stats to the command-line when -v is not used.
-        This prints file deletions and a short data transfer summary. -h is also added
-        for human readable data units.
-
-        Use -i to print a summary line for each changed file. Using -ii also prints a
-        line for unchanged files. Refer to the rsync manpage under --itemize-changes to
-        decode the summary line. Briefly:
-
-          - If a file is to be removed, the summary line is * followed by the
-            word deleting. Otherwise, the first char is the update type. It may be < or
-            > for files sent and received, . for a file with unchanged content, or c for
-            a directory to be created.
-
-          - The second char is the file type, which may be f, d, L, D, or S.
-
-          - The remaining characters are + for a newly created file. Otherwise, any that
-            are not . indicate what will be updated, or why the file is being
-            transferred, e.g. c for checksum, s for size, t for time, etc.
-
-        Issue '--info=help' to print the rsync's info flag options that may be used. The
-        following options are recommended to achieve the noted effects. Note that
-        explicit --info settings always override the implied settings of e.g. -v or
-        --progress:
-
-          --info=name0
-          : Suppress the file listing when using -v or -vv.
-
-          --info=name2 or -vv
-          : Print a line for each unchanged file.
-
-          --info=skip or -vv
-          : Print a line for each skipped file when using -u (--update).
-
-          --info=progress2
-          : Show overall transfer progress (added with --remote)
-
-          --stats or --info=stats2
-          : Print a detailed file transfer summary.
-
-          --debug=filter or -vv
-          : Print the results of applied filter rules.
-
-        Thus, adding -ni to your existing command line is an excellent way to get a
-        detailed picture of the changes that will occur, before affecting any files. If
-        using -nii with -u, rsyncx also adds --info=skip to get a complete picture.
-
-        Filter Rules
-
-        Rsync builds an ordered list of filter rules as specified on the command-line
-        and found in relevant files. The default is for all files within the transfer
-        root to be included.
-
-        This function honours the filter rules found in '~/.config/rsync/default.rules',
-        if that file exists. They are applied using the merge-files syntax for the
-        '--filter' option, and are intended to exclude machine-specific hidden files,
-        such as '.DS_Store' and lock files. To clear the filter list, use: -f'!' on the
-        command line.
-
-        To exclude files for a single transfer, the --exclude=PATTERN option may be
-        used, which is equivalent to a filter rule of -f'- PATTERN'. The patterns
-        generally follow globbing rules as in other similar tools. Refer to the PATTERN
-        MATCHING RULES section of the rsync manpage for details and examples.
-
-        To include only certain files in a transfer, include rules are needed for the
-        file and any parent directories within the transfer root. Then a trailing
-        exclusion rule that matches all files would be specified, e.g.:
-
-          -f'+ x/' -f'+ x/y/' -f'+ x/y/file.txt' -f'- *' x host:/tmp/
-
-        Exclude rules both hide files on the sending side and protect files on the
-        receiving side. Similarly, include rules both show (or expose) files on the
-        sending side, and risk files on the receiving side.
-
-        The option -F may be used apply per-directory filter rules found in files
-        named '.rsync-filter'. With -F, the .rsync-filter files may be found in parent
-        directories of the transfer root, as well as its subdirectories. Refer to the
-        MERGE-FILE FILTER RULES section of the rsync manpage.
-    """
 
     [[ $# -eq 0  || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }
@@ -283,12 +283,13 @@ rsyncx() {
         if (( n == 1 ))
         then
             # only source (listing)
-            srcs=( "${pos_args[0]}" )
+            srcs=( "${pos_args[@]:0:1}" )
 
         else
             # last arg is dest, even with --local-only
             dest="${pos_args[-1]}"
-            srcs=( "${pos_args[@]:0:n-1}" )
+            unset 'pos_args[-1]'
+            srcs=( "${pos_args[@]}" )
 
             _rem=$( _chk_rem "$dest" )
         fi
