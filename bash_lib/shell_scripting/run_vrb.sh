@@ -2,57 +2,55 @@
 import_func is_int \
     || return
 
+: """Print command line to STDERR as it is being run
+
+    Usage: run_vrb [options] [--] <command-line ...>
+
+    This function runs the command line provided. If the verbosity setting is high
+    enough, the command line is printed on STDERR as it is executed, prepended by
+    the \$PS4 string (usually '+ '). This is accomplished by temporarily enabling
+    the xtrace (set -x) shell option.
+
+    The verbosity setting is established by looking for a shell variable called '_v'
+    or '_verb' with a numerical value. If no such variable is found, the default
+    value is 2, which may be changed using the -v option. The verbosity threshold
+    is 1, above which the command line is printed.
+
+    Options
+
+      -v <n>
+      : set verbosity level to integer value n.
+
+      -P
+      : resolve the command name to either a shell builtin or file on the PATH, and
+        modify the command line to be explicit about what is run (i.e. either
+        'builtin command' or '/path/to/command').
+
+    If environment variable settings in the form of A=B are used at the start of the
+    command line, the env command is prepended to ensure the command runs. Note that
+    env is incompatible with running shell functions or builtins, so an alternative
+    command line in the form of 'A=B run_vrb command args' is recommended.
+
+    If the command is a shell function, not only the function call is printed to
+    STDERR, but also the commands within the function.
+
+    The return status code is usually the return status of the command line, but may
+    be 2 if there was an option problem, or 124-6 if there was a problem determining
+    the command name or type.
+
+    Examples
+
+      run_vrb git clone http://repo-url.com dir
+
+      _v=1
+      [[ \$foo == bar ]] && (( _v++ ))
+      run_vrb -\$_v borg-go create
+"""
+
 run_vrb() {
 
-    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
-
-        : """Print command line to STDERR as it is being run
-
-        Usage: run_vrb [options] [--] <command-line ...>
-
-        This function runs the command line provided. If the verbosity setting is high
-        enough, the command line is printed on STDERR as it is executed, prepended by
-        the \$PS4 string (usually '+ '). This is accomplished by temporarily enabling
-        the xtrace (set -x) shell option.
-
-        The verbosity setting is established by looking for a shell variable called '_v'
-        or '_verb' with a numerical value. If no such variable is found, the default
-        value is 2, which may be changed using the -v option. The verbosity threshold
-        is 1, above which the command line is printed.
-
-        Options
-
-          -v <n>
-          : set verbosity level to integer value n.
-
-          -P
-          : resolve the command name to either a shell builtin or file on the PATH, and
-            modify the command line to be explicit about what is run (i.e. either
-            'builtin command' or '/path/to/command').
-
-        If environment variable settings in the form of A=B are used at the start of the
-        command line, the env command is prepended to ensure the command runs. Note that
-        env is incompatible with running shell functions or builtins, so an alternative
-        command line in the form of 'A=B run_vrb command args' is recommended.
-
-        If the command is a shell function, not only the function call is printed to
-        STDERR, but also the commands within the function.
-
-        The return status code is usually the return status of the command line, but may
-        be 2 if there was an option problem, or 124-6 if there was a problem determining
-        the command name or type.
-
-        Examples
-
-          run_vrb git clone http://repo-url.com dir
-
-          _v=1
-          [[ \$foo == bar ]] && (( _v++ ))
-          run_vrb -\$_v borg-go create
-        """
-        docsh -TD
-        return
-    }
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     # cleanup routine
     trap '
