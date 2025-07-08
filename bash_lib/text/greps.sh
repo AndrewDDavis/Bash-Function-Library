@@ -1,12 +1,3 @@
-# TODO
-# - make greps less reliant on an external grep call:
-#   e.g., for simple fixed string or ERE pattern matching,
-#   shell regex matching can be used, which is much faster,
-#   even with flags like -i; flags like -n, -I, etc. would
-#   be trickier, and could fall back to an external grep call
-#
-# ^^^ is this now handled by match-sh?
-
 # deps
 import_func alias-resolve array_strrepl \
     || return
@@ -27,9 +18,29 @@ alias egreps="greps -E"
     includes non-escaped uppercase letters.
 
     The smart-case functionality can be disabled using the --case-sensitive option. It
-    is also disabled if the -i, --ignore-case, or --no-ignore-case options are used. The
-    comments of this function's code contain a comparison of options relevant to
-    case-sensitive matching across various grep tools.
+    is also disabled if the -i, --ignore-case, or --no-ignore-case options are used.
+
+    For simple pattern-matching without an external call to the grep binary, refer to
+    the \`rematch\` function.
+
+    Background: relevant case-sensitivity options across grep tools
+
+      Gnu grep
+      : -i (--ignore-case), --no-ignore-case
+        Uses -s for --no-messages, nothing on -S, -j, or -J.
+
+      BSD grep
+      : -i (--ignore-case)
+        Uses -s for --no-messages, -S for follow symlinks, -J for bz2decompress,
+        nothing on -j; --no-ignore-case does NOT work.
+
+      ripgrep
+      : -i (--ignore-case), -S (--smart-case), -s (--case-sensitive);
+        Uses -j for --threads, nothing on -J; --no-ignore-case does NOT work.
+
+      ugrep
+      : -i (--ignore-case), --no-ignore-case, -j (--smart-case);
+        Uses -s for --no-messages, -S for --dereference-files, and -J for --jobs.
 """
 
 greps() {
@@ -66,22 +77,6 @@ greps() {
     }
 
     _enact_scase() {
-
-        # Relevant options around case across grep tools:
-        #
-        #   - gnu grep:
-        #     -i (--ignore-case), --no-ignore-case
-        #     uses -s for --no-messages, nothing on -S, -j, or -J
-        #   - BSD grep:
-        #     -i (--ignore-case)
-        #     uses -s for --no-messages, -S for follow symlinks, -J for bz2decompress,
-        #     nothing on -j; --no-ignore-case does NOT work
-        #   - ripgrep:
-        #     -i (--ignore-case), -S (--smart-case), -s (--case-sensitive);
-        #     uses -j for --threads, nothing on -J; --no-ignore-case does NOT work
-        #   - ugrep:
-        #     -i (--ignore-case), --no-ignore-case, -j (--smart-case);
-        #     uses -s for --no-messages, -S for --dereference-files, and -J for --jobs
 
         if [[ ${#cl_opts[@]} -gt 0 ]]
         then
