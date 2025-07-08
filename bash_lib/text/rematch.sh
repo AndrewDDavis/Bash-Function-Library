@@ -1,18 +1,3 @@
-# TODO
-# - timing: putting docstrings at the top of this function took the execution time from
-#   ~170 us to ~290 us, amazingly; got to get docsh working with strings that are not
-#   in the function definition. Even putting the no-op and string argument inside the
-#   'if' statement for $# eq 0 adds ~ 35 ms to the execution time.
-# - the return trap, which unsets functions and resets itself, accounts for ~ 25 us of
-#   the runtime, whereas populating the array of subfunctions accounts for another 10 us.
-# - reading the function definitions themselves accounts for ~ 20 us
-# - the docsh test on $# | -h accounts for only a few us. Same with the getopts call;
-#   the whole _parse_args function takes only ~ 20 us.
-# - trying to juggle the function definitions so that rematch -q can skip reading the
-#   unneeded functions did save a bit of time, ~3 us per function skipped, but probably
-#   isn't worth it, due to how strange the code looks. Pre-declaring functions using
-#   declare -f func actually added a few us to the execution time.
-
 : """Test for pattern match using Bash regex comparison
 
     Usage
@@ -61,11 +46,11 @@
         operate line-by-line and print matching lines. When rematch is called without
         options, it has similar functionality to 'grep -Eoc'.
 
-      - Timing: when matching a pattern against a string, 'rematch -q' took ~0.10 ms. A
-        non-matching 'rematch -p' was similar, but a matching call took ~0.15 ms. By
-        comparison, GNU grep took ~1.4 ms, and ugrep took ~3.8 ms to perform the same
-        match. Notably, for simple comparisons, directly running [[ ... =~ ... ]] took
-        only ~0.008 ms.
+      - Execution time: when matching a pattern against a string, 'rematch -q' took
+        ~0.10 ms. A non-matching 'rematch -p' was similar, but a matching call took
+        ~0.15 ms. By comparison, GNU grep took ~1.4 ms, and ugrep took ~3.8 ms to
+        perform the same match. Notably, for simple comparisons, directly running [[ ...
+        =~ ... ]] took only ~0.008 ms.
 
       - A null-matching pattern, such as '' or 'a*', always matches. However, it
         produces only 1 match, consisting of the null string. This differs from
@@ -78,14 +63,17 @@
 
 rematch() {
 
-    # uncomment when docsh can handle strings in the source file:
-    # [[ $# -eq 0  || $1 == @(-h|--help) ]] \
-    #     && { docsh -TD; return; }
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     # cleanup routine and func definitions
     trap '
+        return
+    ' ERR
+
+    trap '
         unset -f _parse_args _match_lines \
-            _match_string _match_printer
+            _match_string _print_matches
         trap - return
     ' RETURN
 
@@ -125,30 +113,12 @@ rematch() {
     _match_lines() {
 
         # line-by-line matching
-        # local ln_match
-
-        # NB, <<< appends a newline to txt
+        # - read txt lines into REPLY, noting that <<< appends a newline
         while IFS= read -r
         do
             # test for one or more matches within the line
             _match_string "$REPLY" \
                 && REMATCH_LINES+=( "$REPLY" )
-
-            # while [[ $REPLY =~ $ptn ]]
-            # do
-            #     (( ++REMATCH_N ))
-            #     REMATCHES+=( "${BASH_REMATCH[@]}" )
-
-            #     [[ ! -v ln_match ]] && {
-            #         REMATCH_LINES+=( "$REPLY" )
-            #         ln_match=1
-            #     }
-
-            #     REPLY=${REPLY#*"${BASH_REMATCH[0]}"}
-            # done
-
-            # NB, local variables stay local, even when unset
-            # unset ln_match
 
         done <<< "$txt"
 
@@ -166,6 +136,7 @@ rematch() {
             (( ++REMATCH_N ))
             REMATCHES+=( "${BASH_REMATCH[@]}" )
 
+            # discard the matched part, then check for more matches
             str=${str#*"${BASH_REMATCH[0]}"}
         done
 
@@ -175,7 +146,7 @@ rematch() {
         [[ $str != "$1" ]]
     }
 
-    _match_printer() {
+    _print_matches() {
 
         if [[ -v _p  && ! -v _q  && REMATCH_N -gt 0 ]]
         then
@@ -199,13 +170,13 @@ rematch() {
     }
 
     # variable defaults
-    unset REMATCHES REMATCH_N REMATCH_LINES || return
+    unset REMATCHES REMATCH_N REMATCH_LINES
     declare -ag REMATCHES=()
     declare -ig REMATCH_N=0
     local _l _p _q
     local txt ptn
 
-    _parse_args "$@" || return
+    _parse_args "$@"
     shift $#
 
     if [[ -v _q ]]
@@ -224,14 +195,30 @@ rematch() {
     elif [[ -v _l ]]
     then
         declare -ag REMATCH_LINES=()
-        _match_lines "$txt" || return
+        _match_lines "$txt"
 
     else
-        _match_string "$txt" || return
+        _match_string "$txt"
     fi
 
-    _match_printer || return
+    _print_matches
 
-    # test for any matches and return true/false
+    # return true/false for match
     (( REMATCH_N ))
 }
+
+# Notes on optimizing execution time
+#
+# - putting docstrings within the function took the execution time from ~170 us to ~290
+#   us, amazingly. Now that docsh handles doc-strings in the source file, this is no
+#   longer an issue.
+# - the return trap, which unsets functions and resets itself, accounts for ~ 25 us of
+#   the runtime, whereas populating the array of subfunctions accounts for another 10 us.
+# - reading the function definitions themselves accounts for ~ 20 us.
+# - the docsh test on $# | -h accounts for only a few us.
+# - The getopts call is also only a few us; the whole _parse_args function takes only ~
+#   20 us.
+# - trying to juggle the function definitions so that rematch -q can skip reading the
+#   unneeded functions did save a bit of time, ~3 us per function skipped, but probably
+#   isn't worth it, due to how strange the code looks. Pre-declaring functions using
+#   declare -f func actually added a few us to the execution time.
