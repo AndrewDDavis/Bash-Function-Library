@@ -17,7 +17,7 @@ import_func is_array \
 
     By default, the pattern is treated as a POSIX ERE that must match an entire
     array element, rather than a substring. For the pattern syntax, refer to the
-    manpages of 'regex(7)' and 'grep'.
+    manpages of regex(7), grep, and isalpha.
 
     Options
 
