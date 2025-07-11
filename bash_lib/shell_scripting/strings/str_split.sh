@@ -1,32 +1,30 @@
+: """Split string into array elements
+
+    Usage: str_split [-d delim] <array-name> [string] ...
+
+    The elements of the indicated array are defined by splitting the supplied
+    string. By default, and when delim is the empty string, the string is split into
+    individual characters. If no string is supplied on the command line, STDIN is
+    used.
+
+    Options
+
+      -a       : append to array instead of clearing it
+      -d delim : split string at each instance of 'delim'
+      -q       : suppress warning when non-empty array is cleared
+
+    Examples
+
+      str_split str_elems 'each_char_is_an_elem'
+      str_split -d '/' path_elems 'path/to/split'
+
+    See Also: str_to_words, str_join_with
+"""
+
 str_split() {
 
-    [[ $# -eq 0  || $1 == @(-h|--help) ]] && {
-
-        : """Split string into array elements
-
-        Usage: str_split [-d delim] <array-name> [string] ...
-
-        The elements of the indicated array are defined by splitting the supplied
-        string. By default, and when delim is the empty string, the string is split into
-        individual characters. If no string is supplied on the command line, STDIN is
-        used.
-
-        Options
-
-          -a       : append to array instead of clearing it
-          -d delim : split string at each instance of 'delim'
-          -q       : suppress warning when non-empty array is cleared
-
-        Examples
-
-          str_split str_elems 'each_char_is_an_elem'
-          str_split -d '/' path_elems 'path/to/split'
-
-        See Also: str_to_words, str_join_with
-        """
-        docsh -TD
-        return
-    }
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
     # defaults
     local _v=1 _d='' _a

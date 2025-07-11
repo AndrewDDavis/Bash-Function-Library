@@ -1,25 +1,25 @@
+: """Shorten a string, substituting '...'.
+
+    Usage: str_trunc [opts] <n> <str>
+
+        n : maximum character length allowed
+      str : string to shorten (e.g. path, directory name)
+
+    Options
+
+      -m : truncate in the middle (default)
+      -s : truncate at the start
+      -e : truncate at the end
+
+    Example
+
+      str_trunc 12 the_path_to_shorten
+"""
+
 str_trunc() {
 
-    : """Shorten a string, substituting '...'.
-
-        Usage: str_trunc [opts] <n> <str>
-
-            n : maximum character length allowed
-          str : string to shorten (e.g. path, directory name)
-
-        Options
-
-          -m : truncate in the middle (default)
-          -s : truncate at the start
-          -e : truncate at the end
-
-        Example
-
-          str_trunc 12 the_path_to_shorten
-    """
-
-    [[ $# -lt 2  || $1 == @(-h|--help) ]] &&
-        { docsh -TD; return; }
+    [[ $# -lt 2  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
 	local sloc=m
 
