@@ -165,13 +165,13 @@ greps() {
 _parse_grepopts() {
 
     # name-refs to handle the arrays
-    local -n _opts=${1:?} _posargs=${2:?} _pats=${3:?}
+    local -n _optargs=${1:?} _posargs=${2:?} _pats=${3:?}
     shift 3
 
     _pats=()
 
     # call std-args with the list of flags that need args, and noting pattern flags
-    # - this clears and sets _opts and _posargs
+    # - this clears and sets _optargs and _posargs
     local spec_idcs spec_args
 
     local sf='efmABCdD'
@@ -180,7 +180,7 @@ _parse_grepopts() {
               group-separator binary-files devices directories
               exclude exclude-from exclude-dir include'
 
-    std-args _opts _posargs "$sf" "$lf" \
+    std-args _optargs _posargs "$sf" "$lf" \
         -s 'e' 'regexp'  -s 'f' 'file' -- "$@" \
         || return
 
