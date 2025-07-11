@@ -376,7 +376,7 @@ std-args() {
         done
     fi
 
-    # sanity
+    # sanity: all external args assigned to either __opts or __pargs?
     n=$(( ${#ext_args[*]} - 1 ))
     (( n == ( ${#__opts__[*]} + ${#__pargs__[*]} ) )) \
         || err_msg 9 "#ext_args=${n}, while #__opts__=${#__opts__[*]} and #__pargs__=${#__pargs__[*]}"
