@@ -157,7 +157,7 @@ array_match () {
         # - needed for sparse or associative array
         # - this locks in an order for associative arrays
         # - the index of this array matches the line numbers output by grep
-        # - they values are the indices of the input array
+        # - the values are the indices of the input array
         local i __keys__=( '' "${!__am_arrnm__[@]}" )
 
         # now we can run with -n, and later convert the line number to the array index
