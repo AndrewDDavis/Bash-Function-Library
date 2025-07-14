@@ -1,76 +1,65 @@
-# notesh
-#
-# - searches notes for header containing the search string
-# - if only 1 file, opens immediately, otherwise presents a choice; could also allow
-#   opening multiple
-# - opens matching file in less or editor (TUI or GUI: micro, gedit, vs-code, ...)
-# - open in less, allows editing in micro
-# - open directly in micro, gedit, or vscode (n or r)
-
-
-# - can use grep, ack, ripgrep, ugrep, etc
-# - ideas:
-#     + find ~/Notes \( -type d -name .git -prune \) -o -type f -print0 | xargs -0 sed -i 's/subdomainA\.example\.com/subdomainB.example.com/g'
-#     + grep -rl oldtext . | xargs sed -i 's/oldtext/newtext/g'
-#       -Z to grep, -0 to xargs ?
-#       --exclude-dir=.svn ?
-#     + find /home/www/ -type f -exec \
-#       sed -i 's/subdomainA\.example\.com/subdomainB.example.com/g' {} +
-#     + menu of items that come back from a search, using a regex with /^#.*<searchterm>/
-
-# TODO: syntax highlighting:
-# from [xdg-ninja](https://github.com/b3nj5m1n/xdg-ninja)
-# - glow for rendering Markdown in the terminal (bat, pygmentize or highlight can be used as fallback, but glow's output is clearer and therefore glow is recommended)
-# - use [glow](https://github.com/charmbracelet/glow) to render markdown in the terminal using a pager
-
-# ugrep globs:
-# -g "~/Documents/,*.txt,*.md,*.adoc,*.text"
-# or --include-dir='~/Documents/'
-
-# TODO: if matching a heading, search using a plausible glob
-
 # TODO:
+# - syntax highlighting:
+#   from [xdg-ninja](https://github.com/b3nj5m1n/xdg-ninja)
+#     + glow for rendering Markdown in the terminal (bat, pygmentize or highlight can be used as fallback, but glow's output is clearer and therefore glow is recommended)
+#     + use [glow](https://github.com/charmbracelet/glow) to render markdown in the terminal using a pager
+#
 # - if two args are passed for pattern, maybe treat it like -%% 'word1 word2'?
-# - otherwise, how to pass -%% ...
-
+#   otherwise, how to pass -%% ...
+#
 # - create project aliases, like --bread, or --project=bread
+#
+# - if a headings search matches nothing, try full text
+#
+# - allow GNU grep as well
+
 
 # dependencies
-import_func run_vrb vrb_msg str_split is_int \
+import_func run_vrb vrb_msg std-args array_match array_irepl \
+    str_split str_wrap is_int ugrep-files \
     || return
 
 : """Open notes matching a pattern
 
-Usage: notesh [options] [--] [grep-options] 'pattern'
+    Usage: notesh [options] [--] [grep-options] [pattern] [search-root]
 
-Search for and open a notes file with content that matches a pattern. If more than one
-file is matched by the pattern, an interactive selection screen is presented.
+    Search for and open a notes file with content that matches a pattern. If more than
+    one file is matched by the pattern, an interactive selection screen is presented.
 
-By default, text files in '~/Documents' are searched, and any symlinks encountered are
-dereferenced and followed. If the working directory is a subdirectory of '~/Documents',
-and '-d' is not used, the working directory is searched.
+    The pattern matching is done by \`ugrep\`, via the \`ugrep-files\` function. This
+    uses smart-case matching and POSIX ERE syntax by default. The pattern may be
+    provided using options, e.g. -e or -%%, or as the first positional argument.
 
-The \`ugrep\` command is used to match the pattern, using smart-case matching and POSIX
-ERE syntax by default. If the pattern comprises simple words, without regex pattern
-characters other than '.', it is expanded to match section headings (markdown and
-asciidoc supported). In this case, a glob is also used to only match files with
-plausible extensions.
+    Unless a search-root argument is provided on the command-line, text files in
+    '~/Documents' are searched, and any symlinks encountered are dereferenced and
+    followed. If the working directory is a subdirectory of '~/Documents', the working
+    directory is used as the search root instead. Per ugrep defaults, hidden files and
+    directories are never searched, unless the -. (or --hidden) option is used.
 
-Options
+    In the case of 'simple' calls to notesh, the pattern is modified to match only
+    section headings (markdown and asciidoc supported). In this case, a glob is also
+    used to only match files with plausible extensions. This occurs when the pattern
+    comprises simple words, without regex pattern characters other than '.'. Also, a
+    notesh call is considered simple only when the following pattern-related options are
+    not used: -e, --regexp, -f, --file, -N, --neg-regexp, -%, --bool, -%%, --files,
+    --and, --andnot, --not.
 
-  -a
-  : match anywhere in the file, don't add section heading regex to simple patterns
+    Options
 
-  -d 'dir'
-  : search in 'dir/' instead of '~/Documents/'.
+      -a
+      : match anywhere in the file, don't add section heading regex to simple patterns
 
-  -o <p|e|s|v>
-  : open file using PAGER (default), EDITOR, sublime text ('subl -n'), or vs-code
-    ('code -n'). Only the first character of the argument is used, so that 'subl' or
-    'VSCode' would also work as expected.
+      -h
+      : add the regex logic to match a header, even if the pattern is not considered
+        simple. This only works when the pattern is provided as a positional arg.
 
-  -x 'cmd ...'
-  : open file using custom command; the argument will be split into words.
+      -o <p|e|s|v>
+      : open file using PAGER (default), EDITOR, sublime text ('subl -n'), or vs-code
+        ('code -n'). Only the first character of the argument is used, so that 'subl' or
+        'VSCode' would also work as expected.
+
+      -x 'cmd ...'
+      : open file using custom command; the argument will be split into words.
 """
 
 notesh() {
@@ -78,10 +67,15 @@ notesh() {
     [[ $# -eq 0 || $1 == @(-h|--help) ]] \
         && { docsh -TD; return; }
 
-    # cleanup routine
+    # err trap and cleanup routine
     trap '
-        unset -f _parse_opts _def_grep_cmd _match_fns _select_fns
-        trap - return
+        return
+    ' ERR
+
+    # TODO: check unset line below
+    trap '
+        unset -f _parse_opts _parse_ugopts _chk_simpcl _def_grep_args _select_fns
+        trap - err return
     ' RETURN
 
     _parse_opts() {
@@ -96,16 +90,14 @@ notesh() {
 
         # args
         local flag OPTIND=1 OPTARG
-        while getopts ':ad:o:x:' flag
+        while getopts ':aho:x:' flag
         do
             case $flag in
                 ( a )
                     full_match=1
                 ;;
-                ( d )
-                    doc_root=$OPTARG
-                    [[ $doc_root != '/' ]] \
-                        && doc_root=${doc_root%/}
+                ( h )
+                    hd_match=1
                 ;;
                 ( o )
                     # define opener from first char of OPTARG
@@ -137,96 +129,186 @@ notesh() {
         n=$(( OPTIND-1 ))
     }
 
-    _def_grep_cmd() {
+    _parse_ugopts() {
 
-        # - TODO: allow GNU grep as well
-        grep_cmdln=( "$( builtin type -P ugrep )" ) \
-            || return 9
+        # Keep command-line argument blobs intact while identifying pattern arg(s)
+        # Usage: _parse_ugopts A1 A2 A3 \"\$@\"
 
-        grep_cmdln+=( '-UIjRl0' )
+        # - call std-args with the list of ugrep flags that need args
+        # - this clears and sets _optargs, _posargs, and _stdopts
+        local sf lf
+        sf='efdgmtABCDJKMNO'
+        lf='regexp file from neg-regexp and not andnot
+            after-context before-context context
+            colors colours delay depth encoding
+            filter filter-magic-label format file-extension file-type
+            glob iglob context-separator jobs label file-magic
+            min-line max-line range min-count max-count max-files
+            binary-files devices directories replace zmax
+            exclude exclude-dir exclude-from exclude-fs
+            include include-dir include-from include-fs'
 
-        # pattern argument required
-        [[ $# -gt 0 ]] \
-            || return 3
+        std-args _optargs _posargs "$sf" "$lf" -- "$@" \
+            || return
 
-        # - all else should be grep options
-        grep_ptn=${!#}
-        grep_cmdln+=( "${@:1:$(($#-1))}" )
-        shift $#
+        local i
+        while i=$( array_match -n _stdopts '--(and|not|andnot)=-e' )
+        do
+            # deal with --and [-e] PAT
+            # - NB, the manpage says --not and --andnot can be used like --not -e PAT,
+            #   but this gives an error; really you can only do --andnot(=| )PAT
+            local bflag=${_stdopts[i]%'=-e'}
 
-        # regex to match a 'simple' pattern
-        # - starts with alpha-num char, later can be blanks, ., and -
-        local simpl_ptn='^[[:alnum:]]'
-        simpl_ptn+='[[:alnum:][:blank:].-]*$'
+            # find the offending entries in _optargs
+            local o f=0
+            for o in "${!_optargs[@]}"
+            do
+                if [[ ${_optargs[o]} == "$bflag"  && ${_optargs[o+1]} == '-e' ]]
+                then
+                    f=1
+                    break
+                fi
+            done
 
-        if  [[ ! -v full_match
-            && $grep_ptn =~ $simpl_ptn ]]
+            # check found and posarg
+            { (( f )) && [[ -v _posargs[o+2] ]]; } \
+                || break
+
+            # fix _stdopts, as --and -ePAT
+            array_irepl _stdopts i "$bflag" "-e${_posargs[o+2]}"
+
+            # move the pattern from _posargs to _optargs
+            _optargs[o+2]=${_posargs[o+2]}
+            unset '_posargs[o+2]'
+        done
+    }
+
+    _chk_simpcl() {
+
+        # check for pattern-related ugrep options
+        local pat_flags='-(e|f|N|-(regexp|file|neg-regexp)=).+'
+        pat_flags+='|-(%|%%|-bool|-files)'
+        pat_flags+='|--(and|not|andnot)(=.*)?'
+
+        if ! array_match _stdopts "$pat_flags"
         then
-            # simple pattern: add regex for heading lines (markdown or adoc)
-            # - refer to the  _expand_keyword() function in scw()
-            grep_ptn="^(#|=).*${grep_ptn}"
+            # no pattern yet: get it from 1st postnl arg
+            (( ${#_posargs[*]} > 0 )) \
+                || { err_msg 3 'no pattern found'; return; }
 
-            # match only files with a plausible extension
-            # - NB, matching no extension at the same time is tricky: it's possible with
-            #   the glob -g '!*.*', but that will exclude all the files with extensions
-            #   (--exclude patterns take priority over --include patterns).
-            # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
-            # - or do a seperate search with the no-extension glob...
-            grep_cmdln+=( -O 'md,adoc,txt,text,markdown' )
+            # - set pat_i to first _posargs index
+            local pos_is=( "${!_posargs[@]}" )
+            pat_i=${pos_is[0]}
+
+            if [[ ${_posargs[pat_i]} == '--' ]]
+            then
+                # '--' is not a real arg
+                if [[ -v 'pos_is[1]' ]]
+                then
+                    pat_i=${pos_is[1]}
+                else
+                    err_msg 3 'no pattern found'
+                    return
+                fi
+            fi
+
+            # regex to match a 'simple' pattern
+            # - starts with alpha-num char, later can be blanks, ., and -
+            local simpl_rgx
+            simpl_rgx='^[[:alnum:]]'
+            simpl_rgx+='[[:alnum:][:blank:].-]*$'
+
+            if  [[ -v hd_match ]] \
+                || [[ ! -v full_match
+                && ${_posargs[pat_i]} =~ $simpl_rgx ]]
+            then
+                # simple pattern: add regex for heading lines (markdown or adoc)
+                # - refer to the  _expand_keyword() function in scw()
+                _posargs[pat_i]="^(#|=).*${_posargs[pat_i]}"
+
+                # match only files with a plausible extension
+                # - NB, matching no extension at the same time is tricky: it's possible with
+                #   the glob -g '!*.*', but that will exclude all the files with extensions
+                #   (--exclude patterns take priority over --include patterns).
+                # - you could use e.g. fd, with the '^[^.]+$' regex to create the file list
+                # - or do a seperate search with the no-extension glob...
+                _optargs+=( -O 'md,adoc,txt,text,markdown' )
+            fi
+        fi
+    }
+
+    # _def_grep_args() {
+
+        # TODO: grep_cmdln becomes grep_args
+        #
+        # grep call is handled by ugrep-files now
+        #
+        # grep_cmdln=( "$( builtin type -P ugrep )" ) \
+        #     || return 9
+
+        # grep_cmdln+=( '-UIjRl0' )
+
+        # # pattern argument required
+        # [[ $# -gt 0 ]] \
+        #     || return 3
+
+        # # - all else should be grep options
+        # grep_ptn=${!#}
+        # grep_cmdln+=( "${@:1:$(($#-1))}" )
+        # shift $#
+
+        # grep_cmdln+=( -- "$gpat" "$doc_root" )
+    # }
+
+    _chk_srchroot() {
+
+        # check whether search dir(s) provided with positional args
+        local n=${#_posargs[*]}
+
+        if (( n > 0 ))
+        then
+            # identify pos-arg array indices
+            local pos_is=( "${!_posargs[@]}" )
+            local i=0
+
+            if [[ ${_posargs[${pos_is[i]}]} == '--' ]]
+            then
+                # '--' is not a real arg
+                (( ++i ))
+                (( --n ))
+            fi
+
+            if [[ -v pat_i ]]
+            then
+                # pattern uses a pos-arg
+                (( ++i ))
+                (( --n ))
+            fi
         fi
 
-        grep_cmdln+=( -- "$grep_ptn" "$doc_root" )
+        if (( n > 0 ))
+        then
+            # the remaining pos-args would be file paths
+            # - NB, [[ -v pos_is[i] ]] must be true when n > 0
+            local fn
+            for fn in "${_posargs[@]:${pos_is[i]}}"
+            do
+                [[ $fn == */  && $fn != '/' ]] \
+                    && fn=${fn%/}
+
+                srch_roots+=( "$fn" )
+            done
+        else
+            # default search root
+            srch_roots=( "$doc_root" )
+            _posargs+=( "$doc_root" )
+        fi
     }
-
-    _match_fns() {
-
-        # match using grep
-        # capture filenames
-        # - for quoted output to shell, use -m1 --format='%h%~'. In a script like this,
-        #   it is better to simply use -l.
-        # - consider --exclude-dir=.git if there are any git dirs in the search dir
-        local grep_rs #grep_pid
-
-        # - start from 1 to match the selection display
-        mapfile -d '' -O1 matched_fns < \
-            <(
-            set -x
-            "${grep_cmdln[@]}"
-        )
-
-        # check ugrep return status from subprocess
-        # grep_pid=$!
-        # wait $grep_pid \
-        wait $! \
-            || {
-            grep_rs=$?
-            [[ $grep_rs -eq 1 ]] \
-                && return 1 \
-                || { err_msg $grep_rs "grep command call error"; return; }
-        }
-
-        # tested grep + find for matching
-        # - about the same, but more complicated
-        # - might be faster for larger number of files
-        #   printf 'find + grep vvv\n\n'
-        #   time find ~/Sync/Notes/ \( -type d -name .git -prune \) -o -type f -name '*.md.txt' \
-        #       -exec egrep -li "^#.*$@" {} +
-        # - NB, sed is unwieldy for this task
-    }
-
-    # _sort_fns() {
-
-        # sort matched_fns
-
-        # TODO
-        # - present candidate files grouped by subdir of ~/Documents/, or format like:
-        #   1) filename from this/long/path
-    # }
 
     _select_fns() {
 
         # select a file from the matches
-
+        # - easy when there's only 1
         if (( ${#matched_fns[@]} == 1 ))
         then
             sel_fns[0]=${matched_fns[1]}
@@ -234,9 +316,9 @@ notesh() {
             return
         fi
 
-        ## improve file path strings for display:
-        # - replace HOME in root dir with ~
-        # - strip root dir from filenames
+        # improve file path strings for display
+        # - replace HOME with ~ in root dir path(s)
+        # - strip root dir from filenames (if only 1 root)
         # - wrap file paths at a comfortable width, and indent following lines
         # - bold file basenames and root dir
         local _bld _rsb _rst
@@ -244,20 +326,40 @@ notesh() {
         _rsb=$'\e[22m'
         _rst=$'\e[0m'
 
-        local dr_dsp=${_bld}${doc_root/#"$HOME"/\~}/${_rsb}
-        printf >&2 '%s\n' '' "Matching files from '${dr_dsp}':" ''
+        # print context line when there's only 1 search root dir
+        local dr fn fn_bn fns_dsp=()
+        if (( ${#srch_roots[*]} == 1 ))
+        then
+            dr=${srch_roots[0]}
+            printf >&2 '%s\n' '' \
+                "Matching files from '${_bld}${dr/#"$HOME"/\~}/${_rsb}':" ''
 
-        local fn fn_bn fns_dsp=()
-        for fn in "${matched_fns[@]}"
-        do
-            fn=$( command fmt -sw88 <<< "${fn#"${doc_root}"/}" )
-            fn="${fn//$'\n'/&    }"
-            # fn=$( command sed '1 {p;d;}; s/^/    /' <<< "$fn" )
-            fn_bn=${fn##*/}
-            fn=${fn%"$fn_bn"}${_bld}${fn_bn}${_rsb}
+            for fn in "${matched_fns[@]}"
+            do
+                fn=$( str_wrap -w88 -i'    ' "${fn#"${dr}"/}" )
+                # fn=$( command fmt -sw88 <<< "${fn#"${dr}"/}" )
+                # fn="${fn//$'\n'/&    }"
+                fn_bn=${fn##*/}
+                fn=${fn%"$fn_bn"}${_bld}${fn_bn}${_rsb}
 
-            fns_dsp+=( "$fn" )
-        done
+                fns_dsp+=( "$fn" )
+            done
+
+        else
+            # with multiple search root dirs, just replace HOME with ~ and bold the basenames
+            printf >&2 '%s\n' ''
+
+            for fn in "${matched_fns[@]}"
+            do
+                fn=$( str_wrap -w88 -i'    ' "${fn/#"$HOME"/\~}" )
+                # fn=$( command fmt -sw88 <<< "${fn/#"$HOME"/\~}" )
+                # fn="${fn//$'\n'/&    }"
+                fn_bn=${fn##*/}
+                fn=${fn%"$fn_bn"}${_bld}${fn_bn}${_rsb}
+
+                fns_dsp+=( "$fn" )
+            done
+        fi
 
         # Call the Bash builtin 'select'
         # - sel is set to the displayed filename, or null when response is invalid
@@ -265,7 +367,7 @@ notesh() {
         # - the REPLY variable has the actual response from the user
         # - Ctrl-D prevents a selection and returns 1
         local PS3 sel nums
-        PS3=$'\n''File number(s) to open (e.g. 1,3,5; a = all, ^D = cancel): '
+        PS3=$'\n''File number(s) to open (e.g. 2, or 1,3,5; can also use a = all or ^D = cancel)'$'\n  : '
 
         select sel in "${fns_dsp[@]}"
         do
@@ -308,26 +410,37 @@ notesh() {
         # - consider using fzf, e.g.
         #   sel_fns[0]=$( fzf <<< $( printf '%s\n' "${matched_fns[@]}" ) )
         #   -m for multi
-        # - or one of the TUI options, like 'dialog'
+        # - or one of the TUI menu programs, like 'dialog'
     }
 
 
     # set defaults and parse options
-    local doc_root opener full_match _verb=2
+    local doc_root opener full_match hd_match _verb=2
     local -i n
-    _parse_opts "$@" || return
+    _parse_opts "$@"
     shift $n
 
-    # [u]grep command path and default args
-    local grep_cmdln grep_ptn
-    _def_grep_cmd "$@" || return
+    # sort args into a standard form for ugrep
+    local _stdopts _optargs _posargs
+    _parse_ugopts "$@"
     shift $#
+
+    # modify simple command-lines to match headings
+    local pat_i
+    _chk_simpcl
+
+    # ensure search root
+    local srch_roots=()
+    _chk_srchroot
+
+    # # [u]grep command path and default args
+    # local grep_args=()
+    # _def_grep_args "$@"
 
     # match files and select one to open
     local matched_fns=() sel_fns=()
-    _match_fns  || return
-    # _sort_fns   || return
-    _select_fns  || return
+    ugrep-files --to-array=matched_fns "${_optargs[@]}" "${_posargs[@]}"
+    _select_fns
 
     run_vrb "${opener[@]}" "${sel_fns[@]}"
 }
