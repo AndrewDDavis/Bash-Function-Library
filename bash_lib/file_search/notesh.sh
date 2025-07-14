@@ -1,19 +1,3 @@
-# TODO:
-# - syntax highlighting:
-#   from [xdg-ninja](https://github.com/b3nj5m1n/xdg-ninja)
-#     + glow for rendering Markdown in the terminal (bat, pygmentize or highlight can be used as fallback, but glow's output is clearer and therefore glow is recommended)
-#     + use [glow](https://github.com/charmbracelet/glow) to render markdown in the terminal using a pager
-#
-# - if two args are passed for pattern, maybe treat it like -%% 'word1 word2'?
-#   otherwise, how to pass -%% ...
-#
-# - create project aliases, like --bread, or --project=bread
-#
-# - if a headings search matches nothing, try full text
-#
-# - allow GNU grep as well
-
-
 # dependencies
 import_func run_vrb vrb_msg std-args array_match array_irepl \
     str_split str_wrap is_int ugrep-files \
@@ -224,7 +208,7 @@ notesh() {
             then
                 # simple pattern: add regex for heading lines (markdown or adoc)
                 # - refer to the  _expand_keyword() function in scw()
-                _posargs[pat_i]="^(#|=).*${_posargs[pat_i]}"
+                _posargs[pat_i]="^[#=].*${_posargs[pat_i]}"
 
                 # match only files with a plausible extension
                 # - NB, matching no extension at the same time is tricky: it's possible with
@@ -444,3 +428,37 @@ notesh() {
 
     run_vrb "${opener[@]}" "${sel_fns[@]}"
 }
+
+# TODO:
+# - syntax highlighting:
+#   from [xdg-ninja](https://github.com/b3nj5m1n/xdg-ninja)
+#     + glow for rendering Markdown in the terminal (bat, pygmentize or highlight can be used as fallback, but glow's output is clearer and therefore glow is recommended)
+#     + use [glow](https://github.com/charmbracelet/glow) to render markdown in the terminal using a pager
+#
+# - create project aliases, like --bread, or --project=bread
+#
+# - if a headings search matches nothing, try full text
+#
+# - allow GNU grep as well
+#
+# - deal with ugrep pattern problem:
+#
+#   in ~/Documents/Food and Diet:
+#
+#     ugrep -EIrj '^[#=].*fried' .
+#     # 2 matches: one with '= Fried ...', one with '# Easy Refried ...'
+#
+#     ugrep -EIrj '^[#=].*refried' .
+#     # 0 matches
+#
+#     ugrep -EIrj '^#.*refried' .
+#     # 1 match
+#
+#     ugrep -EIr '^[#=].*Refried' .
+#     # 1 match
+#
+#     ugrep -EIri '^[#=].*refried' .
+#     # 0 matches
+#
+#     ugrep -EIri '^[#=].*beans' .
+#     # 6 matches (upper and lower, -i is working; all after #)
