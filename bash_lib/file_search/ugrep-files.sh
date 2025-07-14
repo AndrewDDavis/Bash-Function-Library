@@ -1,8 +1,5 @@
 # TODO:
 #
-# - make a --in-headings option, to be called from notesh(),
-#   for a pattern like '##.*flatpak'
-#
 # - make a --no-hist option to exclude shell history files, like:
 #   -g '!*_history*'
 #
@@ -234,7 +231,7 @@ ugrep-files() {
             # capture filenames in array
             # - for notesh, start index at 1 to match the selection display
             local O_arg
-            if [[ ${FUNCNAME[2]} == notesh ]]
+            if [[ ${FUNCNAME[2]-} == notesh ]]
             then
                 O_arg='-O1'
             fi
@@ -261,6 +258,9 @@ ugrep-files() {
         #       -exec egrep -li "^#.*$@" {} +
         # - NB, sed is unwieldy for this task
     }
+
+    # NB, notesh calls ugrep-files, but also includes significant code to parse ugrep
+    # options, so look there if you need some code for that.
 
     # defaults and args
     local ug_cmd
