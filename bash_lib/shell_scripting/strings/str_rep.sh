@@ -1,32 +1,56 @@
+: """Print repetitions of a character or string
+
+    Usage: str_rep <str> [n]
+
+    Print n repetitions of str, followed by a newline (default n = 2).
+
+    Examples
+
+      - Dashes for a table:
+
+        str-rep - 6
+        #------
+
+      - Spaces for indentation:
+
+        str-rep ' ' 4
+        # (four spaces)
+"""
+
 str_rep() {
 
-    : """Print repetitions of a character or string.
+    [[ $# -eq 0  || $1 == @(-h|--help) ]] \
+        && { docsh -TD; return; }
 
-    Usage: str-rep <str> <n>
+    # args
+    local s n
+    s=${1?}
+    if [[ -v 2 ]]
+    then
+        n=$2
+        shift
+    else
+        n=2
+    fi
+    shift
 
-    E.g. dashes for a table, or spaces for indentation:
-      str-rep - 6
-      str-rep ' ' 4
-	"
+    (( n >= 0 )) \
+        || { err_msg 2 "non-negative integer required, got '$n'"; return; }
 
-    [[ $# -lt 2 || $1 == -h ]] &&
-        { docsh -TD; return; }
-
-    local i n=$2
-
-    [ "$n" -ge 0 ] ||
-        { err_msg 2 "non-negative integer required, got ${n@Q}"; return; }
-
-    # Safer than 'while (( n-- ))', in case of n=null
-    # - NB invalid values (e.g. strings) resolve to 0
-    for (( i = 0; i < n; i++ ))
+    # for loop is safer than 'while (( n-- ))', in case of n=null
+    # - NB, invalid values (e.g. strings) resolve to 0
+    local i
+    for (( i=0 ; i<n ; i++ ))
     do
-        printf '%s' "$1"
+        printf '%s' "$s"
     done
-    [[ i -eq 0 ]] || printf '\n'
 
-    # old way:
-    # - this uses seq to output the required no. of words, then the format '.0s' to
-    #   format them as 0-length words
-    #printf -- "$1"'%.0s' $( seq $2 )
+    # add newline if anything was printed
+    (( i == 0 )) \
+        || printf '\n'
+
+    # another way, tried to get it all in one print statement, but couldn't
+    # - output the required no. of words, but use '.0s' to print them as 0-length
+    # - would be good if you could use brace expansion with a variable
+    # printf "$s"'%.0s' $( for (( i=0 ; i<n ; i++ )); do printf '. '; done ); printf '\n'
 }
